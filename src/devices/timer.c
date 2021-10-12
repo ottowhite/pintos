@@ -21,14 +21,11 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
-/* Ordered list of sleeping_thread structs, 
- * the first element has the smallest wake time */
+/* Ordered list of sleeping_thread structs,the first element has the smallest 
+ * wake time. The lock is for coarse grained adding to avoid race conditions. */
 static struct list sleeping_thread_list; 
-
-/* For thread safe adding to the sleeping thread list 
- * Only required for adding as all removals are done by the timer interrupt
- * which is an external interrupt handler (can not be interrupted) */
 static struct lock sleeping_thread_list_lock;
+
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
@@ -116,7 +113,7 @@ timer_sleep (int64_t ticks)
                       &thread_wakes_before, 
                       0);
   lock_release(&sleeping_thread_list_lock);
-
+  /* Upped in timer interrupt if enough time has passed */
   sema_down(&thread_to_sleep.sleeping_sema);
 }
 
@@ -128,15 +125,8 @@ thread_wakes_before(const struct list_elem *a_ptr,
                     const struct list_elem *b_ptr,
                     void *aux) 
 {
-  struct sleeping_thread *sleeping_thread_a_ptr = list_entry(a_ptr, 
-                                                    struct sleeping_thread, 
-                                                    sleepelem);
-  struct sleeping_thread *sleeping_thread_b_ptr = list_entry(b_ptr, 
-                                                    struct sleeping_thread, 
-                                                    sleepelem);
-  return sleeping_thread_a_ptr->wake_time_ticks <
-         sleeping_thread_b_ptr->wake_time_ticks;
-
+  return list_entry(a_ptr, struct sleeping_thread, sleepelem)->wake_time_ticks <
+         list_entry(b_ptr, struct sleeping_thread, sleepelem)->wake_time_ticks;
 }
 
 
@@ -229,19 +219,22 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  thread_tick ();
+
   while (!list_empty(&sleeping_thread_list)) {
-    struct list_elem *sleeping_thread_elem_ptr = 
-        list_front(&sleeping_thread_list);
+    /* Check the soonest thread to wake */
     struct sleeping_thread *sleeping_thread_ptr =
-        list_entry(sleeping_thread_elem_ptr, struct sleeping_thread, sleepelem);
+        list_entry(list_front(&sleeping_thread_list), 
+                   struct sleeping_thread, 
+                   sleepelem);
     if (ticks >= sleeping_thread_ptr->wake_time_ticks) {
       sema_up(&sleeping_thread_ptr->sleeping_sema);
       list_pop_front(&sleeping_thread_list);
-      continue;
+    } else {
+      break;
     }
-    break;
   }
-  thread_tick ();
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
