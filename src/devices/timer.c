@@ -22,9 +22,8 @@
 static int64_t ticks;
 
 /* Ordered list of sleeping_thread structs,the first element has the smallest 
- * wake time. The lock is for coarse grained adding to avoid race conditions. */
+ * wake time. */
 static struct list sleeping_thread_list; 
-static struct lock sleeping_thread_list_lock;
 
 
 /* Number of loops per timer tick.
@@ -45,7 +44,6 @@ timer_init (void)
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
   list_init(&sleeping_thread_list);
-  lock_init(&sleeping_thread_list_lock);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -107,12 +105,14 @@ timer_sleep (int64_t ticks)
                        thread_current(), 
                        start + ticks);
 
-  lock_acquire(&sleeping_thread_list_lock);
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
   list_insert_ordered(&sleeping_thread_list, 
                       &thread_to_sleep.sleepelem,
                       &thread_wakes_before, 
                       0);
-  lock_release(&sleeping_thread_list_lock);
+  intr_set_level (old_level);
   /* Upped in timer interrupt if enough time has passed */
   sema_down(&thread_to_sleep.sleeping_sema);
 }
