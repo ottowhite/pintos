@@ -12,17 +12,15 @@
  * and when to wake them. Elements are created in timer.c:time_sleep
  * and removed in timer.c:timer_interrupt if ticks >= wake_time_ticks */
 struct sleeping_thread {
-  struct thread *thread_ptr;
   int64_t wake_time_ticks;
-  struct list_elem sleepelem;
   struct semaphore sleeping_sema;
+  struct list_elem sleepelem;
 };
 
 /* Initialise a sleeping thread to wake at the specified time,
  * Must then be added to the sleeping_thread_list to be woken 
  * Also 0 initialises a semaphore in the sleeping thread struct */
 void sleeping_thread_init(struct sleeping_thread *sleeping_thread_ptr,
-                          struct thread *thread_ptr,
                           int64_t wake_time_ticks);
 
 /* list_less_func for ordered sleeping thread insertions */

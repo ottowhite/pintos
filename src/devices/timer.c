@@ -102,7 +102,6 @@ timer_sleep (int64_t ticks)
 
   struct sleeping_thread thread_to_sleep;
   sleeping_thread_init(&thread_to_sleep, 
-                       thread_current(), 
                        start + ticks);
 
   enum intr_level old_level;
@@ -132,12 +131,9 @@ thread_wakes_before(const struct list_elem *a_ptr,
 
 /* Initialises a sleeping thread struct with given wake time and 0 semaphore */
 void
-sleeping_thread_init(
-    struct sleeping_thread *sleeping_thread_ptr,
-    struct thread *thread_ptr,
-    int64_t wake_time_ticks)
+sleeping_thread_init(struct sleeping_thread *sleeping_thread_ptr,
+                     int64_t wake_time_ticks)
 {
-  sleeping_thread_ptr->thread_ptr = thread_ptr;
   sleeping_thread_ptr->wake_time_ticks = wake_time_ticks;
   sema_init(&sleeping_thread_ptr->sleeping_sema, 0);
 }
