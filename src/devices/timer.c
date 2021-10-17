@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "lib/kernel/list.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -19,6 +20,11 @@
 
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
+
+/* Ordered list of sleeping_thread structs,the first element has the smallest 
+ * wake time. */
+static struct list sleeping_thread_list; 
+
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
@@ -37,6 +43,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&sleeping_thread_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -92,8 +99,43 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+
+  struct sleeping_thread thread_to_sleep;
+  sleeping_thread_init(&thread_to_sleep, 
+                       start + ticks);
+
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
+  list_insert_ordered(&sleeping_thread_list, 
+                      &thread_to_sleep.sleepelem,
+                      &thread_wakes_before, 
+                      0);
+  intr_set_level (old_level);
+  /* Upped in timer interrupt if enough time has passed */
+  sema_down(&thread_to_sleep.sleeping_sema);
+}
+
+/* To compare two sleeping thread list elems by their corresponding 
+ * sleeping thread wake time. Used for ordered insertions to the sleeping
+ * threads list */
+bool
+thread_wakes_before(const struct list_elem *a_ptr,
+                    const struct list_elem *b_ptr,
+                    void *aux) 
+{
+  return list_entry(a_ptr, struct sleeping_thread, sleepelem)->wake_time_ticks <
+         list_entry(b_ptr, struct sleeping_thread, sleepelem)->wake_time_ticks;
+}
+
+
+/* Initialises a sleeping thread struct with given wake time and 0 semaphore */
+void
+sleeping_thread_init(struct sleeping_thread *sleeping_thread_ptr,
+                     int64_t wake_time_ticks)
+{
+  sleeping_thread_ptr->wake_time_ticks = wake_time_ticks;
+  sema_init(&sleeping_thread_ptr->sleeping_sema, 0);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -166,12 +208,29 @@ timer_print_stats (void)
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
 
-/* Timer interrupt handler. */
+/* Timer interrupt handler. 
+ * Checks whether the next sleeping thread to be woken is ready,
+ * if so it ups it's semaphore and checks the next sleeping thread */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  while (!list_empty(&sleeping_thread_list)) {
+    /* Check the soonest thread to wake */
+    struct sleeping_thread *sleeping_thread_ptr =
+        list_entry(list_front(&sleeping_thread_list), 
+                   struct sleeping_thread, 
+                   sleepelem);
+    if (ticks >= sleeping_thread_ptr->wake_time_ticks) {
+      sema_up(&sleeping_thread_ptr->sleeping_sema);
+      list_pop_front(&sleeping_thread_list);
+    } else {
+      break;
+    }
+  }
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
