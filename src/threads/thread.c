@@ -97,7 +97,7 @@ thread_init (void)
     ready_list_array[i] = &ready_list_temp;
   }
 
-  list_init (&ready_list);
+  /* list_init (&ready_list); */
   list_init (&occupied_ready_list_index);
   list_init (&all_list);
 
