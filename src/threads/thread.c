@@ -20,9 +20,9 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
-/* List of processes in THREAD_READY state, that is, processes
-   that are ready to run but not actually running. */
-static struct list ready_list;
+static struct list *ready_list_array[PRI_MAX];
+static struct list occupied_ready_list_index;
+static struct list ready_list; // TODO: Delete once other working
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -90,7 +90,15 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
+
+  for (int i = 0; i < PRI_MAX; i++)  {
+    struct list ready_list_temp;
+    list_init (&ready_list_temp);
+    ready_list_array[i] = &ready_list_temp;
+  }
+
   list_init (&ready_list);
+  list_init (&occupied_ready_list_index);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
