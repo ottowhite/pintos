@@ -377,7 +377,10 @@ list_less_indexes (const struct list_elem *a_ptr,
   return a_val < b_val;
 }
 
-/* Adds thread to list of ready threads. */
+/* Adds thread to list of ready threads.
+   If there does not exist a list of the priority index, push a new node
+   representating that index into ready_list_priority_index.
+   The push should ensure ready_list_priority_index is ordered */
 void
 add_ready_thread (struct thread *thread)
 {
@@ -389,15 +392,19 @@ add_ready_thread (struct thread *thread)
   ready_threads_count++;
   
   struct list * priority_list = ready_list_array[thread->priority];
-  if (list_empty (priority_list)) {
+
+  /* Create and push a new node to the ready_list_priority_index if the list 
+     for the corresponding index is empty */
+  if (list_empty (priority_list))
+    {
     struct thread_occupied_ready_list *index_elem = 
       malloc (sizeof (struct thread_occupied_ready_list));
     index_elem->occupied_index = thread->priority;
     list_insert_ordered (&ready_list_priority_index,
         &index_elem->occupied_index_list_elem, list_less_indexes, NULL); 
-  }
+    }
   
-  /* insert thread at the end of its corresponding priority list. */
+  /* Insert the thread at the end of its corresponding index. */
   list_push_back (priority_list, &thread->elem);
   // list_insert(list_back(priority_list), thread->elem); 
   
