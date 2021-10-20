@@ -97,6 +97,8 @@ thread_init (void)
 
   lock_init (&tid_lock);
 
+  list_init (ready_list_array);
+
   for (int i = 0; i < PRI_MAX; i++)  {
     struct list ready_list_temp;
     list_init (&ready_list_temp);
@@ -404,9 +406,8 @@ add_ready_thread (struct thread *thread)
         &index_elem->occupied_index_list_elem, list_less_indexes, NULL); 
     }
   
-  /* Insert the thread at the end of its corresponding index. */
+  /* Inserts the thread at the end of its corresponding index. */
   list_push_back (priority_list, &thread->elem);
-  // list_insert(list_back(priority_list), thread->elem); 
   
   intr_set_level (old_level);
 }
@@ -425,7 +426,7 @@ remove_ready_thread (struct thread *thread)
 
   struct list * priority_list = ready_list_array[thread->priority];
   /* Remove corresponding index if priority list becomes empty*/
-  if (list_empty(priority_list)) {
+  if (list_empty (priority_list)) {
     /* Find element with matching index */
     struct list_elem *index_elem_ptr = list_begin (&ready_list_priority_index);
 
@@ -433,16 +434,17 @@ remove_ready_thread (struct thread *thread)
       list_entry (index_elem_ptr, struct thread_occupied_ready_list,
         occupied_index_list_elem);
 
-    uint8_t elem_index_val = index_struct_ptr->occupied_index; 
+    /* Index value of the head of thread_occupied_ready_list */
+    uint8_t index_elem_val = index_struct_ptr->occupied_index; 
 
     /* Loop to find element to remove. */
-    while (elem_index_val != thread->priority) {
+    while (index_elem_val != thread->priority) {
       index_elem_ptr = list_next (index_elem_ptr);
 
       index_struct_ptr = list_entry (index_elem_ptr,
         struct thread_occupied_ready_list, occupied_index_list_elem);
       
-      elem_index_val = index_struct_ptr->occupied_index; 
+      index_elem_val = index_struct_ptr->occupied_index; 
     }
     list_remove (index_elem_ptr);
     free(index_struct_ptr);
