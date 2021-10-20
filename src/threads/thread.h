@@ -15,12 +15,13 @@ enum thread_status
   };
 
 /* A wrapper that includes the index of the occupied_ready_list
-   and a list_elem to put it in the list */
+   and a list_elem to put it in the list. */
 struct thread_occupied_ready_list
-   {
-      uint8_t occupied_index;
-      struct list_elem occupied_index_list_elem;
-   };
+  {
+    uint8_t occupied_index;
+    struct list_elem occupied_index_list_elem;
+  };
+
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
