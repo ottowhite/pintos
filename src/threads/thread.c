@@ -246,11 +246,18 @@ thread_create (const char *name, int priority,
 void
 thread_block (void) 
 {
+  enum intr_level old_level;
+
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
+  old_level = intr_disable ();
+
   thread_current ()->status = THREAD_BLOCKED;
   remove_ready_thread (thread_current ());
+  
+  intr_set_level (old_level);
+
   schedule ();
 }
 
