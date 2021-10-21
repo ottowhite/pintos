@@ -391,6 +391,8 @@ void
 add_ready_thread (struct thread *thread)
 {
   enum intr_level old_level;
+  
+  ASSERT (!intr_context ());
 
   old_level = intr_disable ();
   ready_threads_count++;
@@ -422,8 +424,6 @@ void
 remove_ready_thread (struct thread *thread)
 {
   enum intr_level old_level;
-  
-  ASSERT (!intr_context ());
 
   old_level = intr_disable ();
   ready_threads_count--;
