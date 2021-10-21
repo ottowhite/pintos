@@ -459,11 +459,13 @@ remove_ready_thread (struct thread *thread)
                                        struct thread_occupied_ready_list, 
                                        occupied_index_list_elem);
 
-        if (index_struct_ptr->occupied_index == thread->priority) break;
+        if (index_struct_ptr->occupied_index == thread->priority) 
+          {
+            list_remove (index_elem_ptr);
+            free (index_struct_ptr);
+            break;
+          }
     }
-
-  list_remove (index_elem_ptr);
-  free(index_struct_ptr);
   intr_set_level (old_level);
 }
 
