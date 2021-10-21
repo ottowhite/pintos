@@ -412,6 +412,10 @@ add_ready_thread (struct thread *thread)
   intr_set_level (old_level);
 }
 
+/* Removes thread from a list of ready threads.
+   It removes itself from the list of the corresponding priority index,
+   and if that list becomes empty it removes the corresponding priority node
+   from the ready_list_priority_index list */
 void
 remove_ready_thread (struct thread *thread)
 {
@@ -422,10 +426,10 @@ remove_ready_thread (struct thread *thread)
   old_level = intr_disable ();
   ready_threads_count--;
 
-  /* Removes thread from its corresponding priority list. */
+  /* Remove the thread from its corresponding priority list. */
   list_remove (&thread->elem);
-
   struct list * priority_list = ready_list_array[thread->priority];
+  
   /* Remove corresponding index if priority list becomes empty*/
   if (list_empty (priority_list))
     {
