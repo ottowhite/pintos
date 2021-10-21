@@ -391,8 +391,6 @@ void
 add_ready_thread (struct thread *thread)
 {
   enum intr_level old_level;
-  
-  ASSERT (!intr_context ());
 
   old_level = intr_disable ();
   ready_threads_count++;
@@ -678,7 +676,9 @@ thread_schedule_tail (struct thread *prev)
   /* Mark us as running. */
   cur->status = THREAD_RUNNING;
 
-  remove_ready_thread (thread_current ());
+  /* Idle thread was never in the ready thread list */
+  if (cur != idle_thread) 
+    remove_ready_thread (thread_current ());
 
   /* Start new time slice. */
   thread_ticks = 0;
