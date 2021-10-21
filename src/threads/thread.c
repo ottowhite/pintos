@@ -437,34 +437,34 @@ remove_ready_thread (struct thread *thread)
   list_remove (&thread->elem);
 
   /* Remove the corresponding index if priority list becomes empty*/
-  struct list * priority_list = ready_list_array[thread->priority];
-  if (list_empty (priority_list))
+  struct list *priority_list_ptr = ready_list_array[thread->priority];
+
+  // XXX: should thread_block() be called?
+  if (!list_empty (priority_list_ptr)) 
     {
-      /* Find the element with matching index */
-      struct list_elem *index_elem_ptr =
-        list_begin (&ready_list_priority_index);
-
-      struct thread_occupied_ready_list *index_struct_ptr =
-        list_entry (index_elem_ptr, struct thread_occupied_ready_list,
-          occupied_index_list_elem);
-
-      /* Index value of the head of thread_occupied_ready_list */
-      uint8_t index_elem_val = index_struct_ptr->occupied_index; 
-
-      /* Loop to find the element to remove. */
-      while (index_elem_val != thread->priority)
-        {
-          index_elem_ptr = list_next (index_elem_ptr);
-
-          index_struct_ptr = list_entry (index_elem_ptr,
-            struct thread_occupied_ready_list, occupied_index_list_elem);
-      
-          index_elem_val = index_struct_ptr->occupied_index; 
-        }
-        list_remove (index_elem_ptr);
-        free(index_struct_ptr);
+      intr_set_level(old_level);
+      return;
     }
-    intr_set_level (old_level);
+
+  struct list_elem                  *index_elem_ptr;
+  struct thread_occupied_ready_list *index_struct_ptr;
+
+  /* Loop to find the element to remove. */
+  for (index_elem_ptr = list_begin(&ready_list_priority_index);
+          index_elem_ptr != list_end(&ready_list_priority_index);
+          index_elem_ptr = list_next(index_elem_ptr)) 
+    {
+
+        index_struct_ptr = list_entry (index_elem_ptr,
+                                       struct thread_occupied_ready_list, 
+                                       occupied_index_list_elem);
+
+        if (index_struct_ptr->occupied_index == thread->priority) break;
+    }
+
+  list_remove (index_elem_ptr);
+  free(index_struct_ptr);
+  intr_set_level (old_level);
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
