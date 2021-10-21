@@ -400,7 +400,7 @@ add_ready_thread (struct thread *thread)
   old_level = intr_disable ();
   ready_threads_count++;
   
-  struct list * priority_list = ready_list_array[thread->priority];
+  struct list *priority_list = ready_list_array[thread->priority];
 
   /* Create and push a new node to the ready_list_priority_index if the list 
      for the corresponding index is empty */
@@ -639,14 +639,20 @@ next_thread_to_run (void)
   if (ready_threads_count == 0)
     return idle_thread;
   else {
-    struct list_elem *index_elem = list_front(&ready_list_priority_index);
-    uint8_t priority_index = list_entry (index_elem,
-      struct thread_occupied_ready_list, occupied_index_list_elem)
-        ->occupied_index;
-    struct list_elem *t_elem = list_front(ready_list_array[priority_index]);
-    struct thread *t = list_entry (t_elem, struct thread, elem);
-    remove_ready_thread(t);
-    return t; 
+
+    uint8_t priority_index 
+        = list_entry (list_front(&ready_list_priority_index),
+                      struct thread_occupied_ready_list, 
+                      occupied_index_list_elem)->occupied_index;
+
+    struct thread *thread_ptr 
+        = list_entry (list_front(ready_list_array[priority_index]),
+                      struct thread, 
+                      elem);
+
+    remove_ready_thread(thread_ptr);
+
+    return thread_ptr; 
   }
 }
 
