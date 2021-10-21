@@ -251,8 +251,8 @@ thread_block (void)
 
   old_level = intr_disable ();
 
-  thread_current ()->status = THREAD_BLOCKED;
   remove_ready_thread (thread_current ());
+  thread_current ()->status = THREAD_BLOCKED;
   
   intr_set_level (old_level);
 
@@ -480,7 +480,7 @@ thread_set_priority (int new_priority)
 
   remove_ready_thread(thread_current ());
   add_ready_thread(thread_current ());
-  
+
   intr_set_level (old_level);
 }
 
