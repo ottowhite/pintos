@@ -413,9 +413,9 @@ add_ready_thread (struct thread *thread)
 }
 
 /* Removes thread from a list of ready threads.
-   It removes itself from the list of the corresponding priority index,
-   and if that list becomes empty it removes the corresponding priority node
-   from the ready_list_priority_index list */
+   It removes itself from the list of the corresponding priority index, and
+   if that list becomes empty it removes the corresponding priority node from
+   the ready_list_priority_index list */
 void
 remove_ready_thread (struct thread *thread)
 {
@@ -428,12 +428,12 @@ remove_ready_thread (struct thread *thread)
 
   /* Remove the thread from its corresponding priority list. */
   list_remove (&thread->elem);
+
+  /* Remove the corresponding index if priority list becomes empty*/
   struct list * priority_list = ready_list_array[thread->priority];
-  
-  /* Remove corresponding index if priority list becomes empty*/
   if (list_empty (priority_list))
     {
-      /* Find element with matching index */
+      /* Find the element with matching index */
       struct list_elem *index_elem_ptr =
         list_begin (&ready_list_priority_index);
 
@@ -444,7 +444,7 @@ remove_ready_thread (struct thread *thread)
       /* Index value of the head of thread_occupied_ready_list */
       uint8_t index_elem_val = index_struct_ptr->occupied_index; 
 
-      /* Loop to find element to remove. */
+      /* Loop to find the element to remove. */
       while (index_elem_val != thread->priority)
         {
           index_elem_ptr = list_next (index_elem_ptr);
