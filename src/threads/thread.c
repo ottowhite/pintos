@@ -21,7 +21,7 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
-static struct list *ready_list_array[PRI_MAX];
+static struct list ready_list_array[PRI_MAX];
 static struct list ready_list_priority_index;
 
 static uint8_t ready_threads_count;
@@ -97,10 +97,8 @@ thread_init (void)
 
   lock_init (&tid_lock);
 
-  for (int i = 0; i < PRI_MAX; i++)  {
-    struct list ready_list_temp;
-    list_init (&ready_list_temp);
-    ready_list_array[i] = &ready_list_temp;
+  for (int i = 0; i < PRI_MAX; i++) {
+    list_init (&ready_list_array[i]);
   }
 
   ready_threads_count = 0;
@@ -114,6 +112,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  initial_thread->priority = PRI_DEFAULT;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -251,7 +250,7 @@ thread_block (void)
 
   old_level = intr_disable ();
 
-  remove_ready_thread (thread_current ());
+  // remove_ready_thread (thread_current ());
   thread_current ()->status = THREAD_BLOCKED;
   
   intr_set_level (old_level);
@@ -276,8 +275,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  add_ready_thread (t);
   t->status = THREAD_READY;
+  add_ready_thread (t);
   intr_set_level (old_level);
 }
 
@@ -398,9 +397,9 @@ add_ready_thread (struct thread *thread)
   old_level = intr_disable ();
   ready_threads_count++;
   
-  struct list *priority_list = ready_list_array[thread->priority];
+  struct list *priority_list = &ready_list_array[thread->priority];
 
-  /* Create and push a new node to the ready_list_priority_index if the list 
+  /* Create and push a new node to the &ready_list_priority_index if the list 
      for the corresponding index is empty */
   if (list_empty (priority_list))
     {
@@ -435,7 +434,7 @@ remove_ready_thread (struct thread *thread)
   list_remove (&thread->elem);
 
   /* Remove the corresponding index if priority list becomes empty*/
-  struct list *priority_list_ptr = ready_list_array[thread->priority];
+  struct list *priority_list_ptr = &ready_list_array[thread->priority];
 
   // XXX: should thread_block() be called?
   if (!list_empty (priority_list_ptr)) 
@@ -646,7 +645,7 @@ next_thread_to_run (void)
                       occupied_index_list_elem)->occupied_index;
 
     struct thread *thread_ptr 
-        = list_entry (list_front(ready_list_array[priority_index]),
+        = list_entry (list_front(&ready_list_array[priority_index]),
                       struct thread, 
                       elem);
 
