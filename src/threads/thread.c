@@ -638,7 +638,6 @@ next_thread_to_run (void)
   if (ready_threads_count == 0)
     return idle_thread;
   else {
-
     uint8_t priority_index 
         = list_entry (list_front(&ready_list_priority_index),
                       struct thread_occupied_ready_list, 
@@ -648,8 +647,6 @@ next_thread_to_run (void)
         = list_entry (list_front(&ready_list_array[priority_index]),
                       struct thread, 
                       elem);
-
-    remove_ready_thread(thread_ptr);
 
     return thread_ptr; 
   }
@@ -680,6 +677,8 @@ thread_schedule_tail (struct thread *prev)
 
   /* Mark us as running. */
   cur->status = THREAD_RUNNING;
+
+  remove_ready_thread (thread_current ());
 
   /* Start new time slice. */
   thread_ticks = 0;
