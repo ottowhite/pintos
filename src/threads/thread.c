@@ -465,6 +465,16 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  enum intr_level old_level;
+
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+
+  remove_ready_thread(thread_current ());
+  add_ready_thread(thread_current ());
+  
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
