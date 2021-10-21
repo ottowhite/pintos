@@ -23,6 +23,7 @@
 
 static struct list ready_list_array[PRI_MAX];
 static struct list ready_list_priority_index;
+static struct list dead_index_struct_list;
 
 static uint8_t ready_threads_count;
 
@@ -97,15 +98,17 @@ thread_init (void)
 
   lock_init (&tid_lock);
 
-  for (int i = 0; i < PRI_MAX; i++) {
-    list_init (&ready_list_array[i]);
-  }
-
   ready_threads_count = 0;
 
   /* list_init (&ready_list); */
   list_init (&ready_list_priority_index);
+  list_init (&dead_index_struct_list);
   list_init (&all_list);
+
+  for (int i = 0; i < PRI_MAX; i++) {
+    /* populating the ready_list_array with ready lists for each priority */
+    list_init (&ready_list_array[i]);
+  }
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -120,11 +123,20 @@ thread_init (void)
 void
 thread_start (void) 
 {
+  /* creating 64 index_elems so we don't have to malloc during interrupts */
+  for (int i = 0; i < PRI_MAX; i++) {
+    struct thread_occupied_ready_list *index_struct = 
+      malloc (sizeof (struct thread_occupied_ready_list));
+    index_struct->occupied_index = PRI_DEFAULT;
+    list_push_front (&dead_index_struct_list, 
+      &(index_struct->occupied_index_list_elem));
+  }
+
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
+    
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -399,15 +411,23 @@ add_ready_thread (struct thread *thread)
   
   struct list *priority_list = &ready_list_array[thread->priority];
 
-  /* Create and push a new node to the &ready_list_priority_index if the list 
-     for the corresponding index is empty */
+  /* Push a new node from the dead_index_struct_list to the 
+     &ready_list_priority_index if the list for the corresponding index is 
+     empty */
   if (list_empty (priority_list))
     {
-      struct thread_occupied_ready_list *index_elem = 
-        malloc (sizeof (struct thread_occupied_ready_list));
-      index_elem->occupied_index = thread->priority;
-      list_insert_ordered (&ready_list_priority_index,
-          &index_elem->occupied_index_list_elem, list_less_indexes, NULL); 
+      struct list_elem *index_struct_elem_ptr = 
+        list_pop_front (&dead_index_struct_list);
+      struct thread_occupied_ready_list *index_struct_ptr = list_entry (
+        index_struct_elem_ptr, 
+        struct thread_occupied_ready_list, 
+        occupied_index_list_elem);
+      index_struct_ptr->occupied_index = thread->priority;
+      list_insert_ordered (
+        &ready_list_priority_index,
+        &index_struct_ptr->occupied_index_list_elem, 
+        list_less_indexes, 
+        NULL); 
     }
   
   /* Inserts the thread at the end of its corresponding index. */
@@ -419,7 +439,8 @@ add_ready_thread (struct thread *thread)
 /* Removes thread from a list of ready threads.
    It removes itself from the list of the corresponding priority index, and
    if that list becomes empty it removes the corresponding priority node from
-   the ready_list_priority_index list */
+   the ready_list_priority_index list and pushes it into the 
+   dead_index_struct_ptr_list */
 void
 remove_ready_thread (struct thread *thread)
 {
@@ -457,7 +478,7 @@ remove_ready_thread (struct thread *thread)
         if (index_struct_ptr->occupied_index == thread->priority) 
           {
             list_remove (index_elem_ptr);
-            free (index_struct_ptr);
+            list_push_back (&dead_index_struct_list, index_elem_ptr);
             break;
           }
     }
