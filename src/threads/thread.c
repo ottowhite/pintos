@@ -97,8 +97,6 @@ thread_init (void)
 
   lock_init (&tid_lock);
 
-  list_init (ready_list_array);
-
   for (int i = 0; i < PRI_MAX; i++)  {
     struct list ready_list_temp;
     list_init (&ready_list_temp);
