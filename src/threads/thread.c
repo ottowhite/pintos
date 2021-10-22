@@ -77,6 +77,7 @@ static void add_ready_thread(struct thread *thread);
 static void remove_ready_thread(struct thread *thread);
 static bool list_less_indexes(const struct list_elem *a_ptr,
   const struct list_elem *b_ptr, void *aux);
+static void free_resources (void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -483,6 +484,16 @@ remove_ready_thread (struct thread *thread)
   intr_set_level (old_level);
 }
 
+/* Frees all malloced resources before the kernel thread terminates */
+void
+free_resources (void)
+{
+  /* freeing all structs in the dead_index_struct_list */
+  while (!list_empty (&dead_index_struct_list)) {
+    free (list_pop_front (&dead_index_struct_list));
+  }
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
@@ -584,6 +595,7 @@ kernel_thread (thread_func *function, void *aux)
 
   intr_enable ();       /* The scheduler runs with interrupts off. */
   function (aux);       /* Execute the thread function. */
+  free_resources();     /* Free all resources on the heap. */
   thread_exit ();       /* If function() returns, kill the thread. */
 }
 
