@@ -125,13 +125,14 @@ void
 thread_start (void) 
 {
   /* creating 64 index_elems so we don't have to malloc during interrupts */
-  for (int i = 0; i < PRI_MAX; i++) {
-    struct thread_occupied_ready_list *index_struct = 
-      malloc (sizeof (struct thread_occupied_ready_list));
-    index_struct->occupied_index = PRI_DEFAULT;
-    list_push_front (&dead_index_struct_list, 
-      &(index_struct->occupied_index_list_elem));
-  }
+  for (int i = 0; i < PRI_MAX; i++) 
+    {
+      struct thread_occupied_ready_list *index_struct = 
+        malloc (sizeof (struct thread_occupied_ready_list));
+      index_struct->occupied_index = PRI_DEFAULT;
+      list_push_front (&dead_index_struct_list, 
+        &(index_struct->occupied_index_list_elem));
+    }
 
   /* Create the idle thread. */
   struct semaphore idle_started;
@@ -489,9 +490,10 @@ void
 free_resources (void)
 {
   /* freeing all structs in the dead_index_struct_list */
-  while (!list_empty (&dead_index_struct_list)) {
-    free (list_pop_front (&dead_index_struct_list));
-  }
+  while (!list_empty (&dead_index_struct_list)) 
+    {
+      free (list_pop_front (&dead_index_struct_list));
+    }
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -595,7 +597,7 @@ kernel_thread (thread_func *function, void *aux)
 
   intr_enable ();       /* The scheduler runs with interrupts off. */
   function (aux);       /* Execute the thread function. */
-  free_resources();     /* Free all resources on the heap. */
+  free_resources ();    /* Free all resources on the heap. */
   thread_exit ();       /* If function() returns, kill the thread. */
 }
 
@@ -672,12 +674,9 @@ next_thread_to_run (void)
                       struct thread_occupied_ready_list, 
                       occupied_index_list_elem)->occupied_index;
 
-    struct thread *thread_ptr 
-        = list_entry (list_front(&ready_list_array[priority_index]),
-                      struct thread, 
-                      elem);
-
-    return thread_ptr; 
+    return list_entry (list_front(&ready_list_array[priority_index]),
+                       struct thread, 
+                       elem);
   }
 }
 
