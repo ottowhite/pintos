@@ -80,6 +80,7 @@ static int get_highest_thread_priority(void);
 static void thread_update_priority (void);
 static void update_load_avg (void);
 static void update_recent_cpu (void);
+static void thread_update_position (struct thread *t, void *aux);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -171,16 +172,30 @@ thread_tick (void)
     update_recent_cpu ();
   }
 
+  /* Update each threads priority, and all ready threads position */
+  if (timer_ticks () % 4 == 0) thread_foreach (&thread_update_position, NULL);
+
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 }
 
+static void
+thread_update_position (struct thread *t, void *aux) 
+{
+  if (t->status == THREAD_READY) {
+    remove_ready_thread (t);
+    thread_update_priority ();
+    add_ready_thread (t);
+  } else {
+    thread_update_priority ();
+  }
+}
 
 static void
 update_load_avg (void)
 {
-  fp32_t first_term = mul_fp_by_fp ((59/60), load_avg);
+  fp32_t first_term  = mul_fp_by_fp ((59/60), load_avg);
   fp32_t second_term = mul_fp_by_fp ((1/60), 
       (ready_threads_count + (idle_thread != THREAD_RUNNING)));
   load_avg = add_fp_and_fp (first_term, second_term);
