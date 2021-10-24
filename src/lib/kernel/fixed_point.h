@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 /* The types of the fixed_point representation */
-#define INT32 (int_32t)
-#define FP32  (int_32t)
+#define INT32 int_32t
+#define FP32  int_32t
 
 /* We will use the 17.14 fixed_point representation*/
 #define f (1 << 14)
