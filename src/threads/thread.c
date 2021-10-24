@@ -24,7 +24,7 @@
 static struct list ready_list_array[PRI_MAX];
 static uint64_t ready_queue_presence_flags;
 static uint8_t ready_threads_count;
-static int32_t load_avg;
+static fp32_t load_avg;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */

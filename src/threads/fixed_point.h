@@ -1,5 +1,5 @@
-#ifndef __LIB_KERNEL_FIXED_POINT_H
-#define __LIB_KERNEL_FIXED_POINT_H
+#ifndef THREADS_FIXED_POINT_H
+#define THREADS_FIXED_POINT_H
 
 #include <stdint.h>
 
