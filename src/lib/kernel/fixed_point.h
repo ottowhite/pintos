@@ -4,11 +4,12 @@
 #include <stdint.h>
 
 /* The types of the fixed_point representation */
-#define INT32 int_32t
-#define FP32  int_32t
+typedef fp32_t int32_t
+
+#define FRACTION_SEPARATOR 14
 
 /* We will use the 17.14 fixed_point representation*/
-#define F (1 << 14)
+#define F (1 << FRACTION_SEPARATOR)
 
 #define convert_int_to_fp(n)                 \
         ((n) * (F))                          \

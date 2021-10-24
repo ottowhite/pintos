@@ -441,8 +441,8 @@ thread_set_nice (int new_nice)
 {
   thread_current ()->nice = new_nice;
   thread_current ()->priority =
-    PRI_MAX - (thread_current ()->recent_cpu / 4)
-            - (thread_current ()->nice * 2);
+      PRI_MAX - (thread_current ()->recent_cpu / 4)
+              - (thread_current ()->nice * 2);
 
   // TODO: yield if the current thread no longer has the highest priority
 }
