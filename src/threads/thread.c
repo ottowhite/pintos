@@ -75,6 +75,7 @@ static tid_t allocate_tid (void);
 static void add_ready_thread(struct thread *thread);
 static void remove_ready_thread(struct thread *thread);
 static int get_highest_thread_priority(void);
+static void thread_update_priority (void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -692,6 +693,14 @@ static int
 get_highest_thread_priority(void) 
 {
   return PRI_MAX - __builtin_clzll(ready_queue_presence_flags);
+}
+
+static void
+thread_update_priority (void) 
+{
+  struct thread *t = thread_current ();
+  t->priority = PRI_MAX - (sub_fp_from_fp(div_fp_by_int(t->recent_cpu, 4), 
+                                          mul_fp_by_int(t->nice, 2)));
 }
 
 /* Offset of `stack' member within `struct thread'.
