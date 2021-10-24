@@ -12,6 +12,8 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
+#include "threads/fixed_point.h"
+#include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -76,6 +78,8 @@ static void add_ready_thread(struct thread *thread);
 static void remove_ready_thread(struct thread *thread);
 static int get_highest_thread_priority(void);
 static void thread_update_priority (void);
+static void update_load_avg (void);
+static void update_recent_cpu (void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -178,14 +182,15 @@ update_load_avg (void)
 {
   fp32_t first_term = mul_fp_by_fp ((59/60), load_avg);
   fp32_t second_term = mul_fp_by_fp ((1/60), 
-      (ready_threads_count + (idle_thread != THREAD_RUNNING));
+      (ready_threads_count + (idle_thread != THREAD_RUNNING)));
   load_avg = add_fp_and_fp (first_term, second_term);
 }
 
 static void
 update_recent_cpu (void)
 {
-
+  // TODO
+  return;
 }
 
 
