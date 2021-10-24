@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "lib/kernel/fixed_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -92,6 +93,10 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+
+    /* For the BSD Scheduler */
+    int nice;
+    int32_t recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
