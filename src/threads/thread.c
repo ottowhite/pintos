@@ -155,11 +155,37 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+  
+  /* The current thread's recent_cpu incremented by 1*/
+  t->recent_cpu++;
+
+  /* Once per second, the load_avg and recent_cpu are updated */
+  if (timer_ticks () % TIMER_FREQ == 0) {
+    update_load_avg ();
+    update_recent_cpu ();
+  }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 }
+
+
+static void
+update_load_avg (void)
+{
+  fp32_t first_term = mul_fp_by_fp ((59/60), load_avg);
+  fp32_t second_term = mul_fp_by_fp ((1/60), 
+      (ready_threads_count + (idle_thread != THREAD_RUNNING));
+  load_avg = add_fp_and_fp (first_term, second_term);
+}
+
+static void
+update_recent_cpu (void)
+{
+
+}
+
 
 /* Prints thread statistics. */
 void
@@ -206,6 +232,8 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
   t->nice = thread_current ()->nice;
+  t->recent_cpu = thread_current ()->recent_cpu;
+  
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
@@ -425,7 +453,7 @@ thread_set_priority (int new_priority)
 
   old_level = intr_disable ();
 
-  remove_ready_thread(thread_current ());
+  remove_ready_thread(thread_current ()); 
   add_ready_thread(thread_current ());
 
   intr_set_level (old_level);
