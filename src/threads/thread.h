@@ -96,7 +96,7 @@ struct thread
 
     /* For the BSD Scheduler */
     int nice;
-    int32_t recent_cpu;
+    fp32_t recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

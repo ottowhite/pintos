@@ -469,7 +469,7 @@ thread_get_load_avg (void)
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
-int
+fp32_t
 thread_get_recent_cpu (void) 
 {
   return convert_fp_to_int_rounding (thread_current ()->recent_cpu * 100);
