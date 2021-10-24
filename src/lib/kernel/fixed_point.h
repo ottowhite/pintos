@@ -43,4 +43,4 @@
 #define div_fp_by_int(x, n)                  \
         (x) / (n)                            \
 
-#endif __LIB_KERNEL_FIXED_POINT_H
+#endif
