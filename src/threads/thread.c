@@ -189,8 +189,9 @@ update_load_avg (void)
 static void
 update_recent_cpu (void)
 {
-  // TODO
-  return;
+  struct thread *t = thread_current ();
+  t->recent_cpu = (2 * load_avg) / (2 * load_avg + 1) 
+                  * t->recent_cpu + t->nice;
 }
 
 
