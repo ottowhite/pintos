@@ -483,7 +483,8 @@ thread_set_nice (int new_nice)
       PRI_MAX - (thread_current ()->recent_cpu / 4)
               - (thread_current ()->nice * 2);
 
-  // TODO: yield if the current thread no longer has the highest priority
+  if (thread_current ()->priority < get_highest_thread_priority()) 
+      thread_yield ();
 }
 
 /* Returns the current thread's nice value. */
