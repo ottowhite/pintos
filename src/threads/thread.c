@@ -465,14 +465,15 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  return convert_fp_to_int_rounding (load_avg * 100);
+  return convert_fp_to_int_rounding (mul_fp_by_int(load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
-fp32_t
+int
 thread_get_recent_cpu (void) 
 {
-  return convert_fp_to_int_rounding (thread_current ()->recent_cpu * 100);
+  return convert_fp_to_int_rounding (
+      mul_fp_by_int(thread_current ()->recent_cpu, 100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
