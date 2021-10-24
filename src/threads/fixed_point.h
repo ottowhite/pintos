@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 /* The types of the fixed_point representation */
-typedef fp32_t int32_t
+typedef int32_t fp32_t;
 
 #define FRACTION_SEPARATOR 14
 

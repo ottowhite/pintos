@@ -74,6 +74,7 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 static void add_ready_thread(struct thread *thread);
 static void remove_ready_thread(struct thread *thread);
+static int get_highest_thread_priority(void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -492,14 +493,15 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  return convert_fp_to_int_rounding (load_avg * 100);
+  return convert_fp_to_int_rounding (mul_fp_by_int(load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  return convert_fp_to_int_rounding (thread_current ()->recent_cpu * 100);
+  return convert_fp_to_int_rounding (
+      mul_fp_by_int(thread_current ()->recent_cpu, 100));
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -619,8 +621,7 @@ next_thread_to_run (void)
   if (ready_threads_count == 0)
     return idle_thread;
   else {
-    uint8_t priority_index 
-        = PRI_MAX - __builtin_clzll(ready_queue_presence_flags);
+    uint8_t priority_index = get_highest_thread_priority();
 
     return list_entry (list_front(&ready_list_array[priority_index]),
                        struct thread, 
@@ -713,6 +714,12 @@ allocate_tid (void)
   lock_release (&tid_lock);
 
   return tid;
+}
+
+static int 
+get_highest_thread_priority(void) 
+{
+  return PRI_MAX - __builtin_clzll(ready_queue_presence_flags);
 }
 
 /* Offset of `stack' member within `struct thread'.

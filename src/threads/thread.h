@@ -4,7 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "lib/kernel/fixed_point.h"
+#include "threads/fixed_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -96,7 +96,7 @@ struct thread
 
     /* For the BSD Scheduler */
     int nice;
-    int32_t recent_cpu;
+    fp32_t recent_cpu;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
