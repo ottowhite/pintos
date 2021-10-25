@@ -515,9 +515,7 @@ void
 thread_set_nice (int new_nice) 
 {
   thread_current ()->nice = new_nice;
-  thread_current ()->priority =
-      PRI_MAX - (div_fp_by_int (thread_current ()->recent_cpu, 4))
-              - (thread_current ()->nice * 2);
+  thread_update_priority (thread_current ());
 
   if (thread_current ()->priority < get_highest_thread_priority()) 
       thread_yield ();
@@ -769,6 +767,9 @@ get_highest_thread_priority(void)
 static void
 thread_update_priority (struct thread *t) 
 {
+  ASSERT (t->priority <= PRI_MAX);
+  ASSERT (t->priority >= PRI_MIN);
+
   t->priority = PRI_MAX - 
     (sub_fp_from_fp (div_fp_by_int (t->recent_cpu, 4), (t->nice * 2)));
 }
