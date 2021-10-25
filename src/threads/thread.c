@@ -769,8 +769,8 @@ get_highest_thread_priority(void)
 static void
 thread_update_priority (struct thread *t) 
 {
-  t->priority = PRI_MAX - (sub_fp_from_fp(div_fp_by_int(t->recent_cpu, 4), 
-                                          mul_fp_by_int(t->nice, 2)));
+  t->priority = PRI_MAX - 
+    (sub_fp_from_fp (div_fp_by_int (t->recent_cpu, 4), (t->nice * 2)));
 }
 
 /* Offset of `stack' member within `struct thread'.
