@@ -120,6 +120,7 @@ thread_init (void)
   initial_thread->priority = PRI_DEFAULT;
   initial_thread->nice = 0;
   initial_thread->recent_cpu = 0;
+  load_avg = 0;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -516,7 +517,7 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  return convert_fp_to_int_rounding (mul_fp_by_int(load_avg, 100));
+  return convert_fp_to_int_rounding (mul_fp_by_int (load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
