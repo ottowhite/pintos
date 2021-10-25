@@ -174,7 +174,8 @@ thread_tick (void)
   }
 
   /* Update each threads priority, and all ready threads position */
-  if (timer_ticks () % 4 == 0) thread_foreach (&thread_update_position, NULL);
+  if (timer_ticks () % TIME_SLICE == 0)
+    thread_foreach (&thread_update_position, NULL);
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -196,18 +197,31 @@ thread_update_position (struct thread *t, void *aux)
 static void
 update_load_avg (void)
 {
+  enum intr_level old_level;
+  
+  old_level = intr_disable ();
+
   fp32_t first_term  = mul_fp_by_fp ((59/60), load_avg);
   fp32_t second_term = mul_fp_by_fp ((1/60), 
       (ready_threads_count + (idle_thread != THREAD_RUNNING)));
   load_avg = add_fp_and_fp (first_term, second_term);
+
+  intr_set_level (old_level);
 }
 
 static void
 update_recent_cpu (void)
 {
+  enum intr_level old_level;
+
+  old_level = intr_disable ();
+
   struct thread *t = thread_current ();
-  t->recent_cpu = (2 * load_avg) / (2 * load_avg + 1) 
-                  * t->recent_cpu + t->nice;
+  fp32_t temp  = div_fp_by_fp ((2 * load_avg), (2 * load_avg + 1));
+  fp32_t first_term = mul_fp_by_fp (temp, t->recent_cpu);
+  t->recent_cpu = first_term + t->nice;
+
+  intr_set_level (old_level);
 }
 
 
@@ -253,12 +267,19 @@ thread_create (const char *name, int priority,
     return TID_ERROR;
 
   /* Initialize thread. */
-  init_thread (t, name, priority);
-  tid = t->tid = allocate_tid ();
-  t->nice = thread_current ()->nice;
-  t->recent_cpu = thread_current ()->recent_cpu;
-  
+  if (thread_mlfqs != true)
+    {
+    init_thread (t, name, priority);
+    } else
+      {
+        t->nice = thread_current ()->nice;
+        t->recent_cpu = thread_current ()->recent_cpu;
+        thread_update_priority ();
+        init_thread (t, name, thread_current ()->priority);
+      }
 
+  tid = t->tid = allocate_tid ();
+  
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
      member cannot be observed. */
