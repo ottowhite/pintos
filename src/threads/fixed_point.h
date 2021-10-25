@@ -23,7 +23,7 @@ typedef int32_t fp32_t;
 #define add_fp_and_fp(x, y)                       \
         (x) + (y)                                 \
 
-#define add_fp_and_int(x, y)                      \
+#define add_fp_and_int(x, n)                      \
         x + ((n) * (F))                           \
 
 #define sub_fp_from_fp(x, y)                      \

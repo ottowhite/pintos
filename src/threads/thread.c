@@ -77,9 +77,9 @@ static tid_t allocate_tid (void);
 static void add_ready_thread(struct thread *thread);
 static void remove_ready_thread(struct thread *thread);
 static int get_highest_thread_priority(void);
-static void thread_update_priority (void);
+static void thread_update_priority (struct thread *t);
 static void update_load_avg (void);
-static void update_recent_cpu (void);
+static void update_recent_cpu (struct thread *t, void *aux);
 static void thread_update_position (struct thread *t, void *aux);
 
 /* Initializes the threading system by transforming the code
@@ -116,11 +116,13 @@ thread_init (void)
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
-  initial_thread->tid = allocate_tid ();
-  initial_thread->priority = PRI_DEFAULT;
   initial_thread->nice = 0;
   initial_thread->recent_cpu = 0;
   load_avg = 0;
+
+  /* If the mlfqs flag is set to 1, recalculate the priority based on
+     nice and recent_cpu, hence set the priority to PRI_MAX */
+  if (thread_mlfqs == 1) initial_thread->priority = PRI_MAX;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -164,18 +166,26 @@ thread_tick (void)
   else
     kernel_ticks++;
   
-  /* The current thread's recent_cpu incremented by 1*/
-  t->recent_cpu++;
+  /* The current thread's recent_cpu incremented by 1,
+     if the idle thread is not running*/
+  if (idle_thread->status != THREAD_RUNNING)
+    add_fp_and_int (t->recent_cpu, 1);
+
+  enum intr_level old_level;
+  old_level = intr_disable ();
 
   /* Once per second, the load_avg and recent_cpu are updated */
-  if (timer_ticks () % TIMER_FREQ == 0) {
-    update_load_avg ();
-    update_recent_cpu ();
-  }
+  if (timer_ticks () % TIMER_FREQ == 0)
+    {
+      update_load_avg ();
+      thread_foreach (&update_recent_cpu, NULL);
+    }
 
   /* Update each threads priority, and all ready threads position */
   if (timer_ticks () % TIME_SLICE == 0)
     thread_foreach (&thread_update_position, NULL);
+  
+  intr_set_level (old_level);
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -185,43 +195,32 @@ thread_tick (void)
 static void
 thread_update_position (struct thread *t, void *aux) 
 {
-  if (t->status == THREAD_READY) {
-    remove_ready_thread (t);
-    thread_update_priority ();
-    add_ready_thread (t);
-  } else {
-    thread_update_priority ();
-  }
+  if (t->status == THREAD_READY)
+    {
+      remove_ready_thread (t);
+      thread_update_priority (t);
+      add_ready_thread (t);
+    } else
+      {
+        thread_update_priority (t);
+      }
 }
 
 static void
 update_load_avg (void)
 {
-  enum intr_level old_level;
-  
-  old_level = intr_disable ();
-
   fp32_t first_term  = mul_fp_by_fp ((59/60), load_avg);
   fp32_t second_term = mul_fp_by_fp ((1/60), 
-      (ready_threads_count + (idle_thread != THREAD_RUNNING)));
+      (ready_threads_count + (idle_thread->status != THREAD_RUNNING)));
   load_avg = add_fp_and_fp (first_term, second_term);
-
-  intr_set_level (old_level);
 }
 
 static void
-update_recent_cpu (void)
+update_recent_cpu (struct thread *t, void *aux)
 {
-  enum intr_level old_level;
-
-  old_level = intr_disable ();
-
-  struct thread *t = thread_current ();
   fp32_t temp  = div_fp_by_fp ((2 * load_avg), (2 * load_avg + 1));
   fp32_t first_term = mul_fp_by_fp (temp, t->recent_cpu);
   t->recent_cpu = first_term + t->nice;
-
-  intr_set_level (old_level);
 }
 
 
@@ -267,14 +266,14 @@ thread_create (const char *name, int priority,
     return TID_ERROR;
 
   /* Initialize thread. */
-  if (thread_mlfqs != true)
+  if (thread_mlfqs != 1)
     {
-    init_thread (t, name, priority);
+      init_thread (t, name, priority);
     } else
       {
         t->nice = thread_current ()->nice;
         t->recent_cpu = thread_current ()->recent_cpu;
-        thread_update_priority ();
+        thread_update_priority (t);
         init_thread (t, name, thread_current ()->priority);
       }
 
@@ -517,7 +516,7 @@ thread_set_nice (int new_nice)
 {
   thread_current ()->nice = new_nice;
   thread_current ()->priority =
-      PRI_MAX - (thread_current ()->recent_cpu / 4)
+      PRI_MAX - (div_fp_by_int (thread_current ()->recent_cpu, 4))
               - (thread_current ()->nice * 2);
 
   if (thread_current ()->priority < get_highest_thread_priority()) 
@@ -768,9 +767,8 @@ get_highest_thread_priority(void)
 }
 
 static void
-thread_update_priority (void) 
+thread_update_priority (struct thread *t) 
 {
-  struct thread *t = thread_current ();
   t->priority = PRI_MAX - (sub_fp_from_fp(div_fp_by_int(t->recent_cpu, 4), 
                                           mul_fp_by_int(t->nice, 2)));
 }
