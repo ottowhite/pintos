@@ -270,9 +270,9 @@ thread_create (const char *name, int priority,
     init_thread (t, name, priority);
     } else
       {
-        thread_update_priority ();
         t->nice = thread_current ()->nice;
         t->recent_cpu = thread_current ()->recent_cpu;
+        thread_update_priority ();
         init_thread (t, name, thread_current ()->priority);
       }
 
