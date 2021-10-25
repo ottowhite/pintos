@@ -173,7 +173,8 @@ thread_tick (void)
   }
 
   /* Update each threads priority, and all ready threads position */
-  if (timer_ticks () % TIME_SLICE == 0) thread_foreach (&thread_update_position, NULL);
+  if (timer_ticks () % TIME_SLICE == 0)
+    thread_foreach (&thread_update_position, NULL);
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
