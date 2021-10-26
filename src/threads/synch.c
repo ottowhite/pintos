@@ -31,6 +31,7 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/malloc.h"
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -179,6 +180,7 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+  list_init (lock->donated_pris);
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -196,6 +198,18 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  //old_level = intr_disable ();
+  if (lock->holder != NULL 
+    && lock->holder->priority != thread_current ()->priority) 
+    {
+      struct donated_pri *pri_ptr =
+        malloc (sizeof (struct donated_pri));
+      pri_ptr->priority = thread_current ()->priority;
+      list_push_front (lock->holder->donated_pris,
+                       &pri_ptr->thread_list_elem);
+      add_donated_priority (lock->holder, pri_ptr);
+    }
+  //intr_set_level (old_level);
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
@@ -231,6 +245,15 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  if (!list_empty (lock->donated_pris)) {
+    struct list_elem *elem = list_head (lock->donated_pris);
+    for (uint8_t i = 0; i < list_size (lock->donated_pris); i++)
+      {
+        list_remove (&list_entry (elem, struct donated_pri, lock_list_elem)->thread_list_elem);
+	elem = list_next (elem);
+      }
+    list_pop_front(lock->donated_pris);
+  }
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }

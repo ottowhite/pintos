@@ -77,8 +77,6 @@ static void remove_ready_thread (struct thread *thread);
 static bool list_less_donated_pri (const struct list_elem *a,
                                    const struct list_elem *b,
                                    void *aux);
-static void add_donated_priority(struct thread *donated_thread,
-                                 struct donated_pri donated_priority);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -428,10 +426,10 @@ list_less_donated_pri (const struct list_elem *a,
 
 /* Insert donated priority into donated_pris list. */
 void
-add_donated_priority (struct thread *donated_thread, struct donated_pri donated_priority) 
+add_donated_priority (struct thread *donated_thread, struct donated_pri *donated_priority) 
 {
   list_insert_ordered (donated_thread->donated_pris,
-                       &donated_priority.thread_list_elem,
+                       &donated_priority->thread_list_elem,
                        list_less_donated_pri,
 		       NULL);
 }
