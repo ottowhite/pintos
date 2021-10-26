@@ -200,18 +200,26 @@ thread_update_position (struct thread *t, void *aux)
       remove_ready_thread (t);
       thread_update_priority (t);
       add_ready_thread (t);
-    } else
-      {
-        thread_update_priority (t);
-      }
+    } 
+  else
+    {
+      thread_update_priority (t);
+    }
 }
 
 static void
 update_load_avg (void)
 {
-  fp32_t first_term  = mul_fp_by_fp ((59/60), load_avg);
-  fp32_t second_term = mul_fp_by_fp ((1/60), 
-      (ready_threads_count + (idle_thread->status != THREAD_RUNNING)));
+  fp32_t fraction1     = div_fp_by_fp(convert_int_to_fp(59),
+                                      convert_int_to_fp(60));
+  fp32_t fraction2     = div_fp_by_fp(convert_int_to_fp(1),
+                                      convert_int_to_fp(60));
+  fp32_t ready_threads = convert_int_to_fp(
+                          ready_threads_count + 
+                          (idle_thread->status != THREAD_RUNNING));
+  fp32_t first_term    = mul_fp_by_fp (fraction1, load_avg);
+  fp32_t second_term   = mul_fp_by_fp (fraction2, ready_threads);
+
   load_avg = add_fp_and_fp (first_term, second_term);
 }
 
