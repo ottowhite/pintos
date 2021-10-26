@@ -72,8 +72,13 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-static void add_ready_thread(struct thread *thread);
-static void remove_ready_thread(struct thread *thread);
+static void add_ready_thread (struct thread *thread);
+static void remove_ready_thread (struct thread *thread);
+static bool list_less_donated_pri (const struct list_elem *a,
+                                   const struct list_elem *b,
+                                   void *aux);
+static void add_donated_priority(struct thread *donated_thread,
+                                 struct donated_pri donated_priority);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -411,6 +416,26 @@ remove_ready_thread (struct thread *thread)
   intr_set_level (old_level);
 }
 
+bool
+list_less_donated_pri (const struct list_elem *a, 
+                       const struct list_elem *b,
+		       void *aux UNUSED)
+{
+  uint8_t pri_a = list_entry (a, struct donated_pri, thread_list_elem)->priority;
+  uint8_t pri_b = list_entry (b, struct donated_pri, thread_list_elem)->priority;
+  return pri_a < pri_b;
+}
+
+/* Insert donated priority into donated_pris list. */
+void
+add_donated_priority (struct thread *donated_thread, struct donated_pri donated_priority) 
+{
+  list_insert_ordered (donated_thread->donated_pris,
+                       &donated_priority.thread_list_elem,
+                       list_less_donated_pri,
+		       NULL);
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
@@ -432,7 +457,12 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  struct thread *curr = thread_current ();
+  if (list_empty (curr->donated_pris)) 
+    {
+      return curr->priority;
+    }
+  return list_entry (list_front (curr->donated_pris), struct donated_pri, thread_list_elem)->priority;
 }
 
 /* Sets the current thread's nice value to NICE. */

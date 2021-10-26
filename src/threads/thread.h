@@ -88,6 +88,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    struct list *donated_pris;          /* Ordered list of donated priorities. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -100,6 +101,13 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+  };
+
+struct donated_pri
+  {
+    uint8_t priority;                  /* Priority. */
+    struct list_elem lock_list_elem;   /* List element for list in lock. */
+    struct list_elem thread_list_elem; /* List element for list in receiving thread. */
   };
 
 /* If false (default), use round-robin scheduler.
