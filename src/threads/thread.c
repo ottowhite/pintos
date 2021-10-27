@@ -169,7 +169,7 @@ thread_tick (void)
   /* The current thread's recent_cpu incremented by 1,
      if the idle thread is not running*/
   if (idle_thread->status != THREAD_RUNNING)
-      add_fp_and_int (t->recent_cpu, 1);
+      t->recent_cpu = add_fp_and_int (t->recent_cpu, 1);
 
   enum intr_level old_level;
   old_level = intr_disable ();
@@ -214,12 +214,11 @@ update_load_avg (void)
                                       convert_int_to_fp(60));
   fp32_t fraction2     = div_fp_by_fp(convert_int_to_fp(1),
                                       convert_int_to_fp(60));
-  fp32_t ready_threads 
-      = convert_int_to_fp(ready_threads_count + 
-                          (idle_thread->status != THREAD_RUNNING));
+  int ready_threads = ready_threads_count + 
+                      (idle_thread->status != THREAD_RUNNING);
 
   load_avg = add_fp_and_fp (mul_fp_by_fp (fraction1, load_avg), 
-                            mul_fp_by_fp (fraction2, ready_threads));
+                            mul_fp_by_int (fraction2, ready_threads));
 }
 
 static void
@@ -781,8 +780,11 @@ thread_update_priority (struct thread *t)
   ASSERT (t->priority >= PRI_MIN);
 
   t->priority = PRI_MAX - 
-      convert_fp_to_int_rounding(div_fp_by_int (t->recent_cpu, 4)) - 
-      (t->nice * 2);
+      (convert_fp_to_int_rounding(div_fp_by_int (t->recent_cpu, 4)) +
+       t->nice * 2);
+
+  if      (t->priority > PRI_MAX) t->priority = PRI_MAX;
+  else if (t->priority < PRI_MIN) t->priority = PRI_MIN;
 }
 
 /* Offset of `stack' member within `struct thread'.
