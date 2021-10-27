@@ -195,16 +195,7 @@ thread_tick (void)
 static void
 thread_update_position (struct thread *t, void *aux) 
 {
-  if (t->status == THREAD_READY)
-    {
-      remove_ready_thread (t);
-      thread_update_priority (t);
-      add_ready_thread (t);
-    } 
-  else
-    {
-      thread_update_priority (t);
-    }
+  thread_update_priority (t);
 }
 
 static void
@@ -790,12 +781,26 @@ thread_update_priority (struct thread *t)
   ASSERT (t->priority <= PRI_MAX);
   ASSERT (t->priority >= PRI_MIN);
 
-  t->priority = PRI_MAX - 
+  int new_priority = PRI_MAX - 
       (convert_fp_to_int_rounding(div_fp_by_int (t->recent_cpu, 4)) +
        t->nice * 2);
 
-  if      (t->priority > PRI_MAX) t->priority = PRI_MAX;
-  else if (t->priority < PRI_MIN) t->priority = PRI_MIN;
+  if      (new_priority > PRI_MAX) new_priority = PRI_MAX;
+  else if (new_priority < PRI_MIN) new_priority = PRI_MIN;
+
+  if (t->priority != new_priority) 
+    {
+      if (t->status == THREAD_READY) 
+        {
+          remove_ready_thread (t);
+          t->priority = new_priority;
+          add_ready_thread (t);
+        }
+      else 
+        {
+          t->priority = new_priority;
+        }
+    }
 
   // printBinary(ready_queue_presence_flags);
   // printf("Current thread ready: %s\n", (t->status == THREAD_READY) ? "True" : "False");
