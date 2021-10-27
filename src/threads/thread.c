@@ -74,9 +74,6 @@ void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 static void add_ready_thread (struct thread *thread);
 static void remove_ready_thread (struct thread *thread);
-static bool list_less_donated_pri (const struct list_elem *a,
-                                   const struct list_elem *b,
-                                   void *aux);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -580,6 +577,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  list_init (t->donated_pris);
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();

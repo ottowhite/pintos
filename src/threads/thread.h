@@ -150,4 +150,8 @@ int thread_get_load_avg (void);
 void add_donated_priority (struct thread *donated_thread,
                            struct donated_pri *donated_priority);
 
+bool list_less_donated_pri (const struct list_elem *a,
+                            const struct list_elem *b,
+                            void *aux);
+
 #endif /* threads/thread.h */
