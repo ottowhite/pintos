@@ -214,13 +214,12 @@ update_load_avg (void)
                                       convert_int_to_fp(60));
   fp32_t fraction2     = div_fp_by_fp(convert_int_to_fp(1),
                                       convert_int_to_fp(60));
-  fp32_t ready_threads = convert_int_to_fp(
-                          ready_threads_count + 
+  fp32_t ready_threads 
+      = convert_int_to_fp(ready_threads_count + 
                           (idle_thread->status != THREAD_RUNNING));
-  fp32_t first_term    = mul_fp_by_fp (fraction1, load_avg);
-  fp32_t second_term   = mul_fp_by_fp (fraction2, ready_threads);
 
-  load_avg = add_fp_and_fp (first_term, second_term);
+  load_avg = add_fp_and_fp (mul_fp_by_fp (fraction1, load_avg), 
+                            mul_fp_by_fp (fraction2, ready_threads));
 }
 
 static void
@@ -782,7 +781,8 @@ thread_update_priority (struct thread *t)
   ASSERT (t->priority >= PRI_MIN);
 
   t->priority = PRI_MAX - 
-    (sub_fp_from_fp (div_fp_by_int (t->recent_cpu, 4), (t->nice * 2)));
+      convert_fp_to_int_rounding(div_fp_by_int (t->recent_cpu, 4)) - 
+      (t->nice * 2);
 }
 
 /* Offset of `stack' member within `struct thread'.
