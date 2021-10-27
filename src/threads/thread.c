@@ -425,7 +425,7 @@ list_less_donated_pri (const struct list_elem *a,
 void
 add_donated_priority (struct thread *donated_thread, struct donated_pri *donated_priority) 
 {
-  list_insert_ordered (donated_thread->donated_pris,
+  list_insert_ordered (&donated_thread->donated_pris,
                        &donated_priority->thread_list_elem,
                        list_less_donated_pri,
 		       NULL);
@@ -453,11 +453,11 @@ int
 thread_get_priority (void) 
 {
   struct thread *curr = thread_current ();
-  if (list_empty (curr->donated_pris)) 
+  if (list_empty (&curr->donated_pris)) 
     {
       return curr->priority;
     }
-  return list_entry (list_front (curr->donated_pris), struct donated_pri, thread_list_elem)->priority;
+  return list_entry (list_front (&curr->donated_pris), struct donated_pri, thread_list_elem)->priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -577,7 +577,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  list_init (t->donated_pris);
+  list_init (&t->donated_pris);
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
