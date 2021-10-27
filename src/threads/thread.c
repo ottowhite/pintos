@@ -169,7 +169,7 @@ thread_tick (void)
   /* The current thread's recent_cpu incremented by 1,
      if the idle thread is not running*/
   if (idle_thread->status != THREAD_RUNNING)
-    add_fp_and_int (t->recent_cpu, 1);
+      add_fp_and_int (t->recent_cpu, 1);
 
   enum intr_level old_level;
   old_level = intr_disable ();
@@ -226,9 +226,12 @@ update_load_avg (void)
 static void
 update_recent_cpu (struct thread *t, void *aux)
 {
-  fp32_t temp  = div_fp_by_fp ((2 * load_avg), (2 * load_avg + 1));
-  fp32_t first_term = mul_fp_by_fp (temp, t->recent_cpu);
-  t->recent_cpu = first_term + t->nice;
+  fp32_t coefficient 
+      = div_fp_by_fp (mul_fp_by_int(load_avg, 2), 
+                      add_fp_and_int(mul_fp_by_int(load_avg, 2), 1));
+
+  t->recent_cpu = add_fp_and_int(mul_fp_by_fp(coefficient, t->recent_cpu), 
+                                 t->nice);
 }
 
 
