@@ -278,13 +278,14 @@ thread_create (const char *name, int priority,
   if (thread_mlfqs != 1)
     {
       init_thread (t, name, priority);
-    } else
-      {
-        t->nice = thread_current ()->nice;
-        t->recent_cpu = thread_current ()->recent_cpu;
-        thread_update_priority (t);
-        init_thread (t, name, thread_current ()->priority);
-      }
+    } 
+  else
+    {
+      t->nice = thread_current ()->nice;
+      t->recent_cpu = thread_current ()->recent_cpu;
+      init_thread (t, name, 0);
+      thread_update_priority (t);
+    }
 
   tid = t->tid = allocate_tid ();
   
@@ -523,8 +524,11 @@ thread_get_priority (void)
 void
 thread_set_nice (int new_nice) 
 {
-  thread_current ()->nice = new_nice;
-  thread_update_priority (thread_current ());
+  if (thread_current ()->nice != new_nice)
+  {
+    thread_current ()->nice = new_nice;
+    thread_update_priority (thread_current ());
+  }
 
   if (thread_current ()->priority < get_highest_thread_priority()) 
       thread_yield ();
@@ -773,6 +777,13 @@ get_highest_thread_priority(void)
   return PRI_MAX - __builtin_clzll(ready_queue_presence_flags);
 }
 
+static void printBinary(uint64_t number) {
+  for (uint64_t i = 0, mask = (uint64_t) 1 << 63; i < 64; i++, number <<= 1) {
+    printf("%i", ((number & mask) == 0) ? 0 : 1);
+  }
+  printf("\n");
+}
+
 static void
 thread_update_priority (struct thread *t) 
 {
@@ -785,6 +796,12 @@ thread_update_priority (struct thread *t)
 
   if      (t->priority > PRI_MAX) t->priority = PRI_MAX;
   else if (t->priority < PRI_MIN) t->priority = PRI_MIN;
+
+  // printBinary(ready_queue_presence_flags);
+  // printf("Current thread ready: %s\n", (t->status == THREAD_READY) ? "True" : "False");
+  // printf("Current thread: %s\n", t->name);
+  // printf("New priority: %d\n", t->priority);
+
 }
 
 /* Offset of `stack' member within `struct thread'.
