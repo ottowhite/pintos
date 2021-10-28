@@ -253,7 +253,10 @@ lock_release (struct lock *lock)
   while (!list_empty (&lock->donated_pris))
     {
       struct list_elem *elem = list_pop_front (&lock->donated_pris);
-      list_remove (&list_entry (elem, struct donated_pri, lock_list_elem)->thread_list_elem);
+      struct donated_pri *donated_pri_ptr = 
+        list_entry (elem, struct donated_pri, lock_list_elem);
+      list_remove (&donated_pri_ptr->thread_list_elem);
+      free(donated_pri_ptr);
     }
 
   lock->holder = NULL;
