@@ -202,8 +202,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   enum intr_level old_level = intr_disable ();
-  if (lock->holder != NULL 
-    && lock->holder->priority != thread_current ()->priority) 
+  if (lock->holder != NULL) 
     {
       struct donated_pri *pri_ptr =
         malloc (sizeof (struct donated_pri));
