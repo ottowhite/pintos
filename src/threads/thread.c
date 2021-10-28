@@ -100,7 +100,7 @@ thread_init (void)
 
   list_init (&all_list);
 
-  for (int i = 0; i < PRI_MAX; i++) {
+  for (int i = 0; i <= PRI_MAX; i++) {
     /* populating the ready_list_array with ready lists for each priority */
     list_init (&ready_list_array[i]);
   }
