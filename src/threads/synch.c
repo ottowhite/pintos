@@ -211,7 +211,7 @@ lock_acquire (struct lock *lock)
       /* add donated priority to the lock's list and the holding thread's
          list */
       list_push_front (&lock->donated_pris,
-                       &pri_ptr->thread_list_elem);
+                       &pri_ptr->lock_list_elem);
       add_donated_priority (lock->holder, pri_ptr);
     }
   intr_set_level (old_level);
@@ -249,7 +249,7 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-
+  enum intr_level old_level = intr_disable ();
   while (!list_empty (&lock->donated_pris))
     {
       struct list_elem *elem = list_pop_front (&lock->donated_pris);
@@ -258,7 +258,7 @@ lock_release (struct lock *lock)
       list_remove (&donated_pri_ptr->thread_list_elem);
       free(donated_pri_ptr);
     }
-
+  intr_set_level (old_level);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
