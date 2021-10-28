@@ -251,15 +251,12 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  if (!list_empty (&lock->donated_pris)) {
-    struct list_elem *elem = list_head (&lock->donated_pris);
-    for (uint8_t i = 0; i < list_size (&lock->donated_pris); i++)
-      {
-        list_remove (&list_entry (elem, struct donated_pri, lock_list_elem)->thread_list_elem);
-	elem = list_next (elem);
-      }
-    list_pop_front(&lock->donated_pris);
-  }
+  while (!list_empty (&lock->donated_pris))
+    {
+      struct list_elem *elem = list_pop_front (&lock->donated_pris);
+      list_remove (&list_entry (elem, struct donated_pri, lock_list_elem)->thread_list_elem);
+    }
+
   lock->holder = NULL;
   sema_up (&lock->semaphore);
 }
