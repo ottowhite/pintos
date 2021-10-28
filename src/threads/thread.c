@@ -453,11 +453,17 @@ int
 thread_get_priority (void) 
 {
   struct thread *curr = thread_current ();
+  uint8_t base_priority = curr->priority;
   if (list_empty (&curr->donated_pris)) 
     {
-      return curr->priority;
+      return base_priority;
     }
-  return list_entry (list_front (&curr->donated_pris), struct donated_pri, thread_list_elem)->priority;
+  uint8_t highest_donated_priority = list_entry (
+    list_front (&curr->donated_pris), 
+    struct donated_pri, 
+    thread_list_elem)->priority;
+  return (base_priority < highest_donated_priority) ? highest_donated_priority :
+    base_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
