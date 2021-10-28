@@ -491,6 +491,8 @@ remove_ready_thread (struct thread *thread)
 void
 thread_set_priority (int new_priority) 
 {
+  if (thread_mlfqs) return;
+
   thread_current ()->priority = new_priority;
   enum intr_level old_level;
 
