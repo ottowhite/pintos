@@ -79,8 +79,8 @@ static void remove_ready_thread(struct thread *thread);
 static int get_highest_thread_priority(void);
 static void thread_update_priority (struct thread *t);
 static void update_load_avg (void);
-static void update_recent_cpu (struct thread *t, void *aux);
-static void thread_update_position (struct thread *t, void *aux);
+static void update_recent_cpu (struct thread *t);
+static void thread_update (struct thread *t, void *aux);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -166,24 +166,18 @@ thread_tick (void)
   else
     kernel_ticks++;
   
+  enum intr_level old_level;
+  old_level = intr_disable ();
+
   /* The current thread's recent_cpu incremented by 1,
      if the idle thread is not running*/
   if (idle_thread->status != THREAD_RUNNING)
       t->recent_cpu = add_fp_and_int (t->recent_cpu, 1);
 
-  enum intr_level old_level;
-  old_level = intr_disable ();
-
   /* Once per second, the load_avg and recent_cpu are updated */
-  if (timer_ticks () % TIMER_FREQ == 0)
-    {
-      update_load_avg ();
-      thread_foreach (&update_recent_cpu, NULL);
-    }
+  if (timer_ticks () % TIMER_FREQ == 0) update_load_avg ();
 
-  /* Update each threads priority, and all ready threads position */
-  if (timer_ticks () % TIME_SLICE == 0)
-    thread_foreach (&thread_update_position, NULL);
+  thread_foreach (&thread_update, NULL);
   
   intr_set_level (old_level);
 
@@ -192,10 +186,12 @@ thread_tick (void)
     intr_yield_on_return ();
 }
 
+
 static void
-thread_update_position (struct thread *t, void *aux) 
+thread_update (struct thread *t, void *aux) 
 {
-  thread_update_priority (t);
+  if (timer_ticks () % TIMER_FREQ == 0) update_recent_cpu (t);
+  if (timer_ticks () % TIME_SLICE == 0) thread_update_priority (t);
 }
 
 static void
@@ -213,7 +209,7 @@ update_load_avg (void)
 }
 
 static void
-update_recent_cpu (struct thread *t, void *aux)
+update_recent_cpu (struct thread *t)
 {
   fp32_t coefficient 
       = div_fp_by_fp (mul_fp_by_int(load_avg, 2), 
