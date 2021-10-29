@@ -167,20 +167,23 @@ thread_tick (void)
   else
     kernel_ticks++;
   
-  enum intr_level old_level;
-  old_level = intr_disable ();
-
+  if (thread_mlfqs)
+    {
   /* The current thread's recent_cpu incremented by 1,
      if the idle thread is not running*/
-  if (idle_thread->status != THREAD_RUNNING)
+      if (t != idle_thread)
       t->recent_cpu = add_fp_and_int (t->recent_cpu, 1);
 
   /* Once per second, the load_avg and recent_cpu are updated */
-  if (timer_ticks () % TIMER_FREQ == 0) update_load_avg ();
-
+      if (timer_ticks () % TIMER_FREQ == 0)
+        {
+          update_load_avg ();
   thread_foreach (&thread_update, NULL);
+        }
   
-  intr_set_level (old_level);
+      if (timer_ticks () % TIMER_FREQ != 0 && timer_ticks () % TIME_SLICE == 0)
+        thread_update_priority (t);
+    }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -191,8 +194,8 @@ thread_tick (void)
 static void
 thread_update (struct thread *t, void *aux) 
 {
-  if (timer_ticks () % TIMER_FREQ == 0) update_recent_cpu (t);
-  if (timer_ticks () % TIME_SLICE == 0) thread_update_priority (t);
+  update_recent_cpu (t);
+  thread_update_priority (t);
 }
 
 static void
