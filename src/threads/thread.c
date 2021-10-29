@@ -169,22 +169,22 @@ thread_tick (void)
   
   if (thread_mlfqs)
     {
-  /* The current thread's recent_cpu incremented by 1,
-     if the idle thread is not running*/
+      /* The current thread's recent_cpu incremented by 1,
+         if the idle thread is not running*/
       if (t != idle_thread)
       t->recent_cpu = add_fp_and_int (t->recent_cpu, 1);
 
-  /* Once per second, the load_avg and recent_cpu are updated */
+      /* Once per second, the load_avg and recent_cpu are updated */
       if (timer_ticks () % TIMER_FREQ == 0)
         {
           update_load_avg ();
-  thread_foreach (&thread_update, NULL);
+          thread_foreach (&thread_update, NULL);
         }
-  
+
       if (timer_ticks () % TIMER_FREQ != 0 && timer_ticks () % TIME_SLICE == 0)
         thread_update_priority (t);
     }
-
+  
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -522,10 +522,10 @@ thread_set_nice (int new_nice)
     thread_current ()->nice = new_nice;
     thread_update_priority (thread_current ());
   }
-
+  
   if (!list_array_is_empty ())
     {
-  if (thread_current ()->priority < get_highest_thread_priority()) 
+      if (thread_current ()->priority < get_highest_thread_priority())
         {
           if (intr_context ()) intr_yield_on_return;
           else thread_yield ();

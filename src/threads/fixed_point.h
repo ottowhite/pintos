@@ -14,7 +14,7 @@ typedef int32_t fp32_t;
 #define convert_int_to_fp(n)                          \
         ((n) * (F))                                   \
 
-#define convert_fp_to_int_towards_zero(x)             \
+#define convert_fp_to_int_floor(x)             \
         ((x) / (F))                                   \
 
 #define convert_fp_to_int_rounding(x)                 \
