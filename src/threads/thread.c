@@ -531,8 +531,8 @@ thread_set_nice (int new_nice)
 int
 thread_get_nice (void) 
 {
-  ASSERT (thread_current ()->nice < 20);
-  ASSERT (thread_current ()->nice > -20);
+  ASSERT (thread_current ()->nice < NICE_MAX);
+  ASSERT (thread_current ()->nice > NICE_MIN);
   return thread_current ()->nice;
 }
 
