@@ -229,9 +229,9 @@ lock_acquire (struct lock *lock)
       list_push_front (&lock->donated_pris, &pri_ptr->lock_list_elem);
       add_donated_priority (lock->holder, pri_ptr);
     }
-  intr_set_level (old_level);
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+  intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -265,6 +265,7 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
   enum intr_level old_level = intr_disable ();
+  bool donated_pris_removed = false;
   while (!list_empty (&lock->donated_pris))
     {
       struct list_elem *elem = list_pop_front (&lock->donated_pris);
@@ -272,10 +273,16 @@ lock_release (struct lock *lock)
         list_entry (elem, struct donated_pri, lock_list_elem);
       list_remove (&donated_pri_ptr->thread_list_elem);
       free(donated_pri_ptr);
+      donated_pris_removed = true;
     }
-  intr_set_level (old_level);
+  if (donated_pris_removed) 
+    {
+      remove_ready_thread (thread_current ());
+      add_ready_thread (thread_current ());
+    }
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+  intr_set_level (old_level);
 }
 
 /* Returns true if the current thread holds LOCK, false
