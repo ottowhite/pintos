@@ -765,6 +765,12 @@ get_highest_thread_priority(void)
   return PRI_MAX - __builtin_clzll(ready_queue_presence_flags);
 }
 
+static bool
+list_array_is_empty(void)
+{
+  return ready_queue_presence_flags & 0xffffffffffffffff;
+}
+
 static void
 thread_update_priority (struct thread *t) 
 {
