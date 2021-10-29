@@ -81,6 +81,7 @@ static void thread_update_priority (struct thread *t);
 static void update_load_avg (void);
 static void update_recent_cpu (struct thread *t);
 static void thread_update (struct thread *t, void *aux);
+static bool list_array_is_empty(void);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
