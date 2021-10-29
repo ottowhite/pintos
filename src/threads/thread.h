@@ -97,6 +97,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    struct list donated_pris;          /* Ordered list of donated priorities. */
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -113,6 +114,13 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+  };
+
+struct donated_pri
+  {
+    uint8_t priority;                  /* Priority. */
+    struct list_elem lock_list_elem;   /* List element for list in lock. */
+    struct list_elem thread_list_elem; /* List element for list in receiving thread. */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -133,6 +141,9 @@ tid_t thread_create (const char *name, int priority, thread_func *, void *);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
+void add_ready_thread (struct thread *thread);
+void remove_ready_thread (struct thread *thread);
+
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
@@ -145,11 +156,15 @@ typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
 int thread_get_priority (void);
+int thread_get_specific_priority (struct thread *);
 void thread_set_priority (int);
 
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void add_donated_priority (struct thread *donated_thread,
+                           struct donated_pri *donated_priority);
 
 #endif /* threads/thread.h */

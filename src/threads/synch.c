@@ -31,6 +31,12 @@
 #include <string.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/malloc.h"
+
+static bool list_less_thread_pri (const struct list_elem *a, 
+                                  const struct list_elem *b,
+		                              void *aux UNUSED);
+
 
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
@@ -68,7 +74,10 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_push_back (&sema->waiters, &thread_current ()->elem);
+      list_insert_ordered (&sema->waiters, 
+                           &thread_current ()->elem, 
+                           list_less_thread_pri, 
+                           NULL);
       thread_block ();
     }
   sema->value--;
@@ -116,7 +125,7 @@ sema_up (struct semaphore *sema)
   sema->value++;
   if (!list_empty (&sema->waiters)) 
     {
-      struct thread *thread = list_entry (list_pop_front (&sema->waiters),
+      struct thread *thread = list_entry (list_pop_back (&sema->waiters),
                                           struct thread, 
                                           elem);
       thread_unblock (thread);
@@ -190,6 +199,7 @@ lock_init (struct lock *lock)
 
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+  if (!thread_mlfqs) list_init (&lock->donated_pris);
 }
 
 /* Acquires LOCK, sleeping until it becomes available if
@@ -207,6 +217,27 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  enum intr_level old_level = intr_disable ();
+
+  if (!thread_mlfqs)
+    {
+      if (lock->holder != NULL) 
+        {
+          struct donated_pri *pri_ptr =
+            malloc (sizeof (struct donated_pri));
+          pri_ptr->priority = thread_current ()->priority;
+
+          /* add donated priority to the lock's list and the holding thread's
+             list */
+          list_push_front (&lock->donated_pris, &pri_ptr->lock_list_elem);
+          add_donated_priority (lock->holder, pri_ptr);
+        }
+      sema_down (&lock->semaphore);
+      lock->holder = thread_current ();
+      intr_set_level (old_level);
+      return;
+    }
+  intr_set_level (old_level);
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
@@ -241,9 +272,31 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-
-  lock->holder = NULL;
-  sema_up (&lock->semaphore);
+  if (!thread_mlfqs) 
+    {
+      enum intr_level old_level = intr_disable ();
+      bool donated_pris_removed = false;
+      while (!list_empty (&lock->donated_pris))
+        {
+          struct list_elem *elem = list_pop_front (&lock->donated_pris);
+          struct donated_pri *donated_pri_ptr = 
+            list_entry (elem, struct donated_pri, lock_list_elem);
+          list_remove (&donated_pri_ptr->thread_list_elem);
+          free(donated_pri_ptr);
+          donated_pris_removed = true;
+        }
+      if (donated_pris_removed) 
+        {
+          remove_ready_thread (thread_current ());
+          add_ready_thread (thread_current ());
+        }
+      lock->holder = NULL;
+      sema_up (&lock->semaphore);
+      intr_set_level (old_level);
+      return;
+    }
+    lock->holder = NULL;
+    sema_up (&lock->semaphore);
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -346,4 +399,15 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+static bool
+list_less_thread_pri (const struct list_elem *a, 
+                      const struct list_elem *b,
+		                  void *aux UNUSED)
+{
+  struct thread *thread_a = list_entry (a, struct thread, elem);
+  struct thread *thread_b = list_entry (b, struct thread, elem);
+  return thread_get_specific_priority(thread_a) < 
+         thread_get_specific_priority(thread_b);
 }

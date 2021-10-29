@@ -74,14 +74,18 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-static void add_ready_thread(struct thread *thread);
-static void remove_ready_thread(struct thread *thread);
+
+void add_ready_thread(struct thread *thread);
+void remove_ready_thread(struct thread *thread);
 static int get_highest_thread_priority(void);
 static void thread_update_priority (struct thread *t);
 static void update_load_avg (void);
 static void update_recent_cpu (struct thread *t);
 static void thread_update (struct thread *t, void *aux);
 static bool list_array_is_empty(void);
+static bool list_less_donated_pri (const struct list_elem *a, 
+                                   const struct list_elem *b,
+		                   void *aux UNUSED);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -304,6 +308,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  thread_yield ();
 
   return tid;
 }
@@ -453,10 +458,12 @@ add_ready_thread (struct thread *thread)
   old_level = intr_disable ();
   ready_threads_count++;
   
-  struct list *priority_list = &ready_list_array[thread->priority];
+  struct list *priority_list = 
+    &ready_list_array[thread_get_specific_priority(thread)];
 
   if (list_empty (priority_list)) 
-      ready_queue_presence_flags |= ((uint64_t) 1 << thread->priority);
+      ready_queue_presence_flags |= 
+        ((uint64_t) 1 << thread_get_specific_priority(thread));
   
   /* Inserts the thread at the end of its corresponding index. */
   list_push_back (priority_list, &thread->elem);
@@ -478,13 +485,39 @@ remove_ready_thread (struct thread *thread)
   list_remove (&thread->elem);
 
   /* Remove the corresponding index if priority list becomes empty*/
-  struct list *priority_list_ptr = &ready_list_array[thread->priority];
+  struct list *priority_list_ptr = 
+    &ready_list_array[thread_get_specific_priority (thread)];
 
   /* unset the ready queue presence flag */
   if (list_empty (priority_list_ptr)) 
-      ready_queue_presence_flags &= ~((uint64_t) 1 << thread->priority);
+      ready_queue_presence_flags &= 
+        ~((uint64_t) 1 << thread_get_specific_priority (thread));
 
   intr_set_level (old_level);
+}
+
+bool
+list_less_donated_pri (const struct list_elem *a, 
+                       const struct list_elem *b,
+		       void *aux UNUSED)
+{
+  uint8_t pri_a = list_entry (a, struct donated_pri, thread_list_elem)->priority;
+  uint8_t pri_b = list_entry (b, struct donated_pri, thread_list_elem)->priority;
+  return pri_a < pri_b;
+}
+
+/* Insert donated priority into donated_pris list. */
+void
+add_donated_priority (struct thread *donated_thread, struct donated_pri *donated_priority) 
+{
+  enum intr_level old_interrupt_level = intr_disable();
+  remove_ready_thread(donated_thread);
+  list_insert_ordered (&donated_thread->donated_pris,
+                       &donated_priority->thread_list_elem,
+                       list_less_donated_pri,
+		                   NULL);
+  add_ready_thread(donated_thread);
+  intr_set_level(old_interrupt_level);
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -510,7 +543,29 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  struct thread *curr = thread_current ();
+  return thread_get_specific_priority (curr);
+}
+
+/* Returns the current thread's priority. */
+int
+thread_get_specific_priority (struct thread *thread_ptr) 
+{
+  uint8_t base_priority = thread_ptr->priority;
+  if (thread_mlfqs) 
+    {
+      return base_priority;
+    }
+  if (list_empty (&thread_ptr->donated_pris)) 
+    {
+      return base_priority;
+    }
+  uint8_t highest_donated_priority = list_entry (
+    list_back (&thread_ptr->donated_pris), 
+    struct donated_pri, 
+    thread_list_elem)->priority;
+  return (base_priority < highest_donated_priority) ? highest_donated_priority :
+    base_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -643,6 +698,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  if (!thread_mlfqs) list_init (&t->donated_pris);
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
