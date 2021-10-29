@@ -432,7 +432,7 @@ add_donated_priority (struct thread *donated_thread, struct donated_pri *donated
   list_insert_ordered (&donated_thread->donated_pris,
                        &donated_priority->thread_list_elem,
                        list_less_donated_pri,
-		       NULL);
+		                   NULL);
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -471,7 +471,7 @@ thread_get_specific_priority (struct thread *thread_ptr)
       return base_priority;
     }
   uint8_t highest_donated_priority = list_entry (
-    list_front (&thread_ptr->donated_pris), 
+    list_back (&thread_ptr->donated_pris), 
     struct donated_pri, 
     thread_list_elem)->priority;
   return (base_priority < highest_donated_priority) ? highest_donated_priority :
