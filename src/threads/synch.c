@@ -229,9 +229,9 @@ lock_acquire (struct lock *lock)
       list_push_front (&lock->donated_pris, &pri_ptr->lock_list_elem);
       add_donated_priority (lock->holder, pri_ptr);
     }
-  intr_set_level (old_level);
   sema_down (&lock->semaphore);
   lock->holder = thread_current ();
+  intr_set_level (old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -280,9 +280,9 @@ lock_release (struct lock *lock)
       remove_ready_thread (thread_current ());
       add_ready_thread (thread_current ());
     }
-  intr_set_level (old_level);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+  intr_set_level (old_level);
 }
 
 /* Returns true if the current thread holds LOCK, false
