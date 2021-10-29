@@ -33,6 +33,11 @@
 #include "threads/thread.h"
 #include "threads/malloc.h"
 
+static bool list_less_thread_pri (const struct list_elem *a, 
+                                  const struct list_elem *b,
+		                              void *aux UNUSED);
+
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -71,7 +76,7 @@ sema_down (struct semaphore *sema)
     {
       list_insert_ordered (&sema->waiters, 
                            &thread_current ()->elem, 
-                           list_less_donated_pri, 
+                           list_less_thread_pri, 
                            NULL);
       thread_block ();
     }
@@ -210,8 +215,7 @@ lock_acquire (struct lock *lock)
 
       /* add donated priority to the lock's list and the holding thread's
          list */
-      list_push_front (&lock->donated_pris,
-                       &pri_ptr->lock_list_elem);
+      list_push_front (&lock->donated_pris, &pri_ptr->lock_list_elem);
       add_donated_priority (lock->holder, pri_ptr);
     }
   intr_set_level (old_level);
@@ -363,4 +367,15 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+bool
+list_less_thread_pri (const struct list_elem *a, 
+                      const struct list_elem *b,
+		                  void *aux UNUSED)
+{
+  struct thread *thread_a = list_entry (a, struct thread, elem);
+  struct thread *thread_b = list_entry (b, struct thread, elem);
+  return thread_get_specific_priority(thread_a) < 
+         thread_get_specific_priority(thread_b);
 }

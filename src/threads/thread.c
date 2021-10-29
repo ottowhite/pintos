@@ -453,13 +453,20 @@ int
 thread_get_priority (void) 
 {
   struct thread *curr = thread_current ();
-  uint8_t base_priority = curr->priority;
-  if (list_empty (&curr->donated_pris)) 
+  return thread_get_specific_priority (curr);
+}
+
+/* Returns the current thread's priority. */
+int
+thread_get_specific_priority (struct thread *thread_ptr) 
+{
+  uint8_t base_priority = thread_ptr->priority;
+  if (list_empty (&thread_ptr->donated_pris)) 
     {
       return base_priority;
     }
   uint8_t highest_donated_priority = list_entry (
-    list_front (&curr->donated_pris), 
+    list_front (&thread_ptr->donated_pris), 
     struct donated_pri, 
     thread_list_elem)->priority;
   return (base_priority < highest_donated_priority) ? highest_donated_priority :
