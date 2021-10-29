@@ -377,10 +377,12 @@ add_ready_thread (struct thread *thread)
   old_level = intr_disable ();
   ready_threads_count++;
   
-  struct list *priority_list = &ready_list_array[thread->priority];
+  struct list *priority_list = 
+    &ready_list_array[thread_get_specific_priority(thread)];
 
   if (list_empty (priority_list)) 
-      ready_queue_presence_flags |= ((uint64_t) 1 << thread->priority);
+      ready_queue_presence_flags |= 
+        ((uint64_t) 1 << thread_get_specific_priority(thread));
   
   /* Inserts the thread at the end of its corresponding index. */
   list_push_back (priority_list, &thread->elem);
@@ -402,11 +404,13 @@ remove_ready_thread (struct thread *thread)
   list_remove (&thread->elem);
 
   /* Remove the corresponding index if priority list becomes empty*/
-  struct list *priority_list_ptr = &ready_list_array[thread->priority];
+  struct list *priority_list_ptr = 
+    &ready_list_array[thread_get_specific_priority (thread)];
 
   /* unset the ready queue presence flag */
   if (list_empty (priority_list_ptr)) 
-      ready_queue_presence_flags &= ~((uint64_t) 1 << thread->priority);
+      ready_queue_presence_flags &= 
+        ~((uint64_t) 1 << thread_get_specific_priority (thread));
 
   intr_set_level (old_level);
 }
