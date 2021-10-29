@@ -531,7 +531,6 @@ thread_set_nice (int new_nice)
 int
 thread_get_nice (void) 
 {
-  // TODO: 20 as NICE_MAX, -20 as NICE_MIN
   ASSERT (thread_current ()->nice < 20);
   ASSERT (thread_current ()->nice > -20);
   return thread_current ()->nice;
@@ -770,13 +769,6 @@ get_highest_thread_priority(void)
   return PRI_MAX - __builtin_clzll(ready_queue_presence_flags);
 }
 
-static void printBinary(uint64_t number) {
-  for (uint64_t i = 0, mask = (uint64_t) 1 << 63; i < 64; i++, number <<= 1) {
-    printf("%i", ((number & mask) == 0) ? 0 : 1);
-  }
-  printf("\n");
-}
-
 static void
 thread_update_priority (struct thread *t) 
 {
@@ -803,12 +795,6 @@ thread_update_priority (struct thread *t)
           t->priority = new_priority;
         }
     }
-
-  // printBinary(ready_queue_presence_flags);
-  // printf("Current thread ready: %s\n", (t->status == THREAD_READY) ? "True" : "False");
-  // printf("Current thread: %s\n", t->name);
-  // printf("New priority: %d\n", t->priority);
-
 }
 
 /* Offset of `stack' member within `struct thread'.
