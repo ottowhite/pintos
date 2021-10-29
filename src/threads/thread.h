@@ -25,8 +25,13 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+
+/* Thread nice values */
 #define NICE_MIN (-20)                  /* Lowest nice value */
 #define NICE_MAX 20                     /* Highest nice value */
+
+/* 64 bit mask */
+#define BIT_MASK (0xffffffffffffffff)
 
 /* A kernel thread or user process.
 

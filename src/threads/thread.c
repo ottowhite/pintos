@@ -778,7 +778,7 @@ get_highest_thread_priority(void)
 static bool
 list_array_is_empty(void)
 {
-  return ready_queue_presence_flags & 0xffffffffffffffff;
+  return ready_queue_presence_flags & BIT_MASK;
 }
 
 static void
