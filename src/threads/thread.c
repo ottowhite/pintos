@@ -772,8 +772,8 @@ thread_update_priority (struct thread *t)
   ASSERT (t->priority >= PRI_MIN);
 
   int new_priority = PRI_MAX - 
-      (convert_fp_to_int_rounding (div_fp_by_int (t->recent_cpu, 4)) +
-       t->nice * 2);
+      convert_fp_to_int_floor (div_fp_by_int (t->recent_cpu, 4))
+       - (t->nice * 2);
 
   if      (new_priority > PRI_MAX) new_priority = PRI_MAX;
   else if (new_priority < PRI_MIN) new_priority = PRI_MIN;
