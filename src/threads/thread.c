@@ -122,7 +122,7 @@ thread_init (void)
 
   /* If the mlfqs flag is set to 1, recalculate the priority based on
      nice and recent_cpu, hence set the priority to PRI_MAX */
-  if (thread_mlfqs == 1) initial_thread->priority = PRI_MAX;
+  if (thread_mlfqs) initial_thread->priority = PRI_MAX;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
