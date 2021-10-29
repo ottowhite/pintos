@@ -72,8 +72,6 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-static void add_ready_thread (struct thread *thread);
-static void remove_ready_thread (struct thread *thread);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -429,10 +427,14 @@ list_less_donated_pri (const struct list_elem *a,
 void
 add_donated_priority (struct thread *donated_thread, struct donated_pri *donated_priority) 
 {
+  enum intr_level old_interrupt_level = intr_disable();
+  remove_ready_thread(donated_thread);
   list_insert_ordered (&donated_thread->donated_pris,
                        &donated_priority->thread_list_elem,
                        list_less_donated_pri,
 		                   NULL);
+  add_ready_thread(donated_thread);
+  intr_set_level(old_interrupt_level);
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -457,7 +459,6 @@ int
 thread_get_priority (void) 
 {
   struct thread *curr = thread_current ();
-  if (thread_mlfqs) return curr->priority;
   return thread_get_specific_priority (curr);
 }
 
@@ -466,6 +467,10 @@ int
 thread_get_specific_priority (struct thread *thread_ptr) 
 {
   uint8_t base_priority = thread_ptr->priority;
+  if (thread_mlfqs) 
+    {
+      return base_priority;
+    }
   if (list_empty (&thread_ptr->donated_pris)) 
     {
       return base_priority;

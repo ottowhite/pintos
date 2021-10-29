@@ -254,6 +254,7 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
   enum intr_level old_level = intr_disable ();
+  bool donated_pris_removed = false;
   while (!list_empty (&lock->donated_pris))
     {
       struct list_elem *elem = list_pop_front (&lock->donated_pris);
@@ -261,6 +262,12 @@ lock_release (struct lock *lock)
         list_entry (elem, struct donated_pri, lock_list_elem);
       list_remove (&donated_pri_ptr->thread_list_elem);
       free(donated_pri_ptr);
+      donated_pris_removed = true;
+    }
+  if (donated_pris_removed) 
+    {
+      remove_ready_thread (thread_current ());
+      add_ready_thread (thread_current ());
     }
   intr_set_level (old_level);
   lock->holder = NULL;

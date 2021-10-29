@@ -128,6 +128,9 @@ tid_t thread_create (const char *name, int priority, thread_func *, void *);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
+void add_ready_thread (struct thread *thread);
+void remove_ready_thread (struct thread *thread);
+
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
