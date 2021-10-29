@@ -457,6 +457,7 @@ int
 thread_get_priority (void) 
 {
   struct thread *curr = thread_current ();
+  if (thread_mlfqs) return curr->priority;
   return thread_get_specific_priority (curr);
 }
 
