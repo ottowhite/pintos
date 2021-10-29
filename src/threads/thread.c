@@ -520,8 +520,14 @@ thread_set_nice (int new_nice)
     thread_update_priority (thread_current ());
   }
 
+  if (!list_array_is_empty ())
+    {
   if (thread_current ()->priority < get_highest_thread_priority()) 
-      thread_yield ();
+        {
+          if (intr_context ()) intr_yield_on_return;
+          else thread_yield ();
+        }
+    }
 }
 
 /* Returns the current thread's nice value. */
