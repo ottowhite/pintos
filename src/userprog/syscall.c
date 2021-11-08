@@ -48,9 +48,7 @@ syscall_init (void)
 }
 
 /* Allows user processes to ask the kernel to execute operations
-
    that they don't have permission to execute themselves */
-
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 
