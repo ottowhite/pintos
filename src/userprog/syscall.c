@@ -47,9 +47,33 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
+/* Allows user processes to ask the kernel to execute operations
+
+   that they don't have permission to execute themselves */
+
 static void
+
 syscall_handler (struct intr_frame *f UNUSED) 
+
 {
+  /* Verification before dereference */
+   uint32_t *esp = (uint32_t *)verify_ptr (f->esp);
+
+  /* Read the syscall number at the stack pointer (f->esp) */
+  int syscall_no = *esp;
+  ASSERT (0 <= syscall_no && syscall_no < NUM_SYSCALL);
+
+  /* Read the arguments above the stack pointer */
+
+  /* Pass these to the appropriate function */
+  syscall_func *helper = syscall_func_map[syscall_no];
+
+  ASSERT (helper != NULL);
+
+  /* Return the result to f->eax */
+  f->eax = helper (esp);
+
   printf ("system call!\n");
   thread_exit ();
 }
+
