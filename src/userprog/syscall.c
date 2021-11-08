@@ -114,8 +114,6 @@ verify_ptr (void *ptr)
     return;
 
   /* If this point is reached the pointer is not valid. Exit with -1 */
-  // free the current processes resources
-  process_exit (); 
   syscall_exit (-1);
   NOT_REACHED ();
 }
@@ -127,11 +125,16 @@ syscall_halt (void)
   /* TODO implementation */
 }
 
-/* SYS_EXIT */
+/* SYS_EXIT 
+ * Free current process resources and output process name and exit code.*/
 static void
 syscall_exit (int status)
 {
-  /* TODO implementation */
+	char name[16];
+	strlcpy (name, thread_current ()->name, sizeof name);
+	process_exit ();
+	// can we use printf here? or de we use the file system
+	printf ("%s: exit(%d)\n", name, status);
 }
 
 /* SYS_EXEC */
