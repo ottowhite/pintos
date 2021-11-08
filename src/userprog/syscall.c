@@ -6,6 +6,8 @@
 
 static void syscall_handler (struct intr_frame *);
 
+typedef uint32_t syscall_func (void *args[]);
+
 /* System call helper functions */
 static syscall_func syscall_halt NO_RETURN;
 static syscall_func syscall_exit NO_RETURN;
@@ -22,7 +24,7 @@ static syscall_func syscall_tell;
 static syscall_func syscall_close;
 
 
-static void *syscall_func_map[] = {
+static syscall_func *syscall_func_map[] = {
   /* SYS_HALT */      &syscall_halt,
   /* SYS_EXIT */      &syscall_exit,
   /* SYS_EXEC */      &syscall_exec, 
@@ -52,16 +54,16 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 {
   /* Verification before dereference */
-   uint32_t *esp = (uint32_t *)verify_ptr (f->esp);
+  verify_ptr (f->esp);
 
   /* Read the syscall number at the stack pointer (f->esp) */
   int syscall_no = *esp;
   ASSERT (0 <= syscall_no && syscall_no < NUM_SYSCALL);
 
   /* Read the arguments above the stack pointer */
-
+  
   /* Pass these to the appropriate function */
-  syscall_func *helper = syscall_func_map[syscall_no];
+  uint32_t *helper = uint32_t_map[syscall_no];
 
   ASSERT (helper != NULL);
 
@@ -88,4 +90,108 @@ verify_ptr (void *ptr)
   /* If this point is reached the pointer is not valid. Exit with -1 */
   exit_process_in_syscall (-1);
   NOT_REACHED ();
+}
+
+/* SYS_HALT */
+static uint32_t
+syscall_halt (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_EXIT */
+static uint32_t
+syscall_exit (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_EXEC */
+static uint32_t
+syscall_exec (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_WAIT */
+static uint32_t
+syscall_wait (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_CREATE */
+static uint32_t
+syscall_create (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_REMOVE */
+static uint32_t
+syscall_remove (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_OPEN */
+static uint32_t
+syscall_open (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_FILESIZE */
+static uint32_t
+syscall_filesize (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_READ */
+static uint32_t
+syscall_read (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_WRITE */
+static uint32_t
+syscall_write (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_SEEK */
+static uint32_t
+syscall_seek (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_TELL */
+static uint32_t
+syscall_tell (void *args[])
+{
+  /* TODO implementation */
+  return;
+}
+
+/* SYS_CLOSE */
+static uint32_t
+syscall_close (void *args[])
+{
+  /* TODO implementation */
+  return;
 }
