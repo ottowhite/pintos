@@ -39,12 +39,15 @@ syscall_handler (struct intr_frame *f UNUSED)
   verify_ptr (f->esp);
   int syscall_no = *((int *) f->esp);
 
-  // Ensure our syscall_no refers to a defined system call
+  /* Ensure our syscall_no refers to a defined system call */
   ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_CLOSE);
 
+  /* Read the argc and function_ptr values from our syscall_func_map */
   int   argc         = syscall_func_map[syscall_no].argc;
   void *function_ptr = syscall_func_map[syscall_no].function_ptr;
 
+  /* Verify the necessary number of arguments before passing function
+   * invocation to invoke_function */
   verify_args (argc, f->esp);
   f->eax = invoke_function (function_ptr, argc, f->esp);
 }
