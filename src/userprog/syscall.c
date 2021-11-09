@@ -139,11 +139,16 @@ syscall_halt (void)
 static void
 syscall_exit (int status UNUSED)
 {
+	// Retrieve name of process.
 	char name[16];
 	strlcpy (name, thread_current ()->name, sizeof name);
 	process_exit ();
-	// can we use printf here? or de we use the file system
-	printf ("%s: exit(%d)\n", name, status);
+	
+	// Generate ourput string.
+	uint8_t buf_size = 32; //is size of 25 safe?
+	char str[buf_size];
+	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) == 0);
+	syscall_write (1, str, buf_size);
 }
 
 /* SYS_EXEC */
