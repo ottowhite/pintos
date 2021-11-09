@@ -51,27 +51,43 @@ syscall_init (void)
    that they don't have permission to execute themselves */
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
-
 {
   /* Verification before dereference */
   verify_ptr (f->esp);
 
   /* Read the syscall number at the stack pointer (f->esp) */
+  uint32_t *esp = f->esp;
   int syscall_no = *esp;
+
+  // NUM_SYSCALL = number of system calls
   ASSERT (0 <= syscall_no && syscall_no < NUM_SYSCALL);
 
+  // TODO
+  int num_of_args;
+  // magic number MAX_NUM_OF_ARGS = 3
+  uint32_t args[3];
+
   /* Read the arguments above the stack pointer */
+  switch (num_of_args)
+  {
+    case 3 :
+      verify_ptr (*(esp + 3));
+      args[2] = *(esp + 3);
+    case 2 :
+      verify_ptr (*(esp + 2));
+      args[1] = *(esp + 2);
+    case 1 :
+      verify_ptr (*(esp + 1));
+      args[0] = *(esp + 1);
+    default :
+      break;
+  }
   
   /* Pass these to the appropriate function */
-  uint32_t *helper = uint32_t_map[syscall_no];
-
-  ASSERT (helper != NULL);
+  uint32_t result = syscall_func_map[syscall_no] (args);
 
   /* Return the result to f->eax */
-  f->eax = helper (esp);
-
-  printf ("system call!\n");
-  thread_exit ();
+  f->eax = result;
 }
 
 static void
