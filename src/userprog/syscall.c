@@ -97,105 +97,101 @@ verify_ptr (void *ptr)
 }
 
 /* SYS_HALT */
-static uint32_t
-syscall_halt (void *args[])
+static void
+syscall_halt (void)
 {
   /* TODO implementation */
-  return;
 }
 
 /* SYS_EXIT */
-static uint32_t
-syscall_exit (void *args[])
+static void
+syscall_exit (int status)
 {
   /* TODO implementation */
-  return;
 }
 
 /* SYS_EXEC */
-static uint32_t
-syscall_exec (void *args[])
+static pid_t
+syscall_exec (const char *cmd_line)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_WAIT */
-static uint32_t
-syscall_wait (void *args[])
+static int
+syscall_wait (pid_t pid)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_CREATE */
-static uint32_t
-syscall_create (void *args[])
+static bool
+syscall_create (const char *file, unsigned initial_size)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_REMOVE */
-static uint32_t
-syscall_remove (void *args[])
+static bool
+syscall_remove (const char *file)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_OPEN */
-static uint32_t
-syscall_open (void *args[])
+static int
+syscall_open (const char *file)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_FILESIZE */
-static uint32_t
-syscall_filesize (void *args[])
+static int
+syscall_filesize (int fd)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_READ */
-static uint32_t
-syscall_read (void *args[])
+static int
+syscall_read (int fd, void *buffer, unsigned size)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_WRITE */
-static uint32_t
-syscall_write (void *args[])
+static int
+syscall_write (int fd, const void *buffer, unsigned size)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_SEEK */
-static uint32_t
-syscall_seek (void *args[])
+static void
+syscall_seek (int fd, unsigned position)
 {
   /* TODO implementation */
-  return;
 }
 
 /* SYS_TELL */
-static uint32_t
-syscall_tell (void *args[])
+static unsigned
+syscall_tell (int fd)
 {
   /* TODO implementation */
-  return;
+  return 0;
 }
 
 /* SYS_CLOSE */
-static uint32_t
-syscall_close (void *args[])
+static void
+syscall_close (int fd)
 {
   /* TODO implementation */
-  return;
 }
