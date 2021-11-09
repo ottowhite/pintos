@@ -1,5 +1,6 @@
 #ifndef __LIB_SYSCALL_NR_H
 #define __LIB_SYSCALL_NR_H
+#include <lib/user/syscall.h>
 
 static struct function {
   void *function_ptr;
