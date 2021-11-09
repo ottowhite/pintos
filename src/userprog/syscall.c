@@ -42,8 +42,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   uint32_t *esp = f->esp;
   int syscall_no = *esp;
 
-  // NUM_SYSCALL = number of system calls
-  ASSERT (0 <= syscall_no && syscall_no < NUM_SYSCALL);
+  // Ensure our syscall_no refers to a defined system call
+  ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_CLOSE);
 
   // TODO
   int num_of_args;
