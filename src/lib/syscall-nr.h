@@ -1,6 +1,11 @@
 #ifndef __LIB_SYSCALL_NR_H
 #define __LIB_SYSCALL_NR_H
 
+static struct function {
+  void *function_ptr;
+  int argc;
+};
+
 /* System call numbers. */
 enum 
   {
