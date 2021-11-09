@@ -40,9 +40,9 @@ verify_args (int argc, void *esp)
 {
   switch (argc)
     {
-      case 3: verify_ptr (esp + 3);
-      case 2: verify_ptr (esp + 2);
-      case 1: verify_ptr (esp + 1);
+      case 3: verify_ptr (esp + 3); __attribute__ ((fallthrough));
+      case 2: verify_ptr (esp + 2); __attribute__ ((fallthrough));
+      case 1: verify_ptr (esp + 1); __attribute__ ((fallthrough));
       default: break;
     }
 }
