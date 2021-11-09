@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
+#include "userprog/process.h"
 
 void
 syscall_init (void) 
@@ -75,6 +76,8 @@ verify_ptr (void *ptr)
     return;
 
   /* If this point is reached the pointer is not valid. Exit with -1 */
+  // free the current processes resources
+  process_exit (); 
   exit_process_in_syscall (-1);
   NOT_REACHED ();
 }
