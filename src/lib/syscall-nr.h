@@ -4,7 +4,7 @@
 
 static struct function { void *function_ptr; int argc; };
 
-typedef uint32_t (*function_0_args) ();
+typedef uint32_t (*function_0_args) (void);
 typedef uint32_t (*function_1_args) (void *);
 typedef uint32_t (*function_2_args) (void *, void *);
 typedef uint32_t (*function_3_args) (void *, void *, void *);
