@@ -6,25 +6,8 @@
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
 
-static void syscall_handler (struct intr_frame *);
-static struct function syscall_func_map[] = {
-  {&syscall_halt,     .argc = 0},  /* SYS_HALT */      
-  {&syscall_exit,     .argc = 1},  /* SYS_EXIT */      
-  {&syscall_exec,     .argc = 1},  /* SYS_EXEC */      
-  {&syscall_wait,     .argc = 1},  /* SYS_WAIT */      
-  {&syscall_create,   .argc = 2},  /* SYS_CREATE */    
-  {&syscall_remove,   .argc = 1},  /* SYS_REMOVE */    
-  {&syscall_open,     .argc = 1},  /* SYS_OPEN */      
-  {&syscall_filesize, .argc = 1},  /* SYS_FILESIZE */  
-  {&syscall_read,     .argc = 3},  /* SYS_READ */      
-  {&syscall_write,    .argc = 3},  /* SYS_WRITE */     
-  {&syscall_seek,     .argc = 2},  /* SYS_SEEK */      
-  {&syscall_tell,     .argc = 1},  /* SYS_TELL */      
-  {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
-};
-
 void
-  syscall_init (void) 
+syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
