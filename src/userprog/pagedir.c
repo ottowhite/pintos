@@ -6,7 +6,7 @@
 #include "threads/pte.h"
 #include "threads/palloc.h"
 
-static uint32_t *active_pd (void);
+uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
 
 /* Creates a new page directory that has mappings for kernel
