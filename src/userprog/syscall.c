@@ -35,43 +35,48 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  /* Verification before dereference */
-  verify_ptr (f->esp);
-
   /* Read the syscall number at the stack pointer (f->esp) */
-  uint32_t *esp = f->esp;
-  int syscall_no = *esp;
+  verify_ptr (f->esp);
+  int syscall_no = *((int *) f->esp);
 
   // Ensure our syscall_no refers to a defined system call
   ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_CLOSE);
 
-  // TODO
-  int num_of_args;
-  // magic number MAX_NUM_OF_ARGS = 3
-  uint32_t args[3];
+  int   argc         = syscall_func_map[syscall_no].argc;
+  void *function_ptr = syscall_func_map[syscall_no].function_ptr;
 
-  /* Read the arguments above the stack pointer */
-  switch (num_of_args)
-  {
-    case 3 :
-      verify_ptr (*(esp + 3));
-      args[2] = *(esp + 3);
-    case 2 :
-      verify_ptr (*(esp + 2));
-      args[1] = *(esp + 2);
-    case 1 :
-      verify_ptr (*(esp + 1));
-      args[0] = *(esp + 1);
-    default :
-      break;
-  }
-  
-  /* Pass these to the appropriate function */
-  uint32_t result = syscall_func_map[syscall_no] (args);
-
-  /* Return the result to f->eax */
-  f->eax = result;
+  verify_args (argc, f->esp);
+  f->eax = invoke_function (function_ptr, argc, f->esp);
 }
+
+static void 
+verify_args (int argc, void *esp) 
+{
+  switch (argc)
+  {
+    case 3: verify_ptr (esp + 3);
+    case 2: verify_ptr (esp + 2);
+    case 1: verify_ptr (esp + 1);
+    default: break;
+  }
+}
+
+static uint32_t 
+invoke_function (void *function_ptr, int argc, void *esp) 
+{
+  switch (argc) {
+    case 0: 
+      return ((function_0_args) function_ptr) (); 
+    case 1: 
+      return ((function_1_args) function_ptr) (esp + 1); 
+    case 2: 
+      return ((function_2_args) function_ptr) (esp + 1, esp + 2); 
+    case 3: 
+      return ((function_3_args) function_ptr) (esp + 1, esp + 2, esp + 3); 
+    default: NOT_REACHED (); 
+  }
+}
+
 
 static void
 verify_ptr (void *ptr)
