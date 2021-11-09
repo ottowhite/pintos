@@ -68,8 +68,10 @@ static void
 verify_ptr (void *ptr)
 {
   if (ptr != NULL && 
-      is_user_vaddr (ptr) && /* Check address in user space */
-      pagedir_get_page (active_pd (), ptr) != NULL) /* Check address in page directory*/
+      /* Verify address in user space */
+      is_user_vaddr (ptr) && 
+      /* Verify address in page directory*/
+      pagedir_get_page (active_pd (), ptr) != NULL) 
     return;
 
   /* If this point is reached the pointer is not valid. Exit with -1 */
