@@ -78,7 +78,7 @@ verify_ptr (void *ptr)
   /* If this point is reached the pointer is not valid. Exit with -1 */
   // free the current processes resources
   process_exit (); 
-  exit_process_in_syscall (-1);
+  syscall_exit (-1);
   NOT_REACHED ();
 }
 
