@@ -47,7 +47,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   void *function_ptr = syscall_func_map[syscall_no].function_ptr;
 
   /* Verify the necessary number of arguments before passing function
-   * invocation to invoke_function */
+     invocation to invoke_function */
   verify_args (argc, f->esp);
   f->eax = invoke_function (function_ptr, argc, f->esp);
 }
@@ -56,28 +56,29 @@ static void
 verify_args (int argc, void *esp) 
 {
   switch (argc)
-  {
-    case 3: verify_ptr (esp + 3);
-    case 2: verify_ptr (esp + 2);
-    case 1: verify_ptr (esp + 1);
-    default: break;
-  }
+    {
+      case 3: verify_ptr (esp + 3);
+      case 2: verify_ptr (esp + 2);
+      case 1: verify_ptr (esp + 1);
+      default: break;
+    }
 }
 
 static uint32_t 
 invoke_function (void *function_ptr, int argc, void *esp) 
 {
-  switch (argc) {
-    case 0: 
-      return ((function_0_args) function_ptr) (); 
-    case 1: 
-      return ((function_1_args) function_ptr) (esp + 1); 
-    case 2: 
-      return ((function_2_args) function_ptr) (esp + 1, esp + 2); 
-    case 3: 
-      return ((function_3_args) function_ptr) (esp + 1, esp + 2, esp + 3); 
-    default: NOT_REACHED (); 
-  }
+  switch (argc) 
+    {
+      case 0: 
+        return ((function_0_args) function_ptr) (); 
+      case 1: 
+        return ((function_1_args) function_ptr) (esp + 1); 
+      case 2: 
+        return ((function_2_args) function_ptr) (esp + 1, esp + 2); 
+      case 3: 
+        return ((function_3_args) function_ptr) (esp + 1, esp + 2, esp + 3); 
+      default: NOT_REACHED (); 
+    }
 }
 
 

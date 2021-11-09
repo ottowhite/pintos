@@ -2,10 +2,7 @@
 #define __LIB_SYSCALL_NR_H
 #include <lib/user/syscall.h>
 
-static struct function {
-  void *function_ptr;
-  int argc;
-};
+static struct function { void *function_ptr; int argc; };
 
 typedef uint32_t (*function_0_args) ();
 typedef uint32_t (*function_1_args) (void *);
