@@ -85,15 +85,10 @@ invoke_function (void *function_ptr, int argc, void *esp)
 static void
 verify_ptr (void *ptr)
 {
-  /* Check that the pointer address is in the user space */
-  if (ptr != NULL && is_user_vaddr (ptr))
-    {
-      /* Check that the address is mapped */
-      if (pagedir_get_page (uint32_t *pd, const void *uaddr) != NULL)
-        {
-          return;
-        }
-    }
+  if (ptr != NULL && 
+      is_user_vaddr (ptr) && /* Check address in user space */
+      pagedir_get_page (0, NULL) != NULL) /* Check address in page directory*/
+    return;
 
   /* If this point is reached the pointer is not valid. Exit with -1 */
   exit_process_in_syscall (-1);
