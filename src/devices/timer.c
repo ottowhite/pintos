@@ -121,7 +121,7 @@ timer_sleep (int64_t ticks)
 bool
 thread_wakes_before (const struct list_elem *a_ptr,
                      const struct list_elem *b_ptr,
-                     void *aux) 
+                     void *aux UNUSED) 
 {
   return list_entry(a_ptr, struct sleeping_thread, sleepelem)->wake_time_ticks
        < list_entry(b_ptr, struct sleeping_thread, sleepelem)->wake_time_ticks;

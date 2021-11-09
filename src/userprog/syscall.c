@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <string.h>
+#include "filesys/file.h"
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
@@ -27,6 +30,8 @@ static void     verify_ptr      (void *ptr);
 static void     verify_args     (int argc, void *esp);
 static uint32_t invoke_function (void *function_ptr, int argc, void *esp);
 
+static struct     lock filesys_lock;
+
 static struct function 
 syscall_func_map[] = 
   {
@@ -45,9 +50,13 @@ syscall_func_map[] =
     {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
   };
 
+static struct file *
+filesys_fd_map[MAX_OPEN_FILES];
+
 void
 syscall_init (void) 
 {
+  lock_init (&filesys_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -128,7 +137,7 @@ syscall_halt (void)
 /* SYS_EXIT 
  * Free current process resources and output process name and exit code.*/
 static void
-syscall_exit (int status)
+syscall_exit (int status UNUSED)
 {
 	char name[16];
 	strlcpy (name, thread_current ()->name, sizeof name);
@@ -139,7 +148,7 @@ syscall_exit (int status)
 
 /* SYS_EXEC */
 static pid_t
-syscall_exec (const char *cmd_line)
+syscall_exec (const char *cmd_line UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -147,7 +156,7 @@ syscall_exec (const char *cmd_line)
 
 /* SYS_WAIT */
 static int
-syscall_wait (pid_t pid)
+syscall_wait (pid_t pid UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -155,7 +164,7 @@ syscall_wait (pid_t pid)
 
 /* SYS_CREATE */
 static bool
-syscall_create (const char *file, unsigned initial_size)
+syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -163,7 +172,7 @@ syscall_create (const char *file, unsigned initial_size)
 
 /* SYS_REMOVE */
 static bool
-syscall_remove (const char *file)
+syscall_remove (const char *file UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -171,7 +180,7 @@ syscall_remove (const char *file)
 
 /* SYS_OPEN */
 static int
-syscall_open (const char *file)
+syscall_open (const char *file UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -179,7 +188,7 @@ syscall_open (const char *file)
 
 /* SYS_FILESIZE */
 static int
-syscall_filesize (int fd)
+syscall_filesize (int fd UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -187,7 +196,7 @@ syscall_filesize (int fd)
 
 /* SYS_READ */
 static int
-syscall_read (int fd, void *buffer, unsigned size)
+syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -197,20 +206,54 @@ syscall_read (int fd, void *buffer, unsigned size)
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
-  /* TODO implementation */
-  return 0;
+  ASSERT (fd >= 1);
+  ASSERT (buffer != NULL);
+  ASSERT (fd <= sizeof (filesys_fd_map))
+
+  lock_acquire (&filesys_lock);
+
+  int bytes_written;
+
+  /* fd 1 refers to the console, so output is sent to putbuf */
+  if (fd == 1) 
+    {
+      uint32_t buffer_size = sizeof(buffer);
+      uint32_t bits_to_write;
+      char *temp_buffer;
+      
+      /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
+      for (uint32_t offset = 0; 
+        offset <= MAX_CONSOLE_BUFFER_SIZE * sizeof (uint32_t); 
+        offset += MAX_CONSOLE_BUFFER_SIZE * sizeof (uint32_t)) 
+        {
+          bits_to_write = min (buffer_size - offset, MAX_CONSOLE_BUFFER_SIZE);
+          memcpy(temp_buffer, ((char *) buffer)[offset], bits_to_write);
+          putbuf(temp_buffer, MAX_CONSOLE_BUFFER_SIZE);
+        }
+      bytes_written = sizeof(buffer);
+    }
+  else 
+    {
+      /* if not fd 1, we find the corresponding file_ptr and then write to it */
+      struct file *file_ptr = filesys_fd_map[fd];
+      ASSERT (file_ptr != NULL); 
+      bytes_written = file_write(file_ptr, buffer, size);
+    }
+
+  lock_release (&filesys_lock);
+  return bytes_written;
 }
 
 /* SYS_SEEK */
 static void
-syscall_seek (int fd, unsigned position)
+syscall_seek (int fd UNUSED, unsigned position UNUSED)
 {
   /* TODO implementation */
 }
 
 /* SYS_TELL */
 static unsigned
-syscall_tell (int fd)
+syscall_tell (int fd UNUSED)
 {
   /* TODO implementation */
   return 0;
@@ -218,7 +261,7 @@ syscall_tell (int fd)
 
 /* SYS_CLOSE */
 static void
-syscall_close (int fd)
+syscall_close (int fd UNUSED)
 {
   /* TODO implementation */
 }
