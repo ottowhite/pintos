@@ -7,6 +7,15 @@ static struct function {
   int argc;
 };
 
+typedef uint32_t (*function_0_args) ();
+typedef uint32_t (*function_1_args) (void *);
+typedef uint32_t (*function_2_args) (void *, void *);
+typedef uint32_t (*function_3_args) (void *, void *, void *);
+
+static void verify_ptr (void *ptr);
+static void verify_args (int argc, void *esp);
+static uint32_t invoke_function (void *function_ptr, int argc, void *esp);
+
 /* System call helper functions */
 static void     syscall_halt     (void);
 static void     syscall_exit     (int status);
