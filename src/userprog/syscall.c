@@ -8,38 +8,21 @@ static void syscall_handler (struct intr_frame *);
 
 typedef uint32_t syscall_func (void *args[]);
 
-/* System call helper functions */
-static syscall_func syscall_halt NO_RETURN;
-static syscall_func syscall_exit NO_RETURN;
-static syscall_func syscall_exec;
-static syscall_func syscall_wait;
-static syscall_func syscall_create;
-static syscall_func syscall_remove;
-static syscall_func syscall_open;
-static syscall_func syscall_filesize;
-static syscall_func syscall_read;
-static syscall_func syscall_write;
-static syscall_func syscall_seek;
-static syscall_func syscall_tell;
-static syscall_func syscall_close;
-
-
-static syscall_func *syscall_func_map[] = {
-  /* SYS_HALT */      &syscall_halt,
-  /* SYS_EXIT */      &syscall_exit,
-  /* SYS_EXEC */      &syscall_exec, 
-  /* SYS_WAIT */      &syscall_wait,
-  /* SYS_CREATE */    &syscall_create,
-  /* SYS_REMOVE */    &syscall_remove,
-  /* SYS_OPEN */      &syscall_open,
-  /* SYS_FILESIZE */  &syscall_filesize,
-  /* SYS_READ */      &syscall_read,
-  /* SYS_WRITE */     &syscall_write,
-  /* SYS_SEEK */      &syscall_seek,
-  /* SYS_TELL */      &syscall_tell,
-  /* SYS_CLOSE */     &syscall_close,
+static struct function syscall_func_map[] = {
+  {&syscall_halt,     .argc = 0},  /* SYS_HALT */      
+  {&syscall_exit,     .argc = 1},  /* SYS_EXIT */      
+  {&syscall_exec,     .argc = 1},  /* SYS_EXEC */      
+  {&syscall_wait,     .argc = 1},  /* SYS_WAIT */      
+  {&syscall_create,   .argc = 2},  /* SYS_CREATE */    
+  {&syscall_remove,   .argc = 1},  /* SYS_REMOVE */    
+  {&syscall_open,     .argc = 1},  /* SYS_OPEN */      
+  {&syscall_filesize, .argc = 1},  /* SYS_FILESIZE */  
+  {&syscall_read,     .argc = 3},  /* SYS_READ */      
+  {&syscall_write,    .argc = 3},  /* SYS_WRITE */     
+  {&syscall_seek,     .argc = 2},  /* SYS_SEEK */      
+  {&syscall_tell,     .argc = 1},  /* SYS_TELL */      
+  {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
 };
-
 
 void
 syscall_init (void) 
