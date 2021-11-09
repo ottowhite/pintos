@@ -6,6 +6,21 @@ static struct function {
   int argc;
 };
 
+/* System call helper functions */
+static void     syscall_halt     (void);
+static void     syscall_exit     (int status);
+static pid_t    syscall_exec     (const char *cmd_line);
+static int      syscall_wait     (pid_t pid);
+static bool     syscall_create   (const char *file, unsigned initial_size);
+static bool     syscall_remove   (const char *file);
+static int      syscall_open     (const char *file);
+static int      syscall_filesize (int fd);
+static int      syscall_read     (int fd, void *buffer, unsigned size);
+static int      syscall_write    (int fd, const void *buffer, unsigned size);
+static void     syscall_seek     (int fd, unsigned position);
+static unsigned syscall_tell     (int fd);
+static void     syscall_close    (int fd);
+
 /* System call numbers. */
 enum 
   {
