@@ -213,7 +213,8 @@ syscall_write (int fd, const void *buffer, unsigned size)
 {
   ASSERT (fd >= 1);
   ASSERT (buffer != NULL);
-  ASSERT (fd <= sizeof (filesys_fd_map))
+  ASSERT ((unsigned long) fd <= 
+          sizeof (filesys_fd_map) / sizeof(struct file *));
 
   lock_acquire (&filesys_lock);
 
@@ -223,17 +224,20 @@ syscall_write (int fd, const void *buffer, unsigned size)
   if (fd == 1) 
     {
       uint32_t buffer_size = sizeof(buffer);
-      uint32_t bits_to_write;
-      char *temp_buffer;
+      uint32_t bytes_to_write;
+      char temp_buffer[MAX_CONSOLE_BUFFER_SIZE];
       
       /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
       for (uint32_t offset = 0; 
-        offset <= MAX_CONSOLE_BUFFER_SIZE * sizeof (uint32_t); 
-        offset += MAX_CONSOLE_BUFFER_SIZE * sizeof (uint32_t)) 
+        offset <= size;
+        offset += MAX_CONSOLE_BUFFER_SIZE) 
         {
-          bits_to_write = min (buffer_size - offset, MAX_CONSOLE_BUFFER_SIZE);
-          memcpy(temp_buffer, ((char *) buffer)[offset], bits_to_write);
-          putbuf(temp_buffer, MAX_CONSOLE_BUFFER_SIZE);
+          bytes_to_write = 
+            (buffer_size - offset) > ((uint32_t) MAX_CONSOLE_BUFFER_SIZE) ?
+            (buffer_size - offset) : ((uint32_t) MAX_CONSOLE_BUFFER_SIZE);
+          memcpy(temp_buffer, &((char *) buffer)[offset / sizeof(char)], 
+            bytes_to_write);
+          putbuf(temp_buffer, bytes_to_write);
         }
       bytes_written = sizeof(buffer);
     }
