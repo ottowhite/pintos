@@ -7,9 +7,6 @@
 #include "userprog/pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
-
-typedef uint32_t syscall_func (void *args[]);
-
 static struct function syscall_func_map[] = {
   {&syscall_halt,     .argc = 0},  /* SYS_HALT */      
   {&syscall_exit,     .argc = 1},  /* SYS_EXIT */      
@@ -27,7 +24,7 @@ static struct function syscall_func_map[] = {
 };
 
 void
-syscall_init (void) 
+  syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
@@ -35,7 +32,7 @@ syscall_init (void)
 /* Allows user processes to ask the kernel to execute operations
    that they don't have permission to execute themselves */
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler (struct intr_frame *f) 
 {
   /* Read the syscall number at the stack pointer (f->esp) */
   verify_ptr (f->esp);
@@ -89,7 +86,7 @@ verify_ptr (void *ptr)
 {
   if (ptr != NULL && 
       is_user_vaddr (ptr) && /* Check address in user space */
-      pagedir_get_page (0, NULL) != NULL) /* Check address in page directory*/
+      pagedir_get_page (0, ptr) != NULL) /* Check address in page directory*/
     return;
 
   /* If this point is reached the pointer is not valid. Exit with -1 */
