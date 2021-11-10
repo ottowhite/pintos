@@ -208,7 +208,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
 {
   ASSERT (fd >= 1);
   ASSERT (buffer != NULL);
-  ASSERT ((unsigned long) fd <= sizeof (filesys_fd_map))
+  ASSERT ((unsigned long) fd <= sizeof (filesys_fd_map));
 
   lock_acquire (&filesys_lock);
 
