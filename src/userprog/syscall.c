@@ -202,23 +202,37 @@ syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
 
 /* SYS_WRITE */
 static int
-syscall_write (int fd UNUSED, const void *buffer UNUSED, unsigned size UNUSED)
+syscall_write (int fd, const void *buffer, unsigned size)
 {
-  ASSERT (fd != 0);
+  ASSERT (fd >= 1);
   ASSERT (buffer != NULL);
+  ASSERT (fd <= sizeof (filesys_fd_map))
 
   lock_acquire (&filesys_lock);
 
   int bytes_written;
 
+  /* fd 1 refers to the console, so output is sent to putbuf */
   if (fd == 1) 
     {
-      // TODO: break up larger buffers (unless that's the user's job)
-      putbuf(buffer, MAX_CONSOLE_BUFFER_SIZE);
+      uint32_t buffer_size = sizeof(buffer);
+      uint32_t bits_to_write;
+      char *temp_buffer;
+      
+      /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
+      for (uint32_t offset = 0; 
+        offset <= MAX_CONSOLE_BUFFER_SIZE * sizeof (uint32_t); 
+        offset += MAX_CONSOLE_BUFFER_SIZE * sizeof (uint32_t)) 
+        {
+          bits_to_write = min (buffer_size - offset, MAX_CONSOLE_BUFFER_SIZE);
+          memcpy(temp_buffer, ((char *) buffer)[offset], bits_to_write);
+          putbuf(temp_buffer, MAX_CONSOLE_BUFFER_SIZE);
+        }
       bytes_written = sizeof(buffer);
     }
   else 
     {
+      /* if not fd 1, we find the corresponding file_ptr and then write to it */
       struct file *file_ptr = filesys_fd_map[fd];
       ASSERT (file_ptr != NULL); 
       bytes_written = file_write(file_ptr, buffer, size);
