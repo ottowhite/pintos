@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <syscall-nr.h>
+#include "filesys/file.h"
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
@@ -27,6 +29,10 @@ static void     verify_ptr      (void *ptr);
 static void     verify_args     (int argc, void *esp);
 static uint32_t invoke_function (void *function_ptr, int argc, void *esp);
 
+static struct     lock filesys_lock;
+static const int  MAX_CONSOLE_BUFFER_SIZE = 400;    
+static const int  MAX_OPEN_FILES = 16;
+
 static struct function 
 syscall_func_map[] = 
   {
@@ -45,9 +51,13 @@ syscall_func_map[] =
     {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
   };
 
+static struct file *
+filesys_fd_map[MAX_OPEN_FILES];
+
 void
 syscall_init (void) 
 {
+  lock_init (&filesys_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -194,8 +204,28 @@ syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
 static int
 syscall_write (int fd UNUSED, const void *buffer UNUSED, unsigned size UNUSED)
 {
-  /* TODO implementation */
-  return 0;
+  ASSERT (fd != 0);
+  ASSERT (buffer != NULL);
+
+  lock_acquire (&filesys_lock);
+
+  int bytes_written;
+
+  if (fd == 1) 
+    {
+      // TODO: break up larger buffers (unless that's the user's job)
+      putbuf(buffer, MAX_CONSOLE_BUFFER_SIZE);
+      bytes_written = sizeof(buffer);
+    }
+  else 
+    {
+      struct file *file_ptr = filesys_fd_map[fd];
+      ASSERT (file_ptr != NULL); 
+      bytes_written = file_write(file_ptr, buffer, size);
+    }
+
+  lock_release (&filesys_lock);
+  return bytes_written;
 }
 
 /* SYS_SEEK */
