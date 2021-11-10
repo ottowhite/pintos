@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <string.h>
 #include "filesys/file.h"
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
@@ -30,8 +31,6 @@ static void     verify_args     (int argc, void *esp);
 static uint32_t invoke_function (void *function_ptr, int argc, void *esp);
 
 static struct     lock filesys_lock;
-static const int  MAX_CONSOLE_BUFFER_SIZE = 400;    
-static const int  MAX_OPEN_FILES = 16;
 
 static struct function 
 syscall_func_map[] = 
