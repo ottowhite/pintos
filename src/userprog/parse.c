@@ -1,4 +1,4 @@
-#include "parse.h"
+#include "userprog/parse.h"
 #include <string.h>
 
 // should be using strlcpy
@@ -24,4 +24,3 @@ parse (char *input, int *argc, char **argv, char *argv_str)
 	// null terminator for argv
   argv[*argc] = 0;
 }
-
