@@ -102,11 +102,14 @@ invoke_function (void *function_ptr, int argc, void *esp)
       case 0: 
         return ((function_0_args) function_ptr) (); 
       case 1: 
-        return ((function_1_args) function_ptr) (esp + 1); 
+        return ((function_1_args) function_ptr) (((uint32_t *) esp)[1]); 
       case 2: 
-        return ((function_2_args) function_ptr) (esp + 1, esp + 2); 
+        return ((function_2_args) function_ptr) (((uint32_t *) esp)[1], 
+                                                 ((uint32_t *) esp)[2]); 
       case 3: 
-        return ((function_3_args) function_ptr) (esp + 1, esp + 2, esp + 3); 
+        return ((function_3_args) function_ptr) (((uint32_t *) esp)[1], 
+                                                 ((uint32_t *) esp)[2], 
+                                                 ((uint32_t *) esp)[3]); 
       default: NOT_REACHED (); 
     }
 }
