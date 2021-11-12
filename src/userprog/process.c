@@ -116,6 +116,8 @@ process_wait (tid_t child_tid UNUSED)
          and free its memory to prevent being called again */
       int result_status = cp->exit_status;
 
+			// need to set pointer of child thread to struct thread to NULL
+
       lock_acquire (&parent->children_lock);
 
       list_remove (&cp->elem);
