@@ -112,7 +112,7 @@ struct thread
 struct child
   {
     tid_t tid;                  /* tid of corresponding thread. */
-    struct thread *t;           /* Pointer to the corresponding child_thread. */
+    struct thread *thread_ptr;  /* Pointer to the corresponding child_thread. */
     int exit_status;            /* Stores the exit_status of the child. */
     struct semaphore sema;      /* Semaphore to block the parent thread. */
     struct list_elem elem;      /* For child_processes list in struct thread. */

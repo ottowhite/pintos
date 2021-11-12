@@ -87,12 +87,9 @@ start_process (void *file_name_)
  * This function will be implemented in task 2.
  * For now, it does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
 	struct thread *parent = thread_current ();
-  
-  /* lock to access the list of children */
-  lock_acquire (&parent->children_lock);
 
   struct child *cp = NULL;
   struct list_elem *e;
@@ -104,29 +101,26 @@ process_wait (tid_t child_tid UNUSED)
     {
       struct child *cp_check = list_entry (e, struct child, elem);
       if (cp_check->tid == child_tid) cp = cp_check;
+			break;
     }
-
-  lock_release (&parent->children_lock);
 
   if (cp != NULL)
     {
       sema_down (&cp->sema);
 
-      /* Once cp is unblocked, store its exit_status, remove it from the children list,
-         and free its memory to prevent being called again */
+      /* Once cp is unblocked, store its exit_status, remove it from the 
+			 * children list, and free its memory. */
       int result_status = cp->exit_status;
 
-			// need to set pointer of child thread to struct thread to NULL
-
-      lock_acquire (&parent->children_lock);
+			// set pointer of child thread to struct thread to NULL
+			// cp->thread_ptr = NULL;
+			// child thread will only access its child struct once, when it returns
+			// so no need for this
 
       list_remove (&cp->elem);
       free ((void *) cp);
-      
-      lock_release (&parent->children_lock);
+			return result_status;
     }
-
-  // TODO : error magic number
   return -1;
 }
 
