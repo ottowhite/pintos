@@ -227,7 +227,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
   /* fd 1 refers to the console, so output is sent to putbuf */
   if (fd == STDOUT_FILENO) 
     {
-      uint32_t buffer_size = sizeof(buffer);
+      uint32_t buffer_size = strlen (buffer);
       uint32_t bytes_to_write;
       char temp_buffer[MAX_CONSOLE_BUFFER_SIZE];
       
@@ -243,7 +243,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
             bytes_to_write);
           putbuf(temp_buffer, bytes_to_write);
         }
-      bytes_written = sizeof(buffer);
+      bytes_written = strlen (buffer);
     }
   else 
     {
