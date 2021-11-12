@@ -15,6 +15,7 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
@@ -97,8 +98,8 @@ process_wait (tid_t child_tid UNUSED)
   struct list_elem *e;
 
   /* Iterates the list of children to match the given tid */
-  for (e = list_begin (parent->children);
-        e != list_end (parent->children); 
+  for (e = list_begin (&parent->children);
+        e != list_end (&parent->children); 
         e = list_next(e))
     {
       struct child *cp_check = list_entry (e, struct child, elem);
@@ -117,7 +118,7 @@ process_wait (tid_t child_tid UNUSED)
 
       lock_acquire (&parent->children_lock);
 
-      list_remove (cp->elem);
+      list_remove (&cp->elem);
       free ((void *) cp);
       
       lock_release (&parent->children_lock);
