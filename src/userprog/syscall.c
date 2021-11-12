@@ -142,17 +142,27 @@ syscall_halt (void)
 static void
 syscall_exit (int status)
 {
-	// Retrieve name of process.
+	struct thread *cur = thread_current ();
+	struct child *child_ptr = cur->self_child_ptr;
+	
+	/* Retrieve name of process. */
 	char name[16];
-	strlcpy (name, thread_current ()->name, sizeof name);
+	strlcpy (name, cur->name, sizeof name);
 	process_exit ();
 	
-	// Generate ourput string.
+	/* Generate output string. */
 	uint8_t buf_size = 32; //is size of 25 safe?
 	char str[32];
 	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) != 0);
 	syscall_write (1, str, buf_size);
   thread_exit ();
+
+	/* Set exit status and call sema up. For process_wait. */
+	if (child_ptr != NULL) 
+		{
+			child_ptr->exit_status = status;
+			sema_up (&child_ptr->sema);
+		}
 }
 
 /* SYS_EXEC */

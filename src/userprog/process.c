@@ -119,7 +119,7 @@ process_wait (tid_t child_tid)
 			// cp->thread_ptr = NULL;
 			// child thread will only access its child struct once, when it returns
 			// this is necessary if we make the change in process_exit to free the
-			// child_struct. (if not we can remove thread_ptr from struct altogether)
+			// child_struct.
 
       list_remove (&cp->elem);
       free ((void *) cp);
@@ -135,10 +135,23 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-	// this should be freed by the parent in process_wait
-	// but maybe we should in case, the process doesnt have a parent 
+	// if not null free (t->self_child_ptr);
+	// this should be freed by the parent process 
+	// but maybe we should free here, in case the process doesnt have a parent 
 	// otherwise there will be memory leaks
-	// if its not null free (t->self_child_ptr);
+
+	/* Deallocate all of the child structs in the children list */
+	struct list_elem *e;
+
+  /* Iterates the list of children and frees the struct. */
+  for (e = list_begin (&cur->children);
+        e != list_end (&cur->children); 
+        e = list_next(e))
+    {
+      struct child *cp = list_entry (e, struct child, elem);
+			cp->thread_ptr->self_child_ptr = NULL;
+      free ((void *) cp);
+    }
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
