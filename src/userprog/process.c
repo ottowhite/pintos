@@ -118,7 +118,8 @@ process_wait (tid_t child_tid)
 			// set pointer of child thread to struct thread to NULL
 			// cp->thread_ptr = NULL;
 			// child thread will only access its child struct once, when it returns
-			// so no need for this
+			// this is necessary if we make the change in process_exit to free the
+			// child_struct. (if not we can remove thread_ptr from struct altogether)
 
       list_remove (&cp->elem);
       free ((void *) cp);

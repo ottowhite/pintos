@@ -205,6 +205,9 @@ thread_create (const char *name, int priority,
 	/* Initialize thread child ptr and lock for process wait. */
 	t->self_child_ptr = child_ptr;
 	lock_init (&t->self_lock);
+
+	/* Add struct child to list of children in parent thread. */
+	list_push_back (&thread_current ()->children, &child_ptr->elem);
 	#endif
 
   /* Prepare thread for first run by initializing its stack.
