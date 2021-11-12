@@ -55,6 +55,14 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  int MAX_ARGS = 10;
+  int MAX_CHARS = 1024;
+  int argc;
+  char *argv[MAX_ARGS + 1];
+  char argv_store[MAX_CHARS + 1];
+  // Also side affects file_name to recieve program name 
+  parse (file_name, &argc, argv, argv_store);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -62,12 +70,6 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
-  int MAX_ARGS = 10;
-  int MAX_CHARS = 1024;
-  int argc;
-  char      *argv[MAX_ARGS + 1];
-  char argv_store[MAX_CHARS + 1];
-  parse (file_name, &argc, argv, argv_store);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);

@@ -4,7 +4,7 @@
 void
 parse (char *input, int *argc, char **argv, char *argv_store) 
 {
-  // note: side affects input, should be discarded after use
+  // side affects input to be the first token
   *argc = 0;
   char *save_ptr;
   input = strtok_r (input, " ", &save_ptr);
