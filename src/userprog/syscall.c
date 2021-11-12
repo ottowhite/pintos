@@ -140,7 +140,7 @@ syscall_halt (void)
 /* SYS_EXIT 
  * Free current process resources and output process name and exit code.*/
 static void
-syscall_exit (int status UNUSED)
+syscall_exit (int status)
 {
 	// Retrieve name of process.
 	char name[16];
@@ -149,8 +149,8 @@ syscall_exit (int status UNUSED)
 	
 	// Generate ourput string.
 	uint8_t buf_size = 32; //is size of 25 safe?
-	char str[buf_size];
-	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) == 0);
+	char str[32];
+	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) != 0);
 	syscall_write (1, str, buf_size);
   thread_exit ();
 }
@@ -248,7 +248,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
             putbuf(buffer_section, MAX_CONSOLE_BUFFER_SIZE);
           }
         }
-      bytes_written = strlen (buffer);
+        bytes_written = strlen (buffer);
     }
   else 
     {
