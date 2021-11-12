@@ -157,17 +157,17 @@ syscall_exit (int status)
 
 /* SYS_EXEC */
 static pid_t
-syscall_exec (const char *cmd_line UNUSED)
+syscall_exec (const char *cmd_line)
 {
-  tid_t pid = process_execute(cmd_line);
+  tid_t pid = process_execute (cmd_line);
   return (pid_t) pid; 
 }
 
 /* SYS_WAIT */
 static int
-syscall_wait (pid_t pid UNUSED)
+syscall_wait (pid_t pid)
 {
-  return process_wait((tid_t) pid);
+  return process_wait ((tid_t) pid);
 }
 
 /* SYS_CREATE */
