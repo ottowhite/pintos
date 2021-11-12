@@ -225,7 +225,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
   int bytes_written;
 
   /* fd 1 refers to the console, so output is sent to putbuf */
-  if (fd == 1) 
+  if (fd == STDOUT_FILENO) 
     {
       uint32_t buffer_size = sizeof(buffer);
       uint32_t bytes_to_write;
