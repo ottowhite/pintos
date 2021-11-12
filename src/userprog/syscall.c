@@ -152,6 +152,7 @@ syscall_exit (int status UNUSED)
 	char str[buf_size];
 	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) == 0);
 	syscall_write (1, str, buf_size);
+  thread_exit ();
 }
 
 /* SYS_EXEC */
