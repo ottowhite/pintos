@@ -227,21 +227,26 @@ syscall_write (int fd, const void *buffer, unsigned size)
   /* fd 1 refers to the console, so output is sent to putbuf */
   if (fd == STDOUT_FILENO) 
     {
-      uint32_t buffer_size = strlen (buffer);
-      uint32_t bytes_to_write;
-      char temp_buffer[MAX_CONSOLE_BUFFER_SIZE];
+      char buffer_section[MAX_CONSOLE_BUFFER_SIZE];
       
       /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
-      for (uint32_t offset = 0; 
-        offset <= size;
-        offset += MAX_CONSOLE_BUFFER_SIZE) 
+      uint32_t bytes_to_write = strlen (buffer);
+      for (uint32_t offset = 0; ;
+           bytes_to_write -= MAX_CONSOLE_BUFFER_SIZE,
+           offset         += MAX_CONSOLE_BUFFER_SIZE) 
         {
-          bytes_to_write = 
-            (buffer_size - offset) > ((uint32_t) MAX_CONSOLE_BUFFER_SIZE) ?
-            (buffer_size - offset) : ((uint32_t) MAX_CONSOLE_BUFFER_SIZE);
-          memcpy(temp_buffer, &((char *) buffer)[offset / sizeof(char)], 
-            bytes_to_write);
-          putbuf(temp_buffer, bytes_to_write);
+          if (bytes_to_write - offset <= MAX_CONSOLE_BUFFER_SIZE) {
+            // write all remaining bytes to the console
+            memcpy(buffer_section, &((char *) buffer)[offset], bytes_to_write);
+            putbuf(buffer_section, bytes_to_write);
+            break;
+          } else {
+            // write MAX remaining bytes to the console
+            // Consideration: Untested due to the system imposed limit of 
+            // 64 bytes for strings on stack
+            memcpy(buffer_section, &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
+            putbuf(buffer_section, MAX_CONSOLE_BUFFER_SIZE);
+          }
         }
       bytes_written = strlen (buffer);
     }
