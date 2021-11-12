@@ -98,10 +98,9 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 
-		struct child *self;                 /* Pointer to own child struct. */
+		struct child *self_child_ptr;       /* Pointer to own child struct. */
     struct list children;               /* List of children processes. */
     struct lock self_lock;              /* Lock for the child to update its exit status. */
-    struct lock children_lock;          /* Lock for the thread's children. */
 #endif
 
     /* Owned by thread.c. */
