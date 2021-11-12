@@ -8,6 +8,7 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/parse.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -60,7 +61,13 @@ start_process (void *file_name_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
-	
+
+  int MAX_ARGS = 10;
+  int MAX_CHARS = 1024;
+  int argc;
+  char      *argv[MAX_ARGS + 1];
+  char argv_store[MAX_CHARS + 1];
+  parse (file_name, &argc, argv, argv_store);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
