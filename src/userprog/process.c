@@ -131,6 +131,11 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+	// this should be freed by the parent in process_wait
+	// but maybe we should in case, the process doesnt have a parent 
+	// otherwise there will be memory leaks
+	// if its not null free (t->self_child_ptr);
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;

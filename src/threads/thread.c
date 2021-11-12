@@ -8,6 +8,7 @@
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/switch.h"
 #include "threads/vaddr.h"
 #ifdef USERPROG
@@ -189,6 +190,22 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+
+	/* Initalize corresponding child struct. For process_wait. */
+	t->self_child_ptr = NULL;
+	#ifdef USERPROG
+	struct child *child_ptr = malloc (sizeof (struct child));
+	if (child_ptr == NULL)
+		return TID_ERROR;
+
+	child_ptr->tid = tid;
+	child_ptr->thread_ptr = t;
+	sema_init (&child_ptr->sema, 0);
+	
+	/* Initialize thread child ptr and lock for process wait. */
+	t->self_child_ptr = child_ptr;
+	lock_init (&t->self_lock);
+	#endif
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
