@@ -100,8 +100,11 @@ process_wait (tid_t child_tid)
         e = list_next(e))
     {
       struct child *cp_check = list_entry (e, struct child, elem);
-      if (cp_check->tid == child_tid) cp = cp_check;
-			break;
+      if (cp_check->tid == child_tid)
+			{
+				cp = cp_check;
+				break;
+			}
     }
 
   if (cp != NULL)
