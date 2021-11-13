@@ -8,6 +8,8 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/parse.h"
+#include "userprog/load_arguments.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -30,17 +32,30 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *process_name;
+  char *save_ptr;
   tid_t tid;
+
+  // TODO: Store process_name first in the page rather than second
+  //       to increase process name limit from half the page.
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
+
+  int file_name_length = strlen (file_name) + 1;
+  strlcpy (fn_copy, file_name, file_name_length);
+  
+  /* Copy another file_name into the page for use by strtok_r to extract 
+     the name of the process for giving the thread the correct name */
+  process_name = fn_copy + file_name_length + 1;
+  strlcpy (process_name, file_name, file_name_length);
+  process_name = strtok_r (process_name, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -55,16 +70,25 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  int MAX_ARGS  = 10;
+  int MAX_CHARS = 128;
+  int argc;
+  char *argv[MAX_ARGS + 1];
+  char argv_store[MAX_CHARS + 1];
+  // Also side affects file_name to recieve program name 
+  parse (file_name, &argc, argv, argv_store);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-  if_.cs = SEL_UCSEG;
+  if_.cs     = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  success    = load (file_name, &if_.eip, &if_.esp);
+  load_arguments (argc, argv, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success) // TODO: Free user virtual memory on failure
     thread_exit ();
 
   /* Start the user process by simulating a return from an
@@ -154,7 +178,7 @@ process_exit (void)
     {
       struct child *child_ptr = list_entry (e, struct child, elem);
 
-      /* acquires the self_lock to set the child thread's self_child_ptr to null */
+      /* Acquires the lock to set the child thread's self_child_ptr to null. */
 			struct thread* child_t = child_ptr->thread_ptr;
 			if (child_t != NULL)
 			{
@@ -514,7 +538,7 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE - 12;
+        *esp = PHYS_BASE;
       else
         palloc_free_page (kpage);
     }

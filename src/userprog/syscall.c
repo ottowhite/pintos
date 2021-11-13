@@ -87,9 +87,9 @@ verify_args (int argc, void *esp)
 {
   switch (argc)
     {
-      case 3: verify_ptr (esp + 3); __attribute__ ((fallthrough));
-      case 2: verify_ptr (esp + 2); __attribute__ ((fallthrough));
-      case 1: verify_ptr (esp + 1); __attribute__ ((fallthrough));
+      case 3:  verify_ptr (&((uint32_t *) esp)[3]); FALLTHROUGH;
+      case 2:  verify_ptr (&((uint32_t *) esp)[2]); FALLTHROUGH;
+      case 1:  verify_ptr (&((uint32_t *) esp)[1]); FALLTHROUGH;
       default: break;
     }
 }
@@ -143,18 +143,20 @@ static void
 syscall_exit (int status)
 {
 	struct thread *cur = thread_current ();
-	
+
 	/* Retrieve name of process. */
-	char name[16];
-	strlcpy (name, cur->name, sizeof name);
+	char name[MAX_PROCESS_NAME_LENGTH];
+	strlcpy (name, cur->name, strlen (thread_current ()->name) + 1);
 	process_exit ();
 	
 	/* Generate output string. */
-	uint8_t buf_size = 32; //is size of 25 safe?
-	char str[32];
-	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) != 0);
-	syscall_write (1, str, buf_size);
-  thread_exit ();
+	uint8_t output_buffer_size = MAX_PROCESS_NAME_LENGTH + 15; 
+	char output_buffer[output_buffer_size];
+  int chars_written = snprintf (output_buffer, 
+                                output_buffer_size, 
+                                "%s: exit(%d)\n", name, status);
+	ASSERT (chars_written != 0);
+	syscall_write (1, output_buffer, strlen (output_buffer));
 
 	/* Set exit status and call sema up. For process_wait. */
 	lock_acquire (&cur->self_lock);
@@ -166,6 +168,8 @@ syscall_exit (int status)
 			sema_up (&child_ptr->sema);
 		}
 	else lock_release (&cur->self_lock);
+
+  thread_exit ();
 }
 
 /* SYS_EXEC */
@@ -234,16 +238,16 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   lock_acquire (&filesys_lock);
 
-  int bytes_written;
+  int bytes_written = 0;
 
-  /* fd 1 refers to the console, so output is sent to putbuf */
+  /* STDOUT_FILENO refers to the console, so output is sent to putbuf */
   if (fd == STDOUT_FILENO) 
     {
       char buffer_section[MAX_CONSOLE_BUFFER_SIZE];
       
       /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
-      uint32_t bytes_to_write = strlen (buffer);
-      for (uint32_t offset = 0; ;
+      int32_t bytes_to_write = size;
+      for (int32_t offset = 0; ;
            bytes_to_write -= MAX_CONSOLE_BUFFER_SIZE,
            offset         += MAX_CONSOLE_BUFFER_SIZE) 
         {
@@ -251,16 +255,18 @@ syscall_write (int fd, const void *buffer, unsigned size)
             // write all remaining bytes to the console
             memcpy(buffer_section, &((char *) buffer)[offset], bytes_to_write);
             putbuf(buffer_section, bytes_to_write);
+            bytes_written += bytes_to_write;
             break;
           } else {
             // write MAX remaining bytes to the console
             // Consideration: Untested due to the system imposed limit of 
             // 64 bytes for strings on stack
-            memcpy(buffer_section, &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
+            memcpy(buffer_section, 
+                &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
             putbuf(buffer_section, MAX_CONSOLE_BUFFER_SIZE);
+            bytes_written += MAX_CONSOLE_BUFFER_SIZE;
           }
         }
-        bytes_written = strlen (buffer);
     }
   else 
     {
