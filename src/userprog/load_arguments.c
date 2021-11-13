@@ -17,6 +17,7 @@ push_zero_element (void *write_dest, int size)
   memset (write_dest, 0, size);
   return write_dest;
 }
+
 void load_arguments (int argc, char **argv, void **esp)
 {
   for (int i = argc - 1; i >= 0; i--) {

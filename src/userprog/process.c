@@ -56,8 +56,8 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
-  int MAX_ARGS = 10;
-  int MAX_CHARS = 1024;
+  int MAX_ARGS  = 10;
+  int MAX_CHARS = 128;
   int argc;
   char *argv[MAX_ARGS + 1];
   char argv_store[MAX_CHARS + 1];
@@ -67,10 +67,15 @@ start_process (void *file_name_)
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-  if_.cs = SEL_UCSEG;
+  if_.cs     = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
-  load_arguments (argc, argv, &if_.esp);
+  success    = load (file_name, &if_.eip, &if_.esp);
+  void *upage        = ((uint8_t *) PHYS_BASE) - PGSIZE;
+  void *kpage_bottom = pagedir_get_page (thread_current ()->pagedir, upage);
+  void *kpage_top    = kpage_bottom + (uint32_t) PGSIZE;
+  void *kpage_esp    = kpage_top;
+  load_arguments (argc, argv, &kpage_esp);
+  if_.esp = PHYS_BASE - (kpage_top - kpage_esp);
 
 
   /* If load failed, quit. */
