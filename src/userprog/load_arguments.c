@@ -25,7 +25,7 @@ void load_arguments (int argc, char **argv, void **esp)
     argv[i] = *esp; // save arg pointer in old arg pos
   }
 
-  int padding = ((uint64_t) *esp) % 4;
+  int padding = ((uint32_t) *esp) % 4;
   *esp = push_zero_element (*esp, padding * sizeof (char));   // padding
   *esp = push_zero_element (*esp, sizeof (char *));           // null address
 
