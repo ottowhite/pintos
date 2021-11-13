@@ -70,6 +70,9 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+static void child_process_init (struct child* child_ptr,
+												        struct thread *t,
+												        tid_t tid);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -241,9 +244,9 @@ thread_create (const char *name, int priority,
 }
 
 #ifdef USERPROG
-void child_process_init(struct child_process* child_ptr,
-												struct thread *t,
-												tid_t tid)
+void child_process_init (struct child* child_ptr,
+												 struct thread *t,
+												 tid_t tid)
 {
   child_ptr->tid = tid;
   child_ptr->thread_ptr = t;
@@ -257,8 +260,6 @@ void child_process_init(struct child_process* child_ptr,
 	lock_init (&t->self_lock);
 }
 #endif
-
-
 
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
