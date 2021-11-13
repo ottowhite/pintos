@@ -40,8 +40,19 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  /* Extract a second copy of the filename so we can safely use strtok_r */
+  /* Afterwards extract the program name and write it to fn_copy */
+  char *temp_fn_copy = palloc_get_page (0);
+  char *save_ptr;
+  strlcpy (temp_fn_copy, file_name, strlen (file_name));
+  temp_fn_copy = strtok_r (temp_fn_copy, " ", &save_ptr);
+  memcpy (fn_copy + strlen(file_name) + 1, temp_fn_copy, strlen(temp_fn_copy));
+  palloc_free_page (temp_fn_copy);
+  
+  char *process_name = (char *) fn_copy + strlen(file_name) + 1;
+
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
