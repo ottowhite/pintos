@@ -97,11 +97,10 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 
-    struct lock child_lock;              /* Lock for the thread's children*/
-    struct list children;                /* List of children */
-    struct lock self_ptr_lock;           /* Lock to access the ptrs to itself */
-    struct thread *parent;               /* Pointer to the parent thread  */
-
+    struct lock self_lock;              /* Lock for the thread's children*/
+    struct list children;               /* List of children */
+    struct lock* parent_lock;           /* Lock for the child thread to update */
+    struct thread *parent;              /* Pointer to the parent thread */
 #endif
 
     /* Owned by thread.c. */
@@ -111,9 +110,11 @@ struct thread
 #ifdef USERPROG
 struct child
   {
-    struct thread *t;
-    int status;
-    struct semaphore sema;
+    tid_t tid;                          /* tid to fetch the exit_status */
+    struct thread *t;                   /* Pointer to the child_thread */
+    int exit_status;                    /* Stores the exit_status of the child */
+    bool is_waited;                     /* To check whether the parent has already waited for the child */
+    struct semaphore sema;              /* Semaphore to let the parent thread wait */
     struct list_elem elem; // use for child_processes list in struct thread
   };
 #endif
