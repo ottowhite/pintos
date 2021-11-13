@@ -96,11 +96,28 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+
+    struct lock child_lock;              /* Lock for the thread's children*/
+    struct list children;                /* List of children */
+    struct lock self_ptr_lock;           /* Lock to access the ptrs to itself */
+    struct thread *parent;               /* Pointer to the parent thread  */
+
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+#ifdef USERPROG
+struct child
+  {
+    struct thread *t;
+    int status;
+    struct semaphore sema;
+    struct list_elem elem; // use for child_processes list in struct thread
+  };
+#endif
+
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
