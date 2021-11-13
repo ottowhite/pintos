@@ -193,7 +193,8 @@ thread_create (const char *name, int priority,
 
 	/* Initalize corresponding child struct. For process_wait. */
 	t->self_child_ptr = NULL;
-	#ifdef USERPROG
+#ifdef USERPROG
+	// if (thread_current ()) check if it is a process somehow?
 	struct child *child_ptr = malloc (sizeof (struct child));
 	if (child_ptr == NULL)
 		return TID_ERROR;
@@ -208,7 +209,7 @@ thread_create (const char *name, int priority,
 
 	/* Add struct child to list of children in parent thread. */
 	list_push_back (&thread_current ()->children, &child_ptr->elem);
-	#endif
+#endif
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
