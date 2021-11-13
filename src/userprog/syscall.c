@@ -143,7 +143,6 @@ static void
 syscall_exit (int status)
 {
 	struct thread *cur = thread_current ();
-	struct child *child_ptr = cur->self_child_ptr;
 	
 	/* Retrieve name of process. */
 	char name[16];
@@ -158,11 +157,15 @@ syscall_exit (int status)
   thread_exit ();
 
 	/* Set exit status and call sema up. For process_wait. */
+	lock_acquire (&cur->self_lock);
+	struct child *child_ptr = cur->self_child_ptr;
 	if (child_ptr != NULL) 
 		{
 			child_ptr->exit_status = status;
+			lock_release (&cur->self_lock);
 			sema_up (&child_ptr->sema);
 		}
+	else lock_release (&cur->self_lock);
 }
 
 /* SYS_EXEC */

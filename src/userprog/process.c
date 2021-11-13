@@ -133,15 +133,16 @@ void
 process_exit (void)
 {
   struct thread *cur = thread_current ();
-  struct child *cur_child = cur->self_child_ptr;
   uint32_t *pd;
-
-	sema_up (&cur_child->sema);
 
 	// if not null free (t->self_child_ptr);
 	// this should be freed by the parent process 
 	// but maybe we should free here, in case the process doesnt have a parent 
 	// otherwise there will be memory leaks
+	
+	/* Sets thread pointer of child struct of current thread to null,
+	 * as thread is about to be deallocated. */
+	cur->self_child_ptr->thread_ptr = NULL;
 
 	/* Deallocate all of the child structs in the children list */
 	struct list_elem *e;
@@ -154,10 +155,14 @@ process_exit (void)
       struct child *child_ptr = list_entry (e, struct child, elem);
 
       /* acquires the self_lock to set the child thread's self_child_ptr to null */
-      lock_acquire (&child_ptr->thread_ptr->self_lock);
-			child_ptr->thread_ptr->self_child_ptr = NULL;
-      lock_release (&child_ptr->thread_ptr->self_lock);
-
+			struct thread* child_t = child_ptr->thread_ptr;
+			if (child_t != NULL)
+			{
+				lock_acquire (&child_t->self_lock);
+				child_t->self_child_ptr = NULL;
+				lock_release (&child_t->self_lock);
+			}
+      
       /* releases the child struct */
       free ((void *) child_ptr);
     }
