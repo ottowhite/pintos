@@ -136,8 +136,7 @@ process_exit (void)
   struct child *cur_child = cur->self_child_ptr;
   uint32_t *pd;
 
-  if (!list_empty (&cur_child->sema.waiters))
-    sema_up (&cur_child->sema);
+	sema_up (&cur_child->sema);
 
 	// if not null free (t->self_child_ptr);
 	// this should be freed by the parent process 

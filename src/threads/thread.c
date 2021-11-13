@@ -223,7 +223,7 @@ thread_create (const char *name, int priority,
 #ifdef USERPROG
 
   if (thread_current () == initial_thread)
-    list_init (&thread_current()->children);
+    list_init (&thread_current ()->children);
 
 	struct child *child_ptr = (struct child *) malloc (sizeof (struct child));
 
@@ -241,14 +241,17 @@ thread_create (const char *name, int priority,
 }
 
 #ifdef USERPROG
-void child_process_init(struct child_process* child_ptr, struct thread *t, tid_t tid)
+void child_process_init(struct child_process* child_ptr,
+												struct thread *t,
+												tid_t tid)
 {
   child_ptr->tid = tid;
   child_ptr->thread_ptr = t;
   child_ptr->exit_status = -1;     // set default as -1
   sema_init (&child_ptr->sema, 0);
 
-  /* Initialize thread's child ptr, children list, and the lock for process wait. */
+  /* Initialize thread's child ptr, children list,
+	 * and the lock for process wait. */
   t->self_child_ptr = child_ptr;
   list_init (&t->children);
 	lock_init (&t->self_lock);
