@@ -81,13 +81,7 @@ start_process (void *file_name_)
   if_.cs     = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success    = load (file_name, &if_.eip, &if_.esp);
-  void *upage        = ((uint8_t *) PHYS_BASE) - PGSIZE;
-  void *kpage_bottom = pagedir_get_page (thread_current ()->pagedir, upage);
-  void *kpage_top    = kpage_bottom + (uint32_t) PGSIZE;
-  void *kpage_esp    = kpage_top;
-  load_arguments (argc, argv, &kpage_esp);
-  if_.esp = PHYS_BASE - (kpage_top - kpage_esp);
-
+  load_arguments (argc, argv, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
