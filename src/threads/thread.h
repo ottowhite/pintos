@@ -115,7 +115,7 @@ struct child
     tid_t tid;                  /* tid of corresponding thread. */
     struct thread *t;           /* Pointer to the corresponding child_thread. */
     int exit_status;            /* Stores the exit_status of the child. */
-    bool has_terminated;        /* To check whether child has terminated. */
+    bool waited;                /* To check for duplicate waits. */
     struct semaphore sema;      /* Semaphore to block the parent thread. */
     struct list_elem elem;      /* For child_processes list in struct thread. */
   };
