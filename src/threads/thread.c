@@ -222,14 +222,14 @@ thread_create (const char *name, int priority,
 
 	/* Initalize corresponding child struct. For process_wait. */
 	t->self_child_ptr = NULL;
-  
 #ifdef USERPROG
 
+	/* Special case for initial thread,
+	 * list of children needs to be initialized here. */
   if (thread_current () == initial_thread)
     list_init (&thread_current ()->children);
 
 	struct child *child_ptr = (struct child *) malloc (sizeof (struct child));
-
 	if (child_ptr == NULL)
 		return TID_ERROR;
 
@@ -243,12 +243,12 @@ thread_create (const char *name, int priority,
   return tid;
 }
 
+/* Initialize required elements for a process. */
 #ifdef USERPROG
 void child_process_init (struct child* child_ptr, struct thread *t, tid_t tid)
 {
   child_ptr->tid = tid;
   child_ptr->thread_ptr = t;
-  // child_ptr->exit_status = -1;     // set default as -1 -- no need for this
   sema_init (&child_ptr->sema, 0);
 
   /* Initialize thread's child ptr, children list,

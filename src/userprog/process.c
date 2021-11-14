@@ -105,10 +105,7 @@ start_process (void *file_name_)
  * returns -1.  
  * If TID is invalid or if it was not a child of the calling process, or if 
  * process_wait() has already been successfully called for the given TID, 
- * returns -1 immediately, without waiting.
- * 
- * This function will be implemented in task 2.
- * For now, it does nothing. */
+ * returns -1 immediately, without waiting. */
 int
 process_wait (tid_t child_tid) 
 {
@@ -117,7 +114,7 @@ process_wait (tid_t child_tid)
   struct child *cp = NULL;
   struct list_elem *e;
 
-  /* Iterates the list of children to match the given tid */
+  /* Iterates the list of children to match the given tid. */
   for (e = list_begin (&parent->children);
         e != list_end (&parent->children); 
         e = list_next(e))
@@ -130,6 +127,8 @@ process_wait (tid_t child_tid)
 			}
     }
 
+	/* If child thread with tid is found, wait for it to finish running, then
+	 * deallocate its corresponding child struct and return its exit status. */
   if (cp != NULL)
     {
       sema_down (&cp->sema);
@@ -148,6 +147,8 @@ process_wait (tid_t child_tid)
       free ((void *) cp);
 			return result_status;
     }
+	/* If child thread not found, then it either returned already, or tid is 
+	 * not valid. */
   return -1;
 }
 
@@ -158,11 +159,6 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-	// if not null free (t->self_child_ptr);
-	// this should be freed by the parent process 
-	// but maybe we should free here, in case the process doesnt have a parent 
-	// otherwise there will be memory leaks
-	
 	/* Sets thread pointer of child struct of current thread to null,
 	 * as thread is about to be deallocated. */
 	cur->self_child_ptr->thread_ptr = NULL;
