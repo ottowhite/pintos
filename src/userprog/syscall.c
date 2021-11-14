@@ -146,7 +146,8 @@ syscall_halt (void)
 }
 
 /* SYS_EXIT 
- * Free current process resources and output process name and exit code.*/
+ * Set return status in the child struct for parent to access later on. 
+ * Free current process resources and output process name and exit code. */
 static void
 syscall_exit (int status)
 {
