@@ -89,7 +89,6 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
 	struct thread *parent = thread_current ();
-  int result_status = 0;
   
   /* lock to access the list of children */
   lock_acquire (&parent->children_lock);
@@ -114,7 +113,7 @@ process_wait (tid_t child_tid UNUSED)
 
       /* Once cp is unblocked, store its exit_status, remove it from the children list,
          and free its memory to prevent being called again */
-      result_status = cp->exit_status;
+      int result_status = cp->exit_status;
 
       lock_acquire (&parent->children_lock);
 
