@@ -88,7 +88,48 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-	while (true);
+	struct thread *parent = thread_current ();
+  
+  /* lock to access the list of children */
+  lock_acquire (&parent->self_lock);
+
+  struct child *cp = NULL;
+  struct list_elem *e;
+
+  /* Iterates the list of children to match the given tid */
+  for (e = list_begin (parent->children);
+        e != list_end (parent->children); 
+        e = list_next(e))
+    {
+      struct child *cp_check = list_entry (e, struct child, elem);
+      if (cp->tid == child_tid) cp = cp_check;
+    }
+
+  lock_release (&parent->self_lock);
+
+  /* If the tid given does not match any of the children in the children list */
+  if (cp == NULL)
+    {
+      // TODO : magic number
+      return -1;
+    }
+
+  /* If the parent has already waited for the child before,  */
+  if (cp->waited)
+    {
+      // TODO : magic number
+      return -1;
+    }
+
+  /* If the child has already terminated return its exit_status */
+  if (cp->thread == NULL)
+    {
+      return cp->exit_status;
+    }
+
+  /* Return the child's exit status if sema_up is called */
+  sema_down (&cp->sema);
+  return cp->exit_status;
 }
 
 /* Free the current process's resources. */
