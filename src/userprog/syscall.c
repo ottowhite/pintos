@@ -227,14 +227,14 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   int bytes_written = 0;
 
-  /* fd 1 refers to the console, so output is sent to putbuf */
+  /* STDOUT_FILENO refers to the console, so output is sent to putbuf */
   if (fd == STDOUT_FILENO) 
     {
       char buffer_section[MAX_CONSOLE_BUFFER_SIZE];
       
       /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
-      uint32_t bytes_to_write = strlen (buffer) + 1;
-      for (uint32_t offset = 0; ;
+      int32_t bytes_to_write = size;
+      for (int32_t offset = 0; ;
            bytes_to_write -= MAX_CONSOLE_BUFFER_SIZE,
            offset         += MAX_CONSOLE_BUFFER_SIZE) 
         {
