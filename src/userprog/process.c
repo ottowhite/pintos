@@ -133,7 +133,11 @@ void
 process_exit (void)
 {
   struct thread *cur = thread_current ();
+  struct child *cur_child = cur->self_child_ptr;
   uint32_t *pd;
+
+  if (!list_empty (&cur_child->sema.waiters))
+    sema_up (&cur_child->sema);
 
 	// if not null free (t->self_child_ptr);
 	// this should be freed by the parent process 
@@ -148,9 +152,15 @@ process_exit (void)
         e != list_end (&cur->children); 
         e = list_next(e))
     {
-      struct child *cp = list_entry (e, struct child, elem);
-			cp->thread_ptr->self_child_ptr = NULL;
-      free ((void *) cp);
+      struct child *child_ptr = list_entry (e, struct child, elem);
+
+      /* acquires the self_lock to set the child thread's self_child_ptr to null */
+      lock_acquire (&child_ptr->thread_ptr->self_lock);
+			child_ptr->thread_ptr->self_child_ptr = NULL;
+      lock_release (&child_ptr->thread_ptr->self_lock);
+
+      /* releases the child struct */
+      free ((void *) child_ptr);
     }
 
   /* Destroy the current process's page directory and switch back
