@@ -86,7 +86,7 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name - pg_ofs (file_name));
-  if (!success) // TODO: Free user virtual memory on failure
+  if (!success) 
     thread_exit ();
 
   /* Start the user process by simulating a return from an
