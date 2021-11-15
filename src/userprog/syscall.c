@@ -87,9 +87,9 @@ verify_args (int argc, void *esp)
 {
   switch (argc)
     {
-      case 3: verify_ptr (esp + 3); __attribute__ ((fallthrough));
-      case 2: verify_ptr (esp + 2); __attribute__ ((fallthrough));
-      case 1: verify_ptr (esp + 1); __attribute__ ((fallthrough));
+      case 3: verify_ptr (&((uint32_t *) esp)[3]); FALLTHROUGH;
+      case 2: verify_ptr (&((uint32_t *) esp)[2]); FALLTHROUGH;
+      case 1: verify_ptr (&((uint32_t *) esp)[1]); FALLTHROUGH;
       default: break;
     }
 }
