@@ -9,6 +9,7 @@
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
+#include "userprog/fd_table.h"
 #include "devices/shutdown.h"
 
 /* System call helper functions */
