@@ -31,25 +31,27 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *process_name;
+  char *save_ptr;
   tid_t tid;
+
+  // TODO: Store process_name first in the page rather than second
+  //       to increase process name limit from half the page.
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
 
-  /* Extract a second copy of the filename so we can safely use strtok_r */
-  /* Afterwards extract the program name and write it to fn_copy */
-  char *temp_fn_copy = palloc_get_page (0);
-  char *save_ptr;
-  strlcpy (temp_fn_copy, file_name, strlen (file_name));
-  temp_fn_copy = strtok_r (temp_fn_copy, " ", &save_ptr);
-  memcpy (fn_copy + strlen(file_name) + 1, temp_fn_copy, strlen(temp_fn_copy));
-  palloc_free_page (temp_fn_copy);
+  int file_name_length = strlen (file_name) + 1;
+  strlcpy (fn_copy, file_name, file_name_length);
   
-  char *process_name = (char *) fn_copy + strlen(file_name) + 1;
+  /* Copy another file_name into the page for use by strtok_r to extract 
+     the name of the process for giving the thread the correct name */
+  process_name = fn_copy + file_name_length + 1;
+  strlcpy (process_name, file_name, file_name_length);
+  process_name = strtok_r (process_name, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
