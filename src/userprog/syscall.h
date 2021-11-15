@@ -4,6 +4,7 @@
 
 #define MAX_CONSOLE_BUFFER_SIZE (400)
 #define MAX_OPEN_FILES (16)
+#define MAX_PROCESS_NAME_LENGTH (16)
 #define FALLTHROUGH do { __attribute__ ((fallthrough)); } while (0)
 
 typedef uint32_t (*function_0_args) (void);

@@ -87,9 +87,9 @@ verify_args (int argc, void *esp)
 {
   switch (argc)
     {
-      case 3: verify_ptr (&((uint32_t *) esp)[3]); FALLTHROUGH;
-      case 2: verify_ptr (&((uint32_t *) esp)[2]); FALLTHROUGH;
-      case 1: verify_ptr (&((uint32_t *) esp)[1]); FALLTHROUGH;
+      case 3:  verify_ptr (&((uint32_t *) esp)[3]); FALLTHROUGH;
+      case 2:  verify_ptr (&((uint32_t *) esp)[2]); FALLTHROUGH;
+      case 1:  verify_ptr (&((uint32_t *) esp)[1]); FALLTHROUGH;
       default: break;
     }
 }
@@ -143,15 +143,18 @@ static void
 syscall_exit (int status)
 {
 	// Retrieve name of process.
-	char name[16];
+	char name[MAX_PROCESS_NAME_LENGTH];
 	strlcpy (name, thread_current ()->name, strlen (thread_current ()->name) + 1);
 	process_exit ();
 	
 	// Generate output string.
-	uint8_t buf_size = 32; //is size of 25 safe?
-	char str[32];
-	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) != 0);
-	syscall_write (1, str, strlen (str) + 1);
+	uint8_t output_buffer_size = MAX_PROCESS_NAME_LENGTH + 15; 
+	char output_buffer[output_buffer_size];
+  int chars_written = snprintf (output_buffer, 
+                                output_buffer_size, 
+                                "%s: exit(%d)\n", name, status);
+	ASSERT (chars_written != 0);
+	syscall_write (1, output_buffer, strlen (output_buffer) + 1);
   thread_exit ();
 }
 
