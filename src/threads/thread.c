@@ -8,8 +8,8 @@
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/switch.h"
-#include "threads/synch.h"
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -70,6 +70,9 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+static void child_process_init (struct child* child_ptr,
+												        struct thread *t,
+												        tid_t tid);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -191,6 +194,7 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
+
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
      member cannot be observed. */
@@ -213,11 +217,47 @@ thread_create (const char *name, int priority,
 
   intr_set_level (old_level);
 
+	/* Initalize corresponding child struct. For process_wait. */
+	t->self_child_ptr = NULL;
+#ifdef USERPROG
+
+	/* Special case for initial thread,
+	 * list of children needs to be initialized here. */
+  if (thread_current () == initial_thread)
+    list_init (&thread_current ()->children);
+
+	struct child *child_ptr = (struct child *) malloc (sizeof (struct child));
+	if (child_ptr == NULL)
+		return TID_ERROR;
+
+  child_process_init (child_ptr, t, t->tid);
+	
+	/* Add struct child to list of children in parent thread. */
+	list_push_back (&thread_current ()->children, &child_ptr->elem);
+
+#endif
+
   /* Add to run queue. */
   thread_unblock (t);
 
   return tid;
 }
+
+/* Initialize required elements for a process. */
+#ifdef USERPROG
+void child_process_init (struct child* child_ptr, struct thread *t, tid_t tid)
+{
+  child_ptr->tid = tid;
+  child_ptr->thread_ptr = t;
+  sema_init (&child_ptr->sema, 0);
+
+  /* Initialize thread's child ptr, children list,
+	 * and the lock for process wait. */
+  t->self_child_ptr = child_ptr;
+  list_init (&t->children);
+	lock_init (&t->self_lock);
+}
+#endif
 
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().

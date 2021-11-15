@@ -9,6 +9,7 @@
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
+#include "devices/shutdown.h"
 
 /* System call helper functions */
 static void     syscall_halt     (void);
@@ -30,7 +31,10 @@ static void     verify_ptr      (void *ptr);
 static void     verify_args     (int argc, void *esp);
 static uint32_t invoke_function (void *function_ptr, int argc, void *esp);
 
-static struct     lock filesys_lock;
+static int  write_to_console     (const char *buffer, unsigned size);
+static int  write_to_file        (int fd, const char *buffer, unsigned size);
+
+static struct lock filesys_lock;
 
 static struct function 
 syscall_func_map[] = 
@@ -134,20 +138,23 @@ verify_ptr (void *ptr)
 static void
 syscall_halt (void)
 {
-  /* TODO implementation */
+  shutdown_power_off ();
 }
 
 /* SYS_EXIT 
- * Free current process resources and output process name and exit code.*/
+ * Set return status in the child struct for parent to access later on. 
+ * Free current process resources and output process name and exit code. */
 static void
 syscall_exit (int status)
 {
-	// Retrieve name of process.
+	struct thread *cur = thread_current ();
+
+	/* Retrieve name of process. */
 	char name[MAX_PROCESS_NAME_LENGTH];
-	strlcpy (name, thread_current ()->name, strlen (thread_current ()->name) + 1);
+	strlcpy (name, cur->name, strlen (thread_current ()->name) + 1);
 	process_exit ();
 	
-	// Generate output string.
+	/* Generate output string. */
 	uint8_t output_buffer_size = MAX_PROCESS_NAME_LENGTH + 15; 
 	char output_buffer[output_buffer_size];
   int chars_written = snprintf (output_buffer, 
@@ -155,23 +162,37 @@ syscall_exit (int status)
                                 "%s: exit(%d)\n", name, status);
 	ASSERT (chars_written != 0);
 	syscall_write (1, output_buffer, strlen (output_buffer));
+
+	/* Set exit status and call sema up. For process_wait. */
+
+	/* Acquire lock to prevent race conditions between process writting to the 
+	 * struct child, and its parent deallocating that struct when exiting. */
+	lock_acquire (&cur->self_lock);
+	struct child *child_ptr = cur->self_child_ptr;
+	if (child_ptr != NULL) 
+		{
+			child_ptr->exit_status = status;
+			lock_release (&cur->self_lock);
+			sema_up (&child_ptr->sema);
+		}
+	else lock_release (&cur->self_lock);
+
   thread_exit ();
 }
 
 /* SYS_EXEC */
 static pid_t
-syscall_exec (const char *cmd_line UNUSED)
+syscall_exec (const char *cmd_line)
 {
-  /* TODO implementation */
-  return 0;
+  tid_t pid = process_execute (cmd_line);
+  return (pid_t) pid; 
 }
 
 /* SYS_WAIT */
 static int
-syscall_wait (pid_t pid UNUSED)
+syscall_wait (pid_t pid)
 {
-  /* TODO implementation */
-  return 0;
+  return process_wait ((tid_t) pid);
 }
 
 /* SYS_CREATE */
@@ -214,57 +235,54 @@ syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
   return 0;
 }
 
+
 /* SYS_WRITE */
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
-  ASSERT (fd >= 1);
   ASSERT (buffer != NULL);
-  ASSERT ((unsigned long) fd <= 
-          sizeof (filesys_fd_map) / sizeof(struct file *));
+  ASSERT (fd >= 1);
+  ASSERT (fd < MAX_OPEN_FILES);
+
+  int bytes_written;
 
   lock_acquire (&filesys_lock);
 
-  int bytes_written = 0;
-
-  /* STDOUT_FILENO refers to the console, so output is sent to putbuf */
-  if (fd == STDOUT_FILENO) 
-    {
-      char buffer_section[MAX_CONSOLE_BUFFER_SIZE];
-      
-      /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
-      int32_t bytes_to_write = size;
-      for (int32_t offset = 0; ;
-           bytes_to_write -= MAX_CONSOLE_BUFFER_SIZE,
-           offset         += MAX_CONSOLE_BUFFER_SIZE) 
-        {
-          if (bytes_to_write - offset <= MAX_CONSOLE_BUFFER_SIZE) {
-            // write all remaining bytes to the console
-            memcpy(buffer_section, &((char *) buffer)[offset], bytes_to_write);
-            putbuf(buffer_section, bytes_to_write);
-            bytes_written += bytes_to_write;
-            break;
-          } else {
-            // write MAX remaining bytes to the console
-            // Consideration: Untested due to the system imposed limit of 
-            // 64 bytes for strings on stack
-            memcpy(buffer_section, 
-                &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
-            putbuf(buffer_section, MAX_CONSOLE_BUFFER_SIZE);
-            bytes_written += MAX_CONSOLE_BUFFER_SIZE;
-          }
-        }
-    }
-  else 
-    {
-      /* if not fd 1, we find the corresponding file_ptr and then write to it */
-      struct file *file_ptr = filesys_fd_map[fd];
-      ASSERT (file_ptr != NULL); 
-      bytes_written = file_write(file_ptr, buffer, size);
-    }
+  if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
+  else                     bytes_written = write_to_file (fd, buffer, size);
 
   lock_release (&filesys_lock);
+
   return bytes_written;
+}
+
+static int
+write_to_console (const char *buffer, unsigned size)
+{
+  int bytes_written = 0;
+
+  /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE 
+   * if necessary and write them to the console */
+  for (int32_t offset   = 0, bytes_remaining = size, bytes_to_write; 
+       bytes_remaining  > 0;
+       bytes_remaining -= MAX_CONSOLE_BUFFER_SIZE,
+       offset          += MAX_CONSOLE_BUFFER_SIZE) 
+    {
+      bytes_to_write = (bytes_remaining - offset <= MAX_CONSOLE_BUFFER_SIZE) ?
+          bytes_remaining : MAX_CONSOLE_BUFFER_SIZE; 
+      putbuf (&buffer[offset], bytes_to_write);
+      bytes_written += bytes_to_write;
+    }
+
+  return bytes_written;
+}
+
+static int
+write_to_file (int fd, const char *buffer, unsigned size)
+{
+  struct file *file_ptr = filesys_fd_map[fd];
+  ASSERT (file_ptr != NULL); 
+  return file_write (file_ptr, buffer, size);
 }
 
 /* SYS_SEEK */

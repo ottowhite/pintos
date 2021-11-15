@@ -1,4 +1,3 @@
-#include "userprog/process.h"
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
@@ -10,6 +9,7 @@
 #include "userprog/tss.h"
 #include "userprog/parse.h"
 #include "userprog/load_arguments.h"
+#include "userprog/process.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -17,6 +17,7 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
@@ -35,28 +36,29 @@ process_execute (const char *file_name)
   char *save_ptr;
   tid_t tid;
 
-  // TODO: Store process_name first in the page rather than second
-  //       to increase process name limit from half the page.
-
-  /* Make a copy of FILE_NAME.
-     Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
+  process_name = palloc_get_page (0);
+  if (process_name == NULL)
     return TID_ERROR;
 
-  int file_name_length = strlen (file_name) + 1;
-  strlcpy (fn_copy, file_name, file_name_length);
-  
-  /* Copy another file_name into the page for use by strtok_r to extract 
+  /* Guarantees page will not be overflowed by the copy operations */
+  ASSERT (strlen (file_name) + 1 < MAX_CHARS);
+
+  /* Copy a file_name into the page for use by strtok_r to extract 
      the name of the process for giving the thread the correct name */
-  process_name = fn_copy + file_name_length + 1;
+  int file_name_length = strlen (file_name) + 1;
   strlcpy (process_name, file_name, file_name_length);
   process_name = strtok_r (process_name, " ", &save_ptr);
+  
+  /* Make another copy of FILE_NAME to be parsed and args loaded in start_process
+     Otherwise there's a race between the caller and load(). */
+  int process_name_length = strlen (process_name) + 1;
+  fn_copy = process_name + process_name_length;
+  strlcpy (fn_copy, file_name, file_name_length);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (process_name - pg_ofs (process_name)); 
   return tid;
 }
 
@@ -69,8 +71,6 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
-  int MAX_ARGS  = 10;
-  int MAX_CHARS = 128;
   int argc;
   char *argv[MAX_ARGS + 1];
   char argv_store[MAX_CHARS + 1];
@@ -86,8 +86,8 @@ start_process (void *file_name_)
   load_arguments (argc, argv, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
-  if (!success) // TODO: Free user virtual memory on failure
+  palloc_free_page (file_name - pg_ofs (file_name));
+  if (!success) 
     thread_exit ();
 
   /* Start the user process by simulating a return from an
@@ -105,14 +105,51 @@ start_process (void *file_name_)
  * returns -1.  
  * If TID is invalid or if it was not a child of the calling process, or if 
  * process_wait() has already been successfully called for the given TID, 
- * returns -1 immediately, without waiting.
- * 
- * This function will be implemented in task 2.
- * For now, it does nothing. */
+ * returns -1 immediately, without waiting. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-	while (true);
+	struct thread *parent = thread_current ();
+
+  struct child *cp = NULL;
+  struct list_elem *e;
+
+  /* Iterates the list of children to match the given tid. */
+  for (e = list_begin (&parent->children);
+        e != list_end (&parent->children); 
+        e = list_next(e))
+    {
+      struct child *cp_check = list_entry (e, struct child, elem);
+      if (cp_check->tid == child_tid)
+			{
+				cp = cp_check;
+				break;
+			}
+    }
+
+	/* If child thread with tid is found, wait for it to finish running, then
+	 * deallocate its corresponding child struct and return its exit status. */
+  if (cp != NULL)
+    {
+      sema_down (&cp->sema);
+
+      /* Once cp is unblocked, store its exit_status, remove it from the 
+			 * children list, and free its memory. */
+      int result_status = cp->exit_status;
+
+			// set pointer of child thread to struct thread to NULL
+			// cp->thread_ptr = NULL;
+			// child thread will only access its child struct once, when it returns
+			// this is necessary if we make the change in process_exit to free the
+			// child_struct.
+
+      list_remove (&cp->elem);
+      free ((void *) cp);
+			return result_status;
+    }
+	/* If child thread not found, then it either returned already, or tid is 
+	 * not valid. */
+  return -1;
 }
 
 /* Free the current process's resources. */
@@ -121,6 +158,33 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+	/* Sets thread pointer of child struct of current thread to null,
+	 * as thread is about to be deallocated. */
+	cur->self_child_ptr->thread_ptr = NULL;
+
+	/* Deallocate all of the child structs in the children list */
+	struct list_elem *e;
+
+  /* Iterates the list of children and frees the struct. */
+  for (e = list_begin (&cur->children);
+        e != list_end (&cur->children); 
+        e = list_next(e))
+    {
+      struct child *child_ptr = list_entry (e, struct child, elem);
+
+      /* Acquires the lock to set the child thread's self_child_ptr to null. */
+			struct thread* child_t = child_ptr->thread_ptr;
+			if (child_t != NULL)
+			{
+				lock_acquire (&child_t->self_lock);
+				child_t->self_child_ptr = NULL;
+				lock_release (&child_t->self_lock);
+			}
+      
+      /* releases the child struct */
+      free ((void *) child_ptr);
+    }
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
