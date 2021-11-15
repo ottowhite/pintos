@@ -31,14 +31,10 @@ static void     verify_ptr      (void *ptr);
 static void     verify_args     (int argc, void *esp);
 static uint32_t invoke_function (void *function_ptr, int argc, void *esp);
 
-static int  write_to_console     (const void *buffer, unsigned size);
-static int  write_to_file        (int fd, const void *buffer, unsigned size);
-static void write_buffer_section (char *buffer_section, 
-                                  char *input, 
-                                  int bytes_to_write, 
-                                  int *bytes_written);
+static int  write_to_console     (const char *buffer, unsigned size);
+static int  write_to_file        (int fd, const char *buffer, unsigned size);
 
-static struct     lock filesys_lock;
+static struct lock filesys_lock;
 
 static struct function 
 syscall_func_map[] = 
@@ -258,10 +254,9 @@ syscall_write (int fd, const void *buffer, unsigned size)
 }
 
 static int
-write_to_console (const void *buffer, unsigned size)
+write_to_console (const char *buffer, unsigned size)
 {
   int bytes_written = 0;
-  char buffer_section[MAX_CONSOLE_BUFFER_SIZE];
 
   /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE 
    * if necessary and write them to the console */
@@ -272,32 +267,19 @@ write_to_console (const void *buffer, unsigned size)
     {
       bytes_to_write = (bytes_remaining - offset <= MAX_CONSOLE_BUFFER_SIZE) ?
           bytes_remaining : MAX_CONSOLE_BUFFER_SIZE; 
-
-      write_buffer_section (buffer_section, 
-                            &((char *) buffer)[offset], 
-                            bytes_to_write, 
-                            &bytes_written);
+      putbuf (&buffer[offset], bytes_to_write);
+      bytes_written += bytes_to_write;
     }
+
   return bytes_written;
 }
 
 static int
-write_to_file (int fd, const void *buffer, unsigned size)
+write_to_file (int fd, const char *buffer, unsigned size)
 {
   struct file *file_ptr = filesys_fd_map[fd];
   ASSERT (file_ptr != NULL); 
-  return file_write(file_ptr, buffer, size);
-}
-
-static void
-write_buffer_section (char *buffer_section, 
-                      char *input, 
-                      int bytes_to_write, 
-                      int *bytes_written)
-{
-  memcpy(buffer_section, input, bytes_to_write);
-  putbuf(buffer_section, bytes_to_write);
-  *bytes_written += bytes_to_write;
+  return file_write (file_ptr, buffer, size);
 }
 
 /* SYS_SEEK */
