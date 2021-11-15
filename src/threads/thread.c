@@ -217,9 +217,6 @@ thread_create (const char *name, int priority,
 
   intr_set_level (old_level);
 
-  /* Add to run queue. */
-  thread_unblock (t);
-
 	/* Initalize corresponding child struct. For process_wait. */
 	t->self_child_ptr = NULL;
 #ifdef USERPROG
@@ -239,6 +236,9 @@ thread_create (const char *name, int priority,
 	list_push_back (&thread_current ()->children, &child_ptr->elem);
 
 #endif
+
+  /* Add to run queue. */
+  thread_unblock (t);
 
   return tid;
 }
