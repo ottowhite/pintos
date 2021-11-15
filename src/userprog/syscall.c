@@ -9,6 +9,7 @@
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
+#include "devices/shutdown.h"
 
 /* System call helper functions */
 static void     syscall_halt     (void);
@@ -134,7 +135,7 @@ verify_ptr (void *ptr)
 static void
 syscall_halt (void)
 {
-  /* TODO implementation */
+  shutdown_power_off ();
 }
 
 /* SYS_EXIT 
