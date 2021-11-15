@@ -144,14 +144,14 @@ syscall_exit (int status)
 {
 	// Retrieve name of process.
 	char name[16];
-	strlcpy (name, thread_current ()->name, sizeof name);
+	strlcpy (name, thread_current ()->name, strlen (thread_current ()->name) + 1);
 	process_exit ();
 	
-	// Generate ourput string.
+	// Generate output string.
 	uint8_t buf_size = 32; //is size of 25 safe?
 	char str[32];
 	ASSERT (snprintf (str, buf_size, "%s: exit(%d)\n", name, status) != 0);
-	syscall_write (1, str, buf_size);
+	syscall_write (1, str, strlen (str) + 1);
   thread_exit ();
 }
 
