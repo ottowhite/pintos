@@ -1,4 +1,3 @@
-#include "userprog/process.h"
 #include <debug.h>
 #include <inttypes.h>
 #include <round.h>
@@ -10,6 +9,7 @@
 #include "userprog/tss.h"
 #include "userprog/parse.h"
 #include "userprog/load_arguments.h"
+#include "userprog/process.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -69,8 +69,6 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
-  int MAX_ARGS  = 10;
-  int MAX_CHARS = 128;
   int argc;
   char *argv[MAX_ARGS + 1];
   char argv_store[MAX_CHARS + 1];
