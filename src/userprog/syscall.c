@@ -228,6 +228,17 @@ syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
   return 0;
 }
 
+static void
+write_buffer_section (char *buffer_section, 
+                      char *input, 
+                      int bytes_to_write, 
+                      int *bytes_written)
+{
+  memcpy(buffer_section, input, bytes_to_write);
+  putbuf(buffer_section, bytes_to_write);
+  *bytes_written += bytes_to_write;
+}
+
 /* SYS_WRITE */
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
@@ -246,27 +257,20 @@ syscall_write (int fd, const void *buffer, unsigned size)
     {
       char buffer_section[MAX_CONSOLE_BUFFER_SIZE];
       
-      /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
-      int32_t bytes_to_write = size;
-      for (int32_t offset = 0; ;
-           bytes_to_write -= MAX_CONSOLE_BUFFER_SIZE,
-           offset         += MAX_CONSOLE_BUFFER_SIZE) 
+      /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE 
+       * if necessary and write them to the console */
+      for (int32_t offset   = 0, bytes_remaining = size, bytes_to_write; 
+           bytes_remaining  > 0;
+           bytes_remaining -= MAX_CONSOLE_BUFFER_SIZE,
+           offset          += MAX_CONSOLE_BUFFER_SIZE) 
         {
-          if (bytes_to_write - offset <= MAX_CONSOLE_BUFFER_SIZE) {
-            // write all remaining bytes to the console
-            memcpy(buffer_section, &((char *) buffer)[offset], bytes_to_write);
-            putbuf(buffer_section, bytes_to_write);
-            bytes_written += bytes_to_write;
-            break;
-          } else {
-            // write MAX remaining bytes to the console
-            // Consideration: Untested due to the system imposed limit of 
-            // 64 bytes for strings on stack
-            memcpy(buffer_section, 
-                &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
-            putbuf(buffer_section, MAX_CONSOLE_BUFFER_SIZE);
-            bytes_written += MAX_CONSOLE_BUFFER_SIZE;
-          }
+          bytes_to_write = (bytes_remaining - offset <= MAX_CONSOLE_BUFFER_SIZE) ?
+              bytes_remaining : MAX_CONSOLE_BUFFER_SIZE; 
+
+          write_buffer_section (buffer_section, 
+                                &((char *) buffer)[offset], 
+                                bytes_to_write, 
+                                &bytes_written);
         }
     }
   else 
