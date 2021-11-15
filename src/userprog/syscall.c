@@ -154,7 +154,7 @@ syscall_exit (int status)
                                 output_buffer_size, 
                                 "%s: exit(%d)\n", name, status);
 	ASSERT (chars_written != 0);
-	syscall_write (1, output_buffer, strlen (output_buffer) + 1);
+	syscall_write (1, output_buffer, strlen (output_buffer));
   thread_exit ();
 }
 
@@ -248,7 +248,8 @@ syscall_write (int fd, const void *buffer, unsigned size)
             // write MAX remaining bytes to the console
             // Consideration: Untested due to the system imposed limit of 
             // 64 bytes for strings on stack
-            memcpy(buffer_section, &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
+            memcpy(buffer_section, 
+                &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
             putbuf(buffer_section, MAX_CONSOLE_BUFFER_SIZE);
             bytes_written += MAX_CONSOLE_BUFFER_SIZE;
           }
