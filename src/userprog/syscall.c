@@ -222,7 +222,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   lock_acquire (&filesys_lock);
 
-  int bytes_written;
+  int bytes_written = 0;
 
   /* fd 1 refers to the console, so output is sent to putbuf */
   if (fd == STDOUT_FILENO) 
@@ -230,7 +230,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
       char buffer_section[MAX_CONSOLE_BUFFER_SIZE];
       
       /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE */
-      uint32_t bytes_to_write = strlen (buffer);
+      uint32_t bytes_to_write = strlen (buffer) + 1;
       for (uint32_t offset = 0; ;
            bytes_to_write -= MAX_CONSOLE_BUFFER_SIZE,
            offset         += MAX_CONSOLE_BUFFER_SIZE) 
@@ -239,6 +239,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
             // write all remaining bytes to the console
             memcpy(buffer_section, &((char *) buffer)[offset], bytes_to_write);
             putbuf(buffer_section, bytes_to_write);
+            bytes_written += bytes_to_write;
             break;
           } else {
             // write MAX remaining bytes to the console
@@ -246,9 +247,9 @@ syscall_write (int fd, const void *buffer, unsigned size)
             // 64 bytes for strings on stack
             memcpy(buffer_section, &((char *) buffer)[offset], MAX_CONSOLE_BUFFER_SIZE);
             putbuf(buffer_section, MAX_CONSOLE_BUFFER_SIZE);
+            bytes_written += MAX_CONSOLE_BUFFER_SIZE;
           }
         }
-        bytes_written = strlen (buffer);
     }
   else 
     {
