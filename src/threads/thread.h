@@ -100,14 +100,14 @@ struct thread
 
 		struct child *self_child_ptr;       /* Pointer to own child struct. */
     struct list children;               /* List of children processes. */
-    struct lock self_lock;              /* Lock for the child to update its exit status. */
+    struct lock self_lock;              /* Lock to update exit status. */
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
 
-/* Stores all the information needed from child process for process_wait. */
+/* Stores all the information needed for a child process for process_wait. */
 #ifdef USERPROG
 struct child
   {

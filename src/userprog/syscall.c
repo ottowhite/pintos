@@ -142,7 +142,8 @@ syscall_halt (void)
 }
 
 /* SYS_EXIT 
- * Free current process resources and output process name and exit code.*/
+ * Set return status in the child struct for parent to access later on. 
+ * Free current process resources and output process name and exit code. */
 static void
 syscall_exit (int status)
 {
@@ -163,6 +164,9 @@ syscall_exit (int status)
 	syscall_write (1, output_buffer, strlen (output_buffer));
 
 	/* Set exit status and call sema up. For process_wait. */
+
+	/* Acquire lock to prevent race conditions between process writting to the 
+	 * struct child, and its parent deallocating that struct when exiting. */
 	lock_acquire (&cur->self_lock);
 	struct child *child_ptr = cur->self_child_ptr;
 	if (child_ptr != NULL) 
