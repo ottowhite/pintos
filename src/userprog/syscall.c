@@ -240,10 +240,9 @@ syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
-  ASSERT (fd >= 1);
   ASSERT (buffer != NULL);
-  ASSERT ((unsigned long) fd <= 
-          sizeof (filesys_fd_map) / sizeof(struct file *));
+  ASSERT (fd >= 1);
+  ASSERT (fd < MAX_OPEN_FILES);
 
   int bytes_written;
 
