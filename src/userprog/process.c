@@ -40,23 +40,24 @@ process_execute (const char *file_name)
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
+  process_name = palloc_get_page (0);
+  if (process_name == NULL)
     return TID_ERROR;
 
   int file_name_length = strlen (file_name) + 1;
-  strlcpy (fn_copy, file_name, file_name_length);
+  strlcpy (process_name, file_name, file_name_length);
+  process_name = strtok_r (process_name, " ", &save_ptr);
   
   /* Copy another file_name into the page for use by strtok_r to extract 
      the name of the process for giving the thread the correct name */
-  process_name = fn_copy + file_name_length + 1;
-  strlcpy (process_name, file_name, file_name_length);
-  process_name = strtok_r (process_name, " ", &save_ptr);
+  int process_name_length = strlen (process_name) + 1;
+  fn_copy = process_name + process_name_length;
+  strlcpy (fn_copy, file_name, file_name_length);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (process_name - pg_ofs (process_name)); 
   return tid;
 }
 
@@ -84,7 +85,7 @@ start_process (void *file_name_)
   load_arguments (argc, argv, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
+  palloc_free_page (file_name - pg_ofs (file_name));
   if (!success) // TODO: Free user virtual memory on failure
     thread_exit ();
 
