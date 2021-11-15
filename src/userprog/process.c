@@ -35,21 +35,21 @@ process_execute (const char *file_name)
   char *save_ptr;
   tid_t tid;
 
-  // TODO: Store process_name first in the page rather than second
-  //       to increase process name limit from half the page.
-
-  /* Make a copy of FILE_NAME.
-     Otherwise there's a race between the caller and load(). */
   process_name = palloc_get_page (0);
   if (process_name == NULL)
     return TID_ERROR;
 
+  /* Guarantees page will not be overflowed by the copy operations */
+  ASSERT (strlen (file_name) + 1 < MAX_CHARS);
+
+  /* Copy a file_name into the page for use by strtok_r to extract 
+     the name of the process for giving the thread the correct name */
   int file_name_length = strlen (file_name) + 1;
   strlcpy (process_name, file_name, file_name_length);
   process_name = strtok_r (process_name, " ", &save_ptr);
   
-  /* Copy another file_name into the page for use by strtok_r to extract 
-     the name of the process for giving the thread the correct name */
+  /* Make another copy of FILE_NAME to be parsed and args loaded in start_process
+     Otherwise there's a race between the caller and load(). */
   int process_name_length = strlen (process_name) + 1;
   fn_copy = process_name + process_name_length;
   strlcpy (fn_copy, file_name, file_name_length);

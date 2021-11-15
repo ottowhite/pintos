@@ -4,7 +4,7 @@
 #include "threads/thread.h"
 
 #define MAX_ARGS (10)
-#define MAX_CHARS (128)
+#define MAX_CHARS (512)
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
