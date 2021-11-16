@@ -73,6 +73,10 @@ static tid_t allocate_tid (void);
 static void child_process_init (struct child* child_ptr,
 												        struct thread *t,
 												        tid_t tid);
+static uint32_t fd_hash_func (const struct hash_elem *elem, void *aux UNUSED);
+static bool fd_hash_less_func (const struct hash_elem* a,
+                               const struct hash_elem* b, 
+                               void* aux UNUSED);  
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -221,8 +225,10 @@ thread_create (const char *name, int priority,
 	t->self_child_ptr = NULL;
 #ifdef USERPROG
 
+  // process_wait
+
 	/* Special case for initial thread,
-	 * list of children needs to be initialized here. */
+	   list of children needs to be initialized here. */
   if (thread_current () == initial_thread)
     list_init (&thread_current ()->children);
 
@@ -235,6 +241,11 @@ thread_create (const char *name, int priority,
 	/* Add struct child to list of children in parent thread. */
 	list_push_back (&thread_current ()->children, &child_ptr->elem);
 
+  // hash table for file descriptors
+  t->hash_fd = * (struct hash *) malloc (sizeof (struct hash));
+  hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL);
+  t->fd_cnt = 2;
+
 #endif
 
   /* Add to run queue. */
@@ -245,7 +256,9 @@ thread_create (const char *name, int priority,
 
 /* Initialize required elements for a process. */
 #ifdef USERPROG
-void child_process_init (struct child* child_ptr, struct thread *t, tid_t tid)
+
+static void
+child_process_init (struct child* child_ptr, struct thread *t, tid_t tid)
 {
   child_ptr->tid = tid;
   child_ptr->thread_ptr = t;
@@ -257,6 +270,26 @@ void child_process_init (struct child* child_ptr, struct thread *t, tid_t tid)
   list_init (&t->children);
 	lock_init (&t->self_lock);
 }
+
+static uint32_t 
+fd_hash_func (const struct hash_elem *elem, void *aux UNUSED) 
+{
+  return (uint32_t) hash_entry (elem, struct fd_item, hash_elem)->fd;
+}
+
+static bool
+fd_hash_less_func (const struct hash_elem* a,
+                   const struct hash_elem* b, 
+                   void* aux UNUSED) 
+{
+  struct fd_item *item_a = hash_entry (a, struct fd_item, hash_elem);
+  struct fd_item *item_b = hash_entry (b, struct fd_item, hash_elem);
+
+  if (item_a->fd == item_b->fd) 
+    return item_a->pid < item_b->pid;
+  return item_a->fd < item_b->fd;
+}
+
 #endif
 
 /* Puts the current thread to sleep.  It will not be scheduled
