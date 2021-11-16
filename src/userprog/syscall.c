@@ -30,15 +30,16 @@ static void     syscall_close    (int fd);
 
 static void     syscall_handler (struct intr_frame *f);
 static void     verify_ptr      (const void *ptr);
-static void     verify_args     (int argc, const void *esp);
-static uint32_t invoke_function (const void *function_ptr, int argc, const void *esp);
-
+static void     verify_args     (int argc, const uint32_t *esp);
+static uint32_t invoke_function (const void *syscall_ptr, 
+                                 int argc, 
+                                 const uint32_t *esp);
 static int  write_to_console     (const char *buffer, unsigned size);
 static int  write_to_file        (int fd, const char *buffer, unsigned size);
 
 static struct lock filesys_lock;
 
-static struct function 
+static struct syscall 
 syscall_func_map[] = 
   {
     {&syscall_halt,     .argc = 0},  /* SYS_HALT */      
@@ -79,43 +80,30 @@ syscall_handler (struct intr_frame *f)
   ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_CLOSE);
 
   /* Read the argc and function_ptr values from our syscall_func_map */
-  int   argc         = syscall_func_map[syscall_no].argc;
-  void *function_ptr = syscall_func_map[syscall_no].function_ptr;
+  int   argc        = syscall_func_map[syscall_no].argc;
+  void *syscall_ptr = syscall_func_map[syscall_no].syscall_ptr;
 
   /* Verify the necessary number of arguments before passing function
      invocation to invoke_function */
   verify_args (argc, f->esp);
-  f->eax = invoke_function (function_ptr, argc, f->esp);
+  f->eax = invoke_function (syscall_ptr, argc, f->esp);
 }
 
 static void 
-verify_args (int argc, const void *esp) 
+verify_args (int argc, const uint32_t *esp) 
 {
-  switch (argc)
-    {
-      case 3:  verify_ptr (&((uint32_t *) esp)[3]); FALLTHROUGH;
-      case 2:  verify_ptr (&((uint32_t *) esp)[2]); FALLTHROUGH;
-      case 1:  verify_ptr (&((uint32_t *) esp)[1]); FALLTHROUGH;
-      default: break;
-    }
+  for (int i = argc; i >= 1; i--) verify_ptr (&esp[i]);
 }
 
 static uint32_t 
-invoke_function (const void *function_ptr, int argc, const void *esp) 
+invoke_function (const void *syscall_ptr, int argc, const uint32_t *esp) 
 {
   switch (argc) 
     {
-      case 0: 
-        return ((function_0_args) function_ptr) (); 
-      case 1: 
-        return ((function_1_args) function_ptr) (((uint32_t *) esp)[1]); 
-      case 2: 
-        return ((function_2_args) function_ptr) (((uint32_t *) esp)[1], 
-                                                 ((uint32_t *) esp)[2]); 
-      case 3: 
-        return ((function_3_args) function_ptr) (((uint32_t *) esp)[1], 
-                                                 ((uint32_t *) esp)[2], 
-                                                 ((uint32_t *) esp)[3]); 
+      case 0: return ((syscall_0_args) syscall_ptr) ();
+      case 1: return ((syscall_1_args) syscall_ptr) (esp[1]); 
+      case 2: return ((syscall_2_args) syscall_ptr) (esp[1], esp[2]); 
+      case 3: return ((syscall_3_args) syscall_ptr) (esp[1], esp[2], esp[3]); 
       default: NOT_REACHED (); 
     }
 }
@@ -130,9 +118,10 @@ verify_ptr (const void *ptr)
       /* Verify address in page directory*/
       pagedir_get_page (active_pd (), ptr) != NULL) 
     return;
+  else
+    /* If this point is reached the pointer is not valid. Exit with -1 */
+    syscall_exit (-1);
 
-  /* If this point is reached the pointer is not valid. Exit with -1 */
-  syscall_exit (-1);
   NOT_REACHED ();
 }
 
