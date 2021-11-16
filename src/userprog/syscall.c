@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include <string.h>
+#include <stdlib.h>
 #include "filesys/file.h"
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
@@ -62,7 +63,6 @@ void
 syscall_init (void) 
 {
   lock_init (&filesys_lock);
-  ASSERT (fd_table_init ());
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -217,8 +217,36 @@ syscall_remove (const char *file UNUSED)
 static int
 syscall_open (const char *file UNUSED)
 {
-  /* TODO implementation */
-  return 0;
+  /* Returns an error if the file name is invalid */
+  if (file == NULL) return -1;
+
+  /* Acquires the lock to open the file, 
+     and returns an error if the file is invalid */
+  lock_acquire (&filesys_lock);
+
+  struct file *file_to_open = filesys_open (file);
+
+  lock_release (&filesys_lock);
+  if (file_to_open == NULL) return -1;
+
+  /* Create a new fd_item to pass into the hash table, and
+     return an error if it failed to do so */
+  struct fd_item *new_fd_item 
+    = (struct fd_item *) malloc (sizeof (struct fd_item));
+  if (new_fd_item == NULL) return -1;
+
+  /* Acquires the lock to store the file_to_open in a new fd_item struct
+     and push the struct into the current thread's hash table */
+  lock_acquire (&filesys_lock);
+
+  new_fd_item->fd = thread_current ()->fd_cnt++;
+  new_fd_item->pid = (pid_t) thread_current ()->tid;
+  new_fd_item->file_ptr = file_to_open;
+  hash_insert (&(thread_current ()->hash_fd), &(new_fd_item->hash_elem));
+
+  lock_release (&filesys_lock);
+
+  return new_fd_item->fd;
 }
 
 /* SYS_FILESIZE */
