@@ -126,14 +126,6 @@ struct child
     struct semaphore sema;      /* Semaphore to block the parent thread. */
     struct list_elem elem;      /* For child_processes list in struct thread. */
   };
-
-  struct fd_item 
-  {
-    int fd;
-    tid_t pid;
-    struct file *file_ptr;
-    struct hash_elem hash_elem;
-  };
 #endif
 
 

@@ -1,4 +1,3 @@
-/*
 #ifndef USERPROG_FD_TABLE_H
 #define USERPROG_FD_TABLE_H
 
@@ -7,11 +6,16 @@
 #include "threads/thread.h"
 #include "lib/kernel/hash.h"
 
+struct fd_item 
+{
+  int fd;
+  tid_t pid;
+  struct file *file_ptr;
+  struct hash_elem hash_elem;
+};
 
-
-bool fd_table_init (void);
 int get_free_fd (void);
-struct file *get_file (int fd);
-bool remove_file (int fd);
+struct file *get_file (struct hash *fd_hash_table, int fd);
+bool remove_file (struct hash *fd_hash_table, int fd);
 
-#endif /* userprog/fd_table.h */
+#endif 

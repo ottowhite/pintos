@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "userprog/fd_table.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -285,9 +286,8 @@ fd_hash_less_func (const struct hash_elem* a,
   struct fd_item *item_a = hash_entry (a, struct fd_item, hash_elem);
   struct fd_item *item_b = hash_entry (b, struct fd_item, hash_elem);
 
-  if (item_a->fd == item_b->fd) 
-    return item_a->pid < item_b->pid;
-  return item_a->fd < item_b->fd;
+  if (item_a->fd == item_b->fd) return item_a->pid < item_b->pid;
+  else                          return item_a->fd < item_b->fd;
 }
 
 #endif

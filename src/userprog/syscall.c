@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include <string.h>
-#include <stdlib.h>
 #include "filesys/file.h"
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/synch.h"
+#include "threads/malloc.h"
 #include "userprog/syscall.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
@@ -222,9 +222,8 @@ syscall_open (const char *file)
 
   /* Create a new fd_item to pass into the hash table, and
      return an error if it failed to do so */
-  struct fd_item *new_fd_item 
-    = (struct fd_item *) malloc (sizeof (struct fd_item));
-  if (new_fd_item == NULL) return -1;
+  struct fd_item *new_fd_item = malloc (sizeof (struct fd_item));
+  if (new_fd_item == NULL) syscall_exit (-1);
 
   /* Acquires the lock to store the file_to_open in a new fd_item struct
      and push the struct into the current thread's hash table */
@@ -233,7 +232,7 @@ syscall_open (const char *file)
   new_fd_item->fd = thread_current ()->fd_cnt++;
   new_fd_item->pid = (pid_t) thread_current ()->tid;
   new_fd_item->file_ptr = file_to_open;
-  hash_insert (&(thread_current ()->hash_fd), &(new_fd_item->hash_elem));
+  hash_insert (&thread_current ()->hash_fd, &new_fd_item->hash_elem);
 
   lock_release (&filesys_lock);
 
