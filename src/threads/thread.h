@@ -5,6 +5,9 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "lib/kernel/hash.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -98,9 +101,15 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 
+    /* For process_wait */
 		struct child *self_child_ptr;       /* Pointer to own child struct. */
     struct list children;               /* List of children processes. */
     struct lock self_lock;              /* Lock to update exit status. */
+
+    int fd_cnt;                         /* Unique file descriptor for hash_fd */
+    struct hash hash_fd;                /* Hashtable to map fds to file ptrs */
+    struct file *executable;            /* Current executable file */
+
 #endif
 
     /* Owned by thread.c. */
@@ -116,6 +125,14 @@ struct child
     int exit_status;            /* Stores the exit_status of the child. */
     struct semaphore sema;      /* Semaphore to block the parent thread. */
     struct list_elem elem;      /* For child_processes list in struct thread. */
+  };
+
+  struct fd_item 
+  {
+    int fd;
+    tid_t pid;
+    struct file *file_ptr;
+    struct hash_elem hash_elem;
   };
 #endif
 
