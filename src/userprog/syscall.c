@@ -29,9 +29,9 @@ static unsigned syscall_tell     (int fd);
 static void     syscall_close    (int fd);
 
 static void     syscall_handler (struct intr_frame *f);
-static void     verify_ptr      (void *ptr);
-static void     verify_args     (int argc, void *esp);
-static uint32_t invoke_function (void *function_ptr, int argc, void *esp);
+static void     verify_ptr      (const void *ptr);
+static void     verify_args     (int argc, const void *esp);
+static uint32_t invoke_function (const void *function_ptr, int argc, const void *esp);
 
 static int  write_to_console     (const char *buffer, unsigned size);
 static int  write_to_file        (int fd, const char *buffer, unsigned size);
@@ -89,7 +89,7 @@ syscall_handler (struct intr_frame *f)
 }
 
 static void 
-verify_args (int argc, void *esp) 
+verify_args (int argc, const void *esp) 
 {
   switch (argc)
     {
@@ -101,7 +101,7 @@ verify_args (int argc, void *esp)
 }
 
 static uint32_t 
-invoke_function (void *function_ptr, int argc, void *esp) 
+invoke_function (const void *function_ptr, int argc, const void *esp) 
 {
   switch (argc) 
     {
@@ -122,7 +122,7 @@ invoke_function (void *function_ptr, int argc, void *esp)
 
 
 static void
-verify_ptr (void *ptr)
+verify_ptr (const void *ptr)
 {
   if (ptr != NULL && 
       /* Verify address in user space */
@@ -215,10 +215,12 @@ syscall_remove (const char *file UNUSED)
 
 /* SYS_OPEN */
 static int
-syscall_open (const char *file UNUSED)
+syscall_open (const char *file)
 {
   /* Returns an error if the file name is invalid */
   if (file == NULL) return -1;
+
+  verify_ptr (file);
 
   /* Acquires the lock to open the file, 
      and returns an error if the file is invalid */
