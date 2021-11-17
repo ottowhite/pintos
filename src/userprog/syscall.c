@@ -171,6 +171,7 @@ syscall_exit (int status)
 static pid_t
 syscall_exec (const char *cmd_line)
 {
+  if (!verify_ptr (cmd_line)) syscall_exit (-1);
   tid_t pid = process_execute (cmd_line);
   return (pid_t) pid; 
 }
