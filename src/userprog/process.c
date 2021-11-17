@@ -55,10 +55,17 @@ process_execute (const char *file_name)
   fn_copy = process_name + process_name_length;
   strlcpy (fn_copy, file_name, file_name_length);
 
+  /* Open executable file and deny all writes */
+  struct file *exec_file = filesys_open (process_name);
+  file_deny_write (exec_file);
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (process_name - pg_ofs (process_name)); 
+
+  file_close (exec_file);
+  
   return tid;
 }
 
@@ -89,6 +96,10 @@ start_process (void *file_name_)
   palloc_free_page (file_name - pg_ofs (file_name));
   if (!success) 
     thread_exit ();
+  else {
+    thread_current ()->executable = filesys_open (argv[0]);
+    file_deny_write (thread_current ()->executable);
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -311,6 +322,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   file = filesys_open (file_name);
+
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
