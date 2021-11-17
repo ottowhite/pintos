@@ -12,6 +12,8 @@ typedef uint32_t (*syscall_1_args) (uint32_t);
 typedef uint32_t (*syscall_2_args) (uint32_t, uint32_t);
 typedef uint32_t (*syscall_3_args) (uint32_t, uint32_t, uint32_t);
 
+void syscall_exit (int status);
+
 struct syscall { void *syscall_ptr; int argc; };
 
 void syscall_init (void);

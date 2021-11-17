@@ -2,7 +2,7 @@
 #include <syscall-nr.h>
 #include <string.h>
 #include <hash.h>
-#include "filesys/file.h"
+#include "filesys/file.h" 
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -16,7 +16,7 @@
 
 /* System call helper functions */
 static void     syscall_halt     (void);
-static void     syscall_exit     (int status);
+       void     syscall_exit     (int status);
 static pid_t    syscall_exec     (const char *cmd_line);
 static int      syscall_wait     (pid_t pid);
 static bool     syscall_create   (const char *file, unsigned initial_size);
@@ -131,7 +131,7 @@ syscall_halt (void)
 /* SYS_EXIT 
  * Set return status in the child struct for parent to access later on. 
  * Free current process resources and output process name and exit code. */
-static void
+void
 syscall_exit (int status)
 {
 	struct thread *cur = thread_current ();
