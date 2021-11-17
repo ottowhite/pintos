@@ -270,8 +270,41 @@ syscall_filesize (int fd UNUSED)
 static int
 syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
 {
-  /* TODO implementation */
-  return 0;
+  ASSERT (buffer != NULL);
+  ASSERT (fd < MAX_OPEN_FILES);
+
+  unsigned bytes_read;
+  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+
+  lock_acquire (&filesys_lock);
+
+  if      (fd == STDOUT_FILENO) return -1;
+  else if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
+  else                          bytes_read = read_from_file (fd, buffer, size);
+
+  lock_release (&filesys_lock);
+
+  return bytes_read;
+}
+
+static int
+read_from_console (void *buffer, unsigned size)
+{
+  unsigned cnt = 0;
+
+  /* While the count does not exceed the buffer size, read input from console */
+  while (cnt != size) *(uint8_t *) (buffer + cnt++) = input_getc ();
+  
+  return cnt;
+}
+
+static int
+read_from_file (int fd, void *buffer, unsigned size)
+{
+  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  if (fp == NULL) return -1;
+  int cnt = file_read (fp, buffer, size);
+  return cnt;
 }
 
 
@@ -282,11 +315,11 @@ syscall_write (int fd, const void *buffer, unsigned size)
   ASSERT (buffer != NULL);
   ASSERT (fd < MAX_OPEN_FILES);
 
-  int bytes_written;
+  unsigned bytes_written;
 
   lock_acquire (&filesys_lock);
 
-  if (fd == STDIN_FILENO)       return -1;
+  if      (fd == STDIN_FILENO)  return -1;
   else if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
   else                          bytes_written = write_to_file (fd, buffer, size);
 
