@@ -30,8 +30,8 @@ static unsigned syscall_tell     (int fd);
 static void     syscall_close    (int fd);
 
 static void     syscall_handler (struct intr_frame *f);
-static void     verify_ptr      (const void *ptr);
-static void     verify_args     (int argc, const uint32_t *esp);
+static bool     verify_ptr      (const void *ptr);
+static bool     verify_args     (int argc, const uint32_t *esp);
 static uint32_t invoke_function (const void *syscall_ptr, 
                                  int argc, 
                                  const uint32_t *esp);
@@ -73,7 +73,7 @@ static void
 syscall_handler (struct intr_frame *f) 
 {
   /* Read the syscall number at the stack pointer (f->esp) */
-  verify_ptr (f->esp);
+  if (!verify_ptr (f->esp)) syscall_exit (-1);
   int syscall_no = *((int *) f->esp);
 
   /* Ensure our syscall_no refers to a defined system call */
@@ -85,14 +85,27 @@ syscall_handler (struct intr_frame *f)
 
   /* Verify the necessary number of arguments before passing function
      invocation to invoke_function */
-  verify_args (argc, f->esp);
+  if (!verify_args (argc, f->esp)) syscall_exit (-1);
   f->eax = invoke_function (syscall_ptr, argc, f->esp);
 }
 
-static void 
+static bool 
 verify_args (int argc, const uint32_t *esp) 
 {
-  for (int i = argc; i >= 1; i--) verify_ptr (&esp[i]);
+  for (int i = argc; i >= 1; i--) if (!verify_ptr (&esp[i])) return false;
+  return true;
+}
+
+static bool
+verify_ptr (const void *ptr)
+{
+  /* Verify address in user space and in page directory*/
+  if (ptr != NULL && 
+      is_user_vaddr (ptr) && 
+      pagedir_get_page (active_pd (), ptr) != NULL) 
+    return true;
+  else 
+    return false;
 }
 
 static uint32_t 
@@ -106,23 +119,6 @@ invoke_function (const void *syscall_ptr, int argc, const uint32_t *esp)
       case 3: return ((syscall_3_args) syscall_ptr) (esp[1], esp[2], esp[3]); 
       default: NOT_REACHED (); 
     }
-}
-
-
-static void
-verify_ptr (const void *ptr)
-{
-  if (ptr != NULL && 
-      /* Verify address in user space */
-      is_user_vaddr (ptr) && 
-      /* Verify address in page directory*/
-      pagedir_get_page (active_pd (), ptr) != NULL) 
-    return;
-  else
-    /* If this point is reached the pointer is not valid. Exit with -1 */
-    syscall_exit (-1);
-
-  NOT_REACHED ();
 }
 
 /* SYS_HALT */
@@ -220,7 +216,7 @@ syscall_open (const char *file)
   /* Returns an error if the file name is invalid */
   if (file == NULL) return -1;
 
-  verify_ptr (file);
+  if (!verify_ptr (file)) syscall_exit (-1);
 
   /* Acquires the lock to open the file, 
      and returns an error if the file is invalid */
