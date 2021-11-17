@@ -2,17 +2,15 @@
 #include "userprog/syscall.h"
 #include <hash.h>
 
-uint32_t fd_counter;
-
 hash_hash_func *fd_hash_func_ptr;
 hash_less_func *fd_hash_less_func_ptr;
 
 void
-init_fd_item (struct fd_item *fd_item_ptr, struct thread *t, struct file *f)
+init_fd_item (struct fd_item *fd_item_ptr, struct thread *t, struct file *fp)
 {
   fd_item_ptr->fd = t->fd_cnt++;
   fd_item_ptr->pid = (pid_t) t->tid;
-  fd_item_ptr->file_ptr = f;
+  fd_item_ptr->file_ptr = fp;
   hash_insert (&t->hash_fd, &(fd_item_ptr->hash_elem));
 }
 
@@ -25,17 +23,24 @@ create_fake_fd_item (int fd, pid_t tid)
   return fake_fd_item;
 }
 
-struct file *
-get_file (struct hash *fd_hash_table, int fd) 
+struct fd_item *
+get_fd_item (struct hash *fd_hash_table, int fd)
 {
-
   struct fd_item fake_fd_item 
     = create_fake_fd_item (fd, thread_current ()->tid);
 
   struct hash_elem *elem = hash_find (fd_hash_table, 
                                       &fake_fd_item.hash_elem);
   if (elem == NULL) return NULL;
-  else return hash_entry (elem, struct fd_item, hash_elem)->file_ptr;
+  return hash_entry (elem, struct fd_item, hash_elem);
+}
+
+struct file *
+get_file (struct hash *fd_hash_table, int fd) 
+{
+  if (get_fd_item (fd_hash_table, fd) == NULL)
+    return NULL;
+  return get_fd_item (fd_hash_table, fd)->file_ptr;
 }
 
 bool 

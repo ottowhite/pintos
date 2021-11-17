@@ -16,8 +16,9 @@ struct fd_item
 
 void init_fd_item (struct fd_item *fd_item_ptr,
                    struct thread *t,
-                   struct file *f);
+                   struct file *fp);
 int get_free_fd (void);
+struct fd_item *get_fd_item (struct hash *fd_hash_table, int fd);
 struct file *get_file (struct hash *fd_hash_table, int fd);
 bool remove_file (struct hash *fd_hash_table, int fd);
 
