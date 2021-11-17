@@ -35,6 +35,8 @@ static void     verify_args     (int argc, const uint32_t *esp);
 static uint32_t invoke_function (const void *syscall_ptr, 
                                  int argc, 
                                  const uint32_t *esp);
+static int  read_from_console    (void *buffer, unsigned size);
+static int  read_from_file       (int fd, void *buffer, unsigned size);
 static int  write_to_console     (const char *buffer, unsigned size);
 static int  write_to_file        (int fd, const char *buffer, unsigned size);
 
@@ -267,15 +269,13 @@ syscall_filesize (int fd UNUSED)
 static int
 syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
 {
-  ASSERT (buffer != NULL);
-  ASSERT (fd < MAX_OPEN_FILES);
+  if (buffer == NULL || fd >= MAX_OPEN_FILES) syscall_exit (-1);
 
   unsigned bytes_read;
-  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
 
   lock_acquire (&filesys_lock);
 
-  if      (fd == STDOUT_FILENO) return -1;
+  if      (fd == STDOUT_FILENO) syscall_exit (-1);
   else if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
   else                          bytes_read = read_from_file (fd, buffer, size);
 
@@ -309,13 +309,13 @@ read_from_file (int fd, void *buffer, unsigned size)
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
-  if (buffer != NULL || fd < MAX_OPEN_FILES) return -1;
+  if (buffer == NULL || fd >= MAX_OPEN_FILES) syscall_exit (-1);
 
   unsigned bytes_written;
 
   lock_acquire (&filesys_lock);
 
-  if      (fd == STDIN_FILENO)  return -1;
+  if      (fd == STDIN_FILENO)  syscall_exit (-1);
   else if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
   else                          bytes_written = write_to_file (fd, buffer, size);
 
@@ -349,7 +349,7 @@ static int
 write_to_file (int fd, const char *buffer, unsigned size)
 {
   struct file *fp = get_file (&thread_current ()->hash_fd, fd);
-  if (fp != NULL) return -1; 
+  ASSERT (fp != NULL);
   return file_write (fp, buffer, size);
 }
 
