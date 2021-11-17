@@ -58,9 +58,6 @@ syscall_func_map[] =
     {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
   };
 
-static struct file *
-filesys_fd_map[MAX_OPEN_FILES];
-
 void
 syscall_init (void) 
 {
@@ -312,8 +309,7 @@ read_from_file (int fd, void *buffer, unsigned size)
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
-  ASSERT (buffer != NULL);
-  ASSERT (fd < MAX_OPEN_FILES);
+  if (buffer != NULL || fd < MAX_OPEN_FILES) return -1;
 
   unsigned bytes_written;
 
@@ -352,9 +348,9 @@ write_to_console (const char *buffer, unsigned size)
 static int
 write_to_file (int fd, const char *buffer, unsigned size)
 {
-  struct file *file_ptr = filesys_fd_map[fd];
-  ASSERT (file_ptr != NULL); 
-  return file_write (file_ptr, buffer, size);
+  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  if (fp != NULL) return -1; 
+  return file_write (fp, buffer, size);
 }
 
 /* SYS_SEEK */
