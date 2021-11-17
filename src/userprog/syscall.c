@@ -229,10 +229,7 @@ syscall_open (const char *file)
      and push the struct into the current thread's hash table */
   lock_acquire (&filesys_lock);
 
-  new_fd_item->fd = thread_current ()->fd_cnt++;
-  new_fd_item->pid = (pid_t) thread_current ()->tid;
-  new_fd_item->file_ptr = file_to_open;
-  hash_insert (&thread_current ()->hash_fd, &new_fd_item->hash_elem);
+  init_fd_item (new_fd_item, thread_current (), file_to_open);
 
   lock_release (&filesys_lock);
 
