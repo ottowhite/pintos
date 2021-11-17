@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include <string.h>
+#include <hash.h>
 #include "filesys/file.h"
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
@@ -252,8 +253,8 @@ static int
 syscall_filesize (int fd UNUSED)
 {
   /* Fetches the corresponding file */
-  struct file *fp = get_file (thread_current ()->hash_fd, fd);
-  if (fp == NULL) exit (-1);
+  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  if (fp == NULL) syscall_exit (-1);
 
   /* Acquire the lock to access files */
   lock_acquire (&filesys_lock);
@@ -279,15 +280,15 @@ static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
   ASSERT (buffer != NULL);
-  ASSERT (fd >= 1);
   ASSERT (fd < MAX_OPEN_FILES);
 
   int bytes_written;
 
   lock_acquire (&filesys_lock);
 
-  if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
-  else                     bytes_written = write_to_file (fd, buffer, size);
+  if (fd == STDIN_FILENO)       return -1;
+  else if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
+  else                          bytes_written = write_to_file (fd, buffer, size);
 
   lock_release (&filesys_lock);
 
@@ -328,8 +329,8 @@ static void
 syscall_seek (int fd UNUSED, unsigned position UNUSED)
 {
   /* Fetches the corresponding file */
-  struct file *fp = get_file (thread_current ()->hash_fd, fd);
-  if (fp == NULL) exit (-1);
+  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  if (fp == NULL) syscall_exit (-1);
 
   /* Acquires the lock to access files */
   lock_acquire (&filesys_lock);
@@ -344,9 +345,10 @@ static unsigned
 syscall_tell (int fd UNUSED)
 {
   /* Fetches the corresponding file */
-  struct file *fp = get_file (thread_current ()->hash_fd, fd);
-  if (fp == NULL) exit (-1);
+  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  if (fp == NULL) syscall_exit (-1);
   
+  /* Acquires the lock to access files */
   lock_acquire (&filesys_lock);
   
   int tell = file_tell (fp);
@@ -360,5 +362,17 @@ syscall_tell (int fd UNUSED)
 static void
 syscall_close (int fd UNUSED)
 {
-  /* TODO implementation */
+  /* Fetches the corresponding file */
+  struct fd_item *fd_item_ptr = get_fd_item (&thread_current ()->hash_fd, fd);
+  if (fd_item_ptr == NULL) syscall_exit (-1);
+
+  /* Acquires the lock to access files and free the fd_item struct allocated
+     upon syscall_open */
+  lock_acquire (&filesys_lock);
+  
+  hash_delete (&thread_current ()->hash_fd, &fd_item_ptr->hash_elem);
+  file_close (fd_item_ptr->file_ptr);
+  free (fd_item_ptr);
+  
+  lock_release (&filesys_lock);
 }
