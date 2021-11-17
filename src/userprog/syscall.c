@@ -309,7 +309,7 @@ read_from_file (int fd, void *buffer, unsigned size)
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
-  if (buffer == NULL || 
+  if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO) syscall_exit (-1);
 
@@ -317,9 +317,8 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   lock_acquire (&filesys_lock);
 
-  if      (fd == STDIN_FILENO)  syscall_exit (-1);
-  else if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
-  else                          bytes_written = write_to_file (fd, buffer, size);
+  if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
+  else                     bytes_written = write_to_file (fd, buffer, size);
 
   lock_release (&filesys_lock);
 
