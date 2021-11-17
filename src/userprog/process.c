@@ -55,16 +55,10 @@ process_execute (const char *file_name)
   fn_copy = process_name + process_name_length;
   strlcpy (fn_copy, file_name, file_name_length);
 
-  /* Open executable file and deny all writes */
-  struct file *exec_file = filesys_open (process_name);
-  file_deny_write (exec_file);
-
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (process_name - pg_ofs (process_name)); 
-
-  file_close (exec_file);
   
   return tid;
 }
