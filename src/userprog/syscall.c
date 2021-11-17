@@ -190,16 +190,27 @@ syscall_wait (pid_t pid)
 static bool
 syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 {
-  /* TODO implementation */
-  return 0;
+  /* Acquire the lock to access files */
+  lock_acquire (&filesys_lock);
+  
+  bool result = filesys_create (file, initial_size);
+  
+  lock_release (&filesys_lock);
+  
+  return result;
 }
 
 /* SYS_REMOVE */
 static bool
 syscall_remove (const char *file UNUSED)
 {
-  /* TODO implementation */
-  return 0;
+  /* Acquire the lock to access files */
+  lock_acquire (&filesys_lock);
+
+  bool remove = filesys_remove (file);
+  
+  lock_release (&filesys_lock);
+  return remove;
 }
 
 /* SYS_OPEN */
@@ -240,8 +251,18 @@ syscall_open (const char *file)
 static int
 syscall_filesize (int fd UNUSED)
 {
-  /* TODO implementation */
-  return 0;
+  /* Fetches the corresponding file */
+  struct file *fp = get_file (thread_current ()->hash_fd, fd);
+  if (fp == NULL) exit (-1);
+
+  /* Acquire the lock to access files */
+  lock_acquire (&filesys_lock);
+  
+  int length = file_length (fp);
+  
+  lock_release (&filesys_lock);
+  
+  return length;
 }
 
 /* SYS_READ */
@@ -306,15 +327,33 @@ write_to_file (int fd, const char *buffer, unsigned size)
 static void
 syscall_seek (int fd UNUSED, unsigned position UNUSED)
 {
-  /* TODO implementation */
+  /* Fetches the corresponding file */
+  struct file *fp = get_file (thread_current ()->hash_fd, fd);
+  if (fp == NULL) exit (-1);
+
+  /* Acquires the lock to access files */
+  lock_acquire (&filesys_lock);
+
+  file_seek(fp, position);
+  
+  lock_release (&filesys_lock);
 }
 
 /* SYS_TELL */
 static unsigned
 syscall_tell (int fd UNUSED)
 {
-  /* TODO implementation */
-  return 0;
+  /* Fetches the corresponding file */
+  struct file *fp = get_file (thread_current ()->hash_fd, fd);
+  if (fp == NULL) exit (-1);
+  
+  lock_acquire (&filesys_lock);
+  
+  int tell = file_tell (fp);
+  
+  lock_acquire (&filesys_lock);
+
+  return tell;
 }
 
 /* SYS_CLOSE */
