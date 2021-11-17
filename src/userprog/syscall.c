@@ -269,15 +269,15 @@ syscall_read (int fd, void *buffer, unsigned size)
 {
   if (buffer == NULL || 
       fd >= MAX_OPEN_FILES ||
+      fd == STDOUT_FILENO ||
       !verify_ptr (buffer)) syscall_exit (-1);
 
   unsigned bytes_read;
 
   lock_acquire (&filesys_lock);
 
-  if      (fd == STDOUT_FILENO) syscall_exit (-1);
-  else if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
-  else                          bytes_read = read_from_file (fd, buffer, size);
+  if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
+  else                     bytes_read = read_from_file (fd, buffer, size);
 
   lock_release (&filesys_lock);
 
