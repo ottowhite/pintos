@@ -186,6 +186,7 @@ syscall_wait (pid_t pid)
 static bool
 syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 {
+  if (file == NULL || !verify_ptr (file)) syscall_exit (-1);
   /* Acquire the lock to access files */
   lock_acquire (&filesys_lock);
   
@@ -263,9 +264,11 @@ syscall_filesize (int fd UNUSED)
 
 /* SYS_READ */
 static int
-syscall_read (int fd UNUSED, void *buffer UNUSED, unsigned size UNUSED)
+syscall_read (int fd, void *buffer, unsigned size)
 {
-  if (buffer == NULL || fd >= MAX_OPEN_FILES) syscall_exit (-1);
+  if (buffer == NULL || 
+      fd >= MAX_OPEN_FILES ||
+      !verify_ptr (buffer)) syscall_exit (-1);
 
   unsigned bytes_read;
 
