@@ -100,7 +100,7 @@ start_process (void *file_name_)
   load_arguments (argc, argv, &if_.esp);
   
   /* check that esp has not overflowed the initial page */
-  success &= initial_esp == pg_round_up (if_.esp);
+  success &= pg_round_up (initial_esp) == pg_round_up (if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (file_name - pg_ofs (file_name));
