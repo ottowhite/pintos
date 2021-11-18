@@ -124,6 +124,7 @@ struct child
     struct thread *thread_ptr;  /* Pointer to the corresponding child_thread. */
     int exit_status;            /* Stores the exit_status of the child. */
     struct semaphore sema;      /* Semaphore to block the parent thread. */
+    struct semaphore load_sema; /* Semaphore to block parent when loading. */
     struct list_elem elem;      /* For child_processes list in struct thread. */
   };
 #endif

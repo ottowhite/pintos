@@ -264,6 +264,7 @@ child_process_init (struct child* child_ptr, struct thread *t, tid_t tid)
   child_ptr->tid = tid;
   child_ptr->thread_ptr = t;
   sema_init (&child_ptr->sema, 0);
+  sema_init (&child_ptr->load_sema, 0);
 
   /* Initialize thread's child ptr, children list,
 	 * and the lock for process wait. */

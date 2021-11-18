@@ -23,6 +23,7 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static int process_wait_for_load (tid_t child_tid);
 
 static bool
 file_exists (const char *file_name)
@@ -62,13 +63,15 @@ process_execute (const char *file_name)
   fn_copy = process_name + process_name_length;
   strlcpy (fn_copy, file_name, file_name_length);
 
-  if (!file_exists (process_name)) return -1;
+  if (!file_exists (process_name)) return TID_ERROR;
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (process_name - pg_ofs (process_name)); 
-  
+      palloc_free_page (process_name - pg_ofs (process_name)); 
+  else
+      tid = process_wait_for_load (tid);
+
   return tid;
 }
 
@@ -101,12 +104,19 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name - pg_ofs (file_name));
+  struct child *self_child_ptr = thread_current ()->self_child_ptr;
   if (!success) 
-    thread_exit ();
-  else {
-    thread_current ()->executable = filesys_open (argv[0]);
-    file_deny_write (thread_current ()->executable);
-  }
+    {
+      self_child_ptr->tid = TID_ERROR;
+      sema_up (&self_child_ptr->load_sema);
+      thread_exit ();
+    }
+  else 
+    {
+      thread_current ()->executable = filesys_open (argv[0]);
+      file_deny_write (thread_current ()->executable);
+      sema_up (&self_child_ptr->load_sema);
+    }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -159,7 +169,17 @@ process_wait (tid_t child_tid)
   else 
 	    /* If child thread not found, then it either returned already, or tid is 
 	     * not valid. */
-      return -1;
+      return TID_ERROR;
+}
+
+static int
+process_wait_for_load (tid_t child_tid)
+{
+  ASSERT (child_tid != TID_ERROR);
+  struct child *cp = find_child (thread_current (), child_tid, &cp);
+  ASSERT (cp != NULL);
+  sema_down (&cp->load_sema);
+  return cp->tid;
 }
 
 /* Free the current process's resources. */
