@@ -96,7 +96,11 @@ start_process (void *file_name_)
   if_.cs     = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success    = load (file_name, &if_.eip, &if_.esp);
+  void *initial_esp = if_.esp; // store esp to check for overflow
   load_arguments (argc, argv, &if_.esp);
+  
+  /* check that esp has not overflowed the initial page */
+  success &= initial_esp == pg_round_up (if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (file_name - pg_ofs (file_name));
