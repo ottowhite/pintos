@@ -40,8 +40,6 @@ static int  read_from_file       (int fd, void *buffer, unsigned size);
 static int  write_to_console     (const char *buffer, unsigned size);
 static int  write_to_file        (int fd, const char *buffer, unsigned size);
 
-static struct lock filesys_lock;
-
 static struct syscall 
 syscall_func_map[] = 
   {
@@ -63,7 +61,6 @@ syscall_func_map[] =
 void
 syscall_init (void) 
 {
-  lock_init (&filesys_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -192,11 +189,11 @@ syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 {
   if (file == NULL || !verify_ptr (file)) syscall_exit (-1);
   /* Acquire the lock to access files */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
   
   bool result = filesys_create (file, initial_size);
   
-  lock_release (&filesys_lock);
+  release_filesys ();
   
   return result;
 }
@@ -206,11 +203,11 @@ static bool
 syscall_remove (const char *file UNUSED)
 {
   /* Acquire the lock to access files */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
 
   bool remove = filesys_remove (file);
   
-  lock_release (&filesys_lock);
+  release_filesys ();
   return remove;
 }
 
@@ -225,11 +222,11 @@ syscall_open (const char *file)
 
   /* Acquires the lock to open the file, 
      and returns an error if the file is invalid */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
 
   struct file *file_to_open = filesys_open (file);
 
-  lock_release (&filesys_lock);
+  release_filesys ();
   if (file_to_open == NULL) return -1;
 
   /* Create a new fd_item to pass into the hash table, and
@@ -239,11 +236,11 @@ syscall_open (const char *file)
 
   /* Acquires the lock to store the file_to_open in a new fd_item struct
      and push the struct into the current thread's hash table */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
 
   init_fd_item (new_fd_item, thread_current (), file_to_open);
 
-  lock_release (&filesys_lock);
+  release_filesys ();
 
   return new_fd_item->fd;
 }
@@ -257,11 +254,11 @@ syscall_filesize (int fd UNUSED)
   if (fp == NULL) syscall_exit (-1);
 
   /* Acquire the lock to access files */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
   
   int length = file_length (fp);
   
-  lock_release (&filesys_lock);
+  release_filesys ();
   
   return length;
 }
@@ -277,12 +274,12 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   unsigned bytes_read;
 
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
 
   if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
   else                     bytes_read = read_from_file (fd, buffer, size);
 
-  lock_release (&filesys_lock);
+  release_filesys ();
 
   return bytes_read;
 }
@@ -319,12 +316,12 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   unsigned bytes_written;
 
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
 
   if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
   else                     bytes_written = write_to_file (fd, buffer, size);
 
-  lock_release (&filesys_lock);
+  release_filesys ();
 
   return bytes_written;
 }
@@ -367,11 +364,11 @@ syscall_seek (int fd UNUSED, unsigned position UNUSED)
   if (fp == NULL) syscall_exit (-1);
 
   /* Acquires the lock to access files */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
 
   file_seek(fp, position);
   
-  lock_release (&filesys_lock);
+  release_filesys ();
 }
 
 /* SYS_TELL */
@@ -383,11 +380,11 @@ syscall_tell (int fd UNUSED)
   if (fp == NULL) syscall_exit (-1);
   
   /* Acquires the lock to access files */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
   
   int tell = file_tell (fp);
   
-  lock_acquire (&filesys_lock);
+  release_filesys ();
 
   return tell;
 }
@@ -402,11 +399,11 @@ syscall_close (int fd UNUSED)
 
   /* Acquires the lock to access files and free the fd_item struct allocated
      upon syscall_open */
-  lock_acquire (&filesys_lock);
+  acquire_filesys ();
   
   hash_delete (&thread_current ()->hash_fd, &fd_item_ptr->hash_elem);
   file_close (fd_item_ptr->file_ptr);
   free (fd_item_ptr);
   
-  lock_release (&filesys_lock);
+  release_filesys ();
 }
