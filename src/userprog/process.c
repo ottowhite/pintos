@@ -118,6 +118,21 @@ start_process (void *file_name_)
   NOT_REACHED ();
 }
 
+static struct child *
+find_child (struct thread *parent, tid_t child_tid, struct child **cp)
+{
+  struct list_elem *e;
+  /* Iterates the list of children to match the given tid. */
+  for (e  = list_begin (&parent->children);
+       e != list_end (&parent->children); 
+       e  = list_next(e))
+    {
+      struct child *cp_check = list_entry (e, struct child, elem);
+      if (cp_check->tid == child_tid) return cp_check;
+    }
+  return NULL;
+}
+
 /* Waits for thread TID to die and returns its exit status. 
  * If it was terminated by the kernel (i.e. killed due to an exception), 
  * returns -1.  
@@ -127,23 +142,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-	struct thread *parent = thread_current ();
-
-  struct child *cp = NULL;
-  struct list_elem *e;
-
-  /* Iterates the list of children to match the given tid. */
-  for (e = list_begin (&parent->children);
-        e != list_end (&parent->children); 
-        e = list_next(e))
-    {
-      struct child *cp_check = list_entry (e, struct child, elem);
-      if (cp_check->tid == child_tid)
-			{
-				cp = cp_check;
-				break;
-			}
-    }
+  struct child *cp = find_child (thread_current (), child_tid, &cp);
 
 	/* If child thread with tid is found, wait for it to finish running, then
 	 * deallocate its corresponding child struct and return its exit status. */
@@ -151,23 +150,16 @@ process_wait (tid_t child_tid)
     {
       sema_down (&cp->sema);
 
-      /* Once cp is unblocked, store its exit_status, remove it from the 
-			 * children list, and free its memory. */
-      int result_status = cp->exit_status;
-
-			// set pointer of child thread to struct thread to NULL
-			// cp->thread_ptr = NULL;
-			// child thread will only access its child struct once, when it returns
-			// this is necessary if we make the change in process_exit to free the
-			// child_struct.
-
+      /* Once cp is unblocked, store its exit_status, remove it from the * children list, and free its memory. */ 
+      int exit_status = cp->exit_status;
       list_remove (&cp->elem);
-      free ((void *) cp);
-			return result_status;
+      free (cp);
+			return exit_status;
     }
-	/* If child thread not found, then it either returned already, or tid is 
-	 * not valid. */
-  return -1;
+  else 
+	    /* If child thread not found, then it either returned already, or tid is 
+	     * not valid. */
+      return -1;
 }
 
 /* Free the current process's resources. */
