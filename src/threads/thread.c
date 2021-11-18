@@ -231,11 +231,11 @@ thread_create (const char *name, int priority,
 	/* Special case for initial thread,
 	   list of children needs to be initialized here. */
   if (thread_current () == initial_thread)
-    list_init (&thread_current ()->children);
+      list_init (&thread_current ()->children);
 
 	struct child *child_ptr = (struct child *) malloc (sizeof (struct child));
 	if (child_ptr == NULL)
-		return TID_ERROR;
+		  return TID_ERROR;
 
   child_process_init (child_ptr, t, t->tid);
 	
@@ -244,7 +244,10 @@ thread_create (const char *name, int priority,
 
   // hash table for file descriptors
   t->hash_fd = * (struct hash *) malloc (sizeof (struct hash));
-  hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL);
+  if (&t->hash_fd == NULL) 
+      return TID_ERROR;
+  if (!hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL)) 
+      return TID_ERROR;
   t->fd_cnt = 2;
 
 #endif
