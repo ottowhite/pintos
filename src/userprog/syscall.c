@@ -136,7 +136,6 @@ syscall_exit (int status)
 	/* Retrieve name of process. */
 	char name[MAX_PROCESS_NAME_LENGTH];
 	strlcpy (name, cur->name, strlen (thread_current ()->name) + 1);
-	process_exit ();
 	
 	/* Generate output string. */
 	uint8_t output_buffer_size = MAX_PROCESS_NAME_LENGTH + 15; 
@@ -162,7 +161,8 @@ syscall_exit (int status)
 	else lock_release (&cur->self_lock);
 
   /* Allow writes back to the executable */
-  file_allow_write (thread_current ()->executable);
+  if (cur->executable)
+    file_allow_write (thread_current ()->executable);
 
   thread_exit ();
 }
