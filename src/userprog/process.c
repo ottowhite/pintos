@@ -24,6 +24,13 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
+static bool
+file_exists (const char *file_name)
+{
+  return filesys_open (file_name) != NULL;
+}
+
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -54,6 +61,8 @@ process_execute (const char *file_name)
   int process_name_length = strlen (process_name) + 1;
   fn_copy = process_name + process_name_length;
   strlcpy (fn_copy, file_name, file_name_length);
+
+  if (!file_exists (process_name)) return -1;
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
