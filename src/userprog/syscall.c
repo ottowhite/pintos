@@ -148,7 +148,7 @@ syscall_exit (int status)
                                 output_buffer_size, 
                                 "%s: exit(%d)\n", name, status);
 	ASSERT (chars_written != 0);
-	syscall_write (1, output_buffer, strlen (output_buffer));
+	write_to_console (output_buffer, strlen (output_buffer));
 
 	/* Set exit status and call sema up. For process_wait. */
 
@@ -314,7 +314,8 @@ syscall_write (int fd, const void *buffer, unsigned size)
 {
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
-      fd == STDIN_FILENO) syscall_exit (-1);
+      fd == STDIN_FILENO   ||
+      !verify_ptr (buffer)) syscall_exit (-1);
 
   unsigned bytes_written;
 
