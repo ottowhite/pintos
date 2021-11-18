@@ -164,6 +164,9 @@ syscall_exit (int status)
 		}
 	else lock_release (&cur->self_lock);
 
+  /* Allow writes back to the executable */
+  file_allow_write (thread_current ()->executable);
+
   thread_exit ();
 }
 
