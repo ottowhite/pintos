@@ -38,16 +38,17 @@ file_exists (const char *file_name)
 static bool 
 test_overflow (int argc, char **argv, void *esp) 
 {
-  int total_size = 0;
+  // pointer to argv + argc + null return address + max padding
+  static int base_size = sizeof (char **) + sizeof (int) + sizeof (void *) + 3;
+  int total_size = base_size;
 
   /* loop through elements in argv adding their sizes */
   for (int i = argc - 1; i >= 0; i--) {
     total_size += strlen (argv[i]) + 1;
   }
 
-  total_size += 3;          // max padding
-  total_size += argc + 1;   // pointers to args (including null pointer)
-  total_size += 3;          // argv + argc + return address
+  total_size += sizeof (char *) * (argc + 1);   /* pointers to args (including 
+                                                   null pointer) */
 
   // check if the page size behind esp is larger than the total stack size
   return pg_ofs (esp - 1) < total_size; 
