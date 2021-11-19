@@ -193,7 +193,8 @@ process_wait_for_load (tid_t child_tid)
   return cp->load_successful;
 }
 
-/* Free the current process's resources. */
+/* Termination of a process.
+   Frees the current process's resources in prior. */
 void
 process_exit (void)
 {
@@ -201,20 +202,22 @@ process_exit (void)
   uint32_t *pd;
 
 	/* Sets thread pointer of child struct of current thread to null,
-	 * as thread is about to be deallocated. */
+	   since the thread is about to be terminated. */
 	cur->self_child_ptr->thread_ptr = NULL;
 
-	/* Deallocate all of the child structs in the children list */
+	/* List elem to iterate through the thread's children list */
 	struct list_elem *e;
 
-  /* Iterates the list of children and frees the struct. */
+  /* Iterates through the list of children to frees the child structs. */
   for (e = list_begin (&cur->children);
         e != list_end (&cur->children); 
         e = list_next(e))
     {
       struct child *child_ptr = list_entry (e, struct child, elem);
 
-      /* Acquires the lock to set the child thread's self_child_ptr to null. */
+      /* Acquires the lock to set the child thread's self_child_ptr to null.
+         The lock is necessary since the thread's child threads may be running
+         while the thread is terminating */
 			struct thread* child_t = child_ptr->thread_ptr;
 			if (child_t != NULL)
 			{
@@ -223,7 +226,7 @@ process_exit (void)
 				lock_release (&child_t->self_lock);
 			}
       
-      /* releases the child struct */
+      /* Releases the child struct */
       free ((void *) child_ptr);
     }
 
