@@ -146,35 +146,40 @@ find_child (struct thread *parent, tid_t child_tid, struct child **cp)
   return NULL;
 }
 
-/* Waits for thread TID to die and returns its exit status. 
- * If it was terminated by the kernel (i.e. killed due to an exception), 
- * returns -1.  
- * If TID is invalid or if it was not a child of the calling process, or if 
- * process_wait() has already been successfully called for the given TID, 
- * returns -1 immediately, without waiting. */
+/* Waits for thread TID to die and return its exit status. 
+   If it was terminated by the kernel (i.e. killed due to an exception), 
+   returns -1.  
+   If the given TID is invalid, was not a child of the calling process, or if 
+   process_wait() has already been successfully called for the given TID, 
+   returns -1 immediately, without waiting. */
 int
 process_wait (tid_t child_tid) 
 {
+  /* Checks whether the given tid matches one of current thread's children */
   struct child *cp = find_child (thread_current (), child_tid, &cp);
 
-	/* If child thread with tid is found, wait for it to finish running, then
-	 * deallocate its corresponding child struct and return its exit status. */
+	/* If a child thread with the given tid is found, waits until it finishes
+     to run and to deallocates its corresponding child struct after
+     returning the child struct's exit status. */
   if (cp != NULL)
     {
       sema_down (&cp->sema);
 
-      /* Once cp is unblocked, store its exit_status, remove it from the * children list, and free its memory. */ 
+      /* At this point cp is unblocked. Store the exit_status and
+         remove the cp from the parent's children list to free its memory.
+         This ensures that the parent will not wait for the same child twice */ 
       int exit_status = cp->exit_status;
       list_remove (&cp->elem);
       free (cp);
 			return exit_status;
     }
   else 
-	    /* If child thread not found, then it either returned already, or tid is 
-	     * not valid. */
+	    /* If child thread not found, then either the parent called wait
+         on a child that returned already or the given tid is invalid. */
       return TID_ERROR;
 }
 
+/* Blocks the current thread's given child until it finishes loading */
 static bool
 process_wait_for_load (tid_t child_tid)
 {
@@ -182,6 +187,9 @@ process_wait_for_load (tid_t child_tid)
   struct child *cp = find_child (thread_current (), child_tid, &cp);
   ASSERT (cp != NULL);
   sema_down (&cp->load_sema);
+
+  /* At this point load will be finished for cp, and this function
+     returns the bool value load_successful to check the load status */
   return cp->load_successful;
 }
 
