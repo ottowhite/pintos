@@ -32,6 +32,7 @@ static void     syscall_close    (int fd);
 
 static void     syscall_handler (struct intr_frame *f);
 static bool     verify_ptr      (const void *ptr);
+static bool     verify_buffer   (const void *buffer, int size);
 static bool     verify_args     (int argc, const uint32_t *esp);
 static uint32_t invoke_function (const void *syscall_ptr, 
                                  int argc, 
@@ -112,8 +113,26 @@ verify_ptr (const void *ptr)
     return false;
 }
 
-/* Invokes the corresponding function of the syscall number
-   by using the jump table. The args must be verified in prior */
+/* Checks that the entire buffer (up to size) is in valid memory and returns 
+   false if not */
+static bool
+verify_buffer (const void *buffer, int size) 
+{
+  /* Check that the first memory location in the buffer is valid, and that 
+     every memory location on the end of a page + 1 (i.e. the next page over) 
+     is also valid */
+  void *buffer_top = buffer + size * sizeof (char);
+  for (void *loc = buffer; 
+       loc <= buffer_top; 
+       loc = pg_round_up(loc) + 1) 
+  {
+    if (!verify_ptr (loc)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static uint32_t 
 invoke_function (const void *syscall_ptr, int argc, const uint32_t *esp) 
 {
@@ -289,7 +308,7 @@ syscall_read (int fd, void *buffer, unsigned size)
   if (buffer == NULL || 
       fd >= MAX_OPEN_FILES ||
       fd == STDOUT_FILENO ||
-      !verify_ptr (buffer)) syscall_exit (-1);
+      !verify_buffer (buffer, size)) syscall_exit (-1);
 
   unsigned bytes_read;
 
@@ -342,7 +361,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
-      !verify_ptr (buffer)) syscall_exit (-1);
+      !verify_buffer (buffer, strlen (buffer))) syscall_exit (-1);
 
   unsigned bytes_written;
 
