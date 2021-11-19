@@ -148,7 +148,7 @@ syscall_exit (int status)
 
 	/* Set exit status and call sema up. For process_wait. */
 
-	/* Acquire lock to prevent race conditions between process writting to the 
+	/* Acquire lock to prevent race conditions between process writing to the 
 	 * struct child, and its parent deallocating that struct when exiting. */
 	lock_acquire (&cur->self_lock);
 	struct child *child_ptr = cur->self_child_ptr;
@@ -164,7 +164,6 @@ syscall_exit (int status)
   /* Allow writes back to the executable */
   if (cur->executable)
     file_allow_write (thread_current ()->executable);
-
 
   thread_exit ();
 }
@@ -269,6 +268,9 @@ syscall_filesize (int fd UNUSED)
 static int
 syscall_read (int fd, void *buffer, unsigned size)
 {
+  /* Additional sanity check to verify the buffer, check if the fd value
+     is below the maximum range of open files, and check if the fd value
+     is not equal to 1 (STDOUT_FILENO) for syscall_read */
   if (buffer == NULL || 
       fd >= MAX_OPEN_FILES ||
       fd == STDOUT_FILENO ||
@@ -276,6 +278,8 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   unsigned bytes_read;
 
+  /* Acquires the lock to first check the fd value to either read from the
+     console, or read from a specific file */
   acquire_filesys ();
 
   if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
@@ -283,9 +287,11 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   release_filesys ();
 
+  /* Returns the total count of bytes read */
   return bytes_read;
 }
 
+/* Helper function for syscall_read to return the bytes read from the console */
 static int
 read_from_console (void *buffer, unsigned size)
 {
@@ -297,12 +303,16 @@ read_from_console (void *buffer, unsigned size)
   return cnt;
 }
 
+/* Helper function for syscall_read to return the bytes read from the file */
 static int
 read_from_file (int fd, void *buffer, unsigned size)
 {
+  /* Fetch the corresponding file mapped with the value of fd
+     Read the file if the file fetched is valid, otherwise return -1 */
   struct file *fp = get_file (&thread_current ()->hash_fd, fd);
   if (fp == NULL) return -1;
   int cnt = file_read (fp, buffer, size);
+
   return cnt;
 }
 
