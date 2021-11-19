@@ -403,11 +403,12 @@ syscall_seek (int fd UNUSED, unsigned position UNUSED)
 static unsigned
 syscall_tell (int fd UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetch the corresponding file mapped with the value of fd
+     Exit with -1 if fetch fails */
   struct file *fp = get_file (&thread_current ()->hash_fd, fd);
   if (fp == NULL) syscall_exit (-1);
   
-  /* Acquires the lock to access files */
+  /* Acquires the lock to tell the current position in the file */
   acquire_filesys ();
   
   int tell = file_tell (fp);
