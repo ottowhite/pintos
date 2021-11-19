@@ -6,6 +6,8 @@
 #include "threads/thread.h"
 #include "lib/kernel/hash.h"
 
+/* Structure to map fd values into files.
+   Contains a hash_elem to be inserted in a hash table */
 struct fd_item 
 {
   int fd;
