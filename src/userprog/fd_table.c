@@ -1,6 +1,7 @@
 #include "userprog/fd_table.h"
 #include "userprog/syscall.h"
 #include <hash.h>
+#include <stdlib.h>
 
 hash_hash_func *fd_hash_func_ptr;
 hash_less_func *fd_hash_less_func_ptr;
@@ -52,3 +53,18 @@ remove_file (struct hash *fd_hash_table, int fd)
       = hash_delete (fd_hash_table, &fake_fd_item.hash_elem);
   return found_item != NULL;
 }
+
+/* An action function to apply hash_destroy to the fd_item hash map */
+void
+fd_hash_free (struct hash_elem *e, void *aux UNUSED)
+{
+  struct fd_item *fd_item_ptr = hash_entry (e, struct fd_item, hash_elem);
+
+  /* Acquires the file system to close any opened files before freeing */
+  acquire_filesys ();
+  file_close (fd_item_ptr->file_ptr);
+  release_filesys ();
+
+  free (fd_item_ptr);
+}
+
