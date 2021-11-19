@@ -25,6 +25,7 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 static bool process_wait_for_load (tid_t child_tid);
+static bool test_overflow (int argc, char **argv, void *esp);
 
 static bool
 file_exists (const char *file_name)
@@ -32,6 +33,25 @@ file_exists (const char *file_name)
   return filesys_open (file_name) != NULL;
 }
 
+/* Returns true if the given argv and argc will overflow the page that esp is 
+   in when they are loaded into the stack using load_arguments */
+static bool 
+test_overflow (int argc, char **argv, void *esp) 
+{
+  int total_size = 0;
+
+  /* loop through elements in argv adding their sizes */
+  for (int i = argc - 1; i >= 0; i--) {
+    total_size += strlen (argv[i]) + 1;
+  }
+
+  total_size += 3;          // max padding
+  total_size += argc + 1;   // pointers to args (including null pointer)
+  total_size += 3;          // argv + argc + return address
+
+  // check if the page size behind esp is larger than the total stack size
+  return pg_ofs (esp - 1) < total_size; 
+}
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -103,12 +123,14 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success    = load (file_name, &if_.eip, &if_.esp);
   void *initial_esp = pg_round_up (if_.esp); // store esp to check for overflow
-  load_arguments (argc, argv, &if_.esp);
+  if (test_overflow (argc, argv, if_.esp)) 
+    success = false;
+  else
+    load_arguments (argc, argv, &if_.esp);
   
   /* check that esp has not overflowed the initial page */
   success &= pg_round_up (initial_esp) == pg_round_up (if_.esp);
 
-  /* If load failed, quit. */
   palloc_free_page (file_name - pg_ofs (file_name));
   struct child *self_child_ptr = thread_current ()->self_child_ptr;
 
