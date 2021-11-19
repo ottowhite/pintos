@@ -13,6 +13,7 @@
 #include "userprog/process.h"
 #include "userprog/fd_table.h"
 #include "devices/shutdown.h"
+#include "devices/input.h"
 
 /* System call helper functions */
 static void     syscall_halt     (void);
