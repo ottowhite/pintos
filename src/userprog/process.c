@@ -65,7 +65,11 @@ process_execute (const char *file_name)
   fn_copy = process_name + process_name_length;
   strlcpy (fn_copy, file_name, file_name_length);
 
-  if (!file_exists (process_name)) return TID_ERROR; //TODO: FREE YOUR SOUL!!
+  if (!file_exists (process_name)) 
+  {
+    palloc_free_page (process_name - pg_ofs (process_name));
+    return TID_ERROR; 
+  }
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
