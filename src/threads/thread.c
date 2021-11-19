@@ -233,6 +233,15 @@ thread_create (const char *name, int priority,
   if (thread_current () == initial_thread)
       list_init (&thread_current ()->children);
 
+  // TODO: Free memory on failure
+  // hash table for file descriptors
+  t->hash_fd = * (struct hash *) malloc (sizeof (struct hash));
+  if (&t->hash_fd == NULL) 
+      return TID_ERROR;
+  if (!hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL)) 
+      return TID_ERROR;
+  t->fd_cnt = 2;
+
 	struct child *child_ptr = (struct child *) malloc (sizeof (struct child));
 	if (child_ptr == NULL)
 		  return TID_ERROR;
@@ -242,13 +251,6 @@ thread_create (const char *name, int priority,
 	/* Add struct child to list of children in parent thread. */
 	list_push_back (&thread_current ()->children, &child_ptr->elem);
 
-  // hash table for file descriptors
-  t->hash_fd = * (struct hash *) malloc (sizeof (struct hash));
-  if (&t->hash_fd == NULL) 
-      return TID_ERROR;
-  if (!hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL)) 
-      return TID_ERROR;
-  t->fd_cnt = 2;
 
 #endif
 
@@ -262,7 +264,7 @@ thread_create (const char *name, int priority,
 #ifdef USERPROG
 
 static void
-child_process_init (struct child* child_ptr, struct thread *t, tid_t tid)
+child_process_init (struct child *child_ptr, struct thread *t, tid_t tid)
 {
   child_ptr->tid = tid;
   child_ptr->thread_ptr = t;

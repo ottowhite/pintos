@@ -44,6 +44,7 @@ process_execute (const char *file_name)
   char *save_ptr;
   tid_t tid;
 
+
   process_name = palloc_get_page (0);
   if (process_name == NULL)
     return TID_ERROR;
@@ -63,7 +64,7 @@ process_execute (const char *file_name)
   fn_copy = process_name + process_name_length;
   strlcpy (fn_copy, file_name, file_name_length);
 
-  if (!file_exists (process_name)) return TID_ERROR;
+  if (!file_exists (process_name)) return TID_ERROR; //TODO: FREE YOUR SOUL!!
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
@@ -72,7 +73,6 @@ process_execute (const char *file_name)
       tid = TID_ERROR;
       palloc_free_page (process_name - pg_ofs (process_name));
     }
-
   return tid;
 }
 
@@ -155,6 +155,8 @@ find_child (struct thread *parent, tid_t child_tid, struct child **cp)
 int
 process_wait (tid_t child_tid) 
 {
+
+
   struct child *cp = find_child (thread_current (), child_tid, &cp);
 
 	/* If child thread with tid is found, wait for it to finish running, then
@@ -182,7 +184,9 @@ process_wait_for_load (tid_t child_tid)
   struct child *cp = find_child (thread_current (), child_tid, &cp);
   ASSERT (cp != NULL);
   sema_down (&cp->load_sema);
-  return cp->load_successful;
+  bool success = cp->load_successful;
+  if (!success) list_remove (&cp->elem);
+  return success;
 }
 
 /* Free the current process's resources. */
