@@ -105,7 +105,6 @@ struct thread
 		struct child *self_child_ptr;       /* Pointer to own child struct. */
     struct list children;               /* List of children processes. */
     struct lock self_lock;              /* Lock to update exit status. */
-
     int fd_cnt;                         /* Unique file descriptor for hash_fd */
     struct hash hash_fd;                /* Hashtable to map fds to file ptrs */
     struct file *executable;            /* Current executable file */
@@ -123,6 +122,7 @@ struct child
     tid_t tid;                  /* tid of corresponding thread. */
     struct thread *thread_ptr;  /* Pointer to the corresponding child_thread. */
     int exit_status;            /* Stores the exit_status of the child. */
+    bool load_successful;       /* New child loaded successfully */
     struct semaphore sema;      /* Semaphore to block the parent thread. */
     struct semaphore load_sema; /* Semaphore to block parent when loading. */
     struct list_elem elem;      /* For child_processes list in struct thread. */

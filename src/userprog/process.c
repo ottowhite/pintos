@@ -23,7 +23,7 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
-static int process_wait_for_load (tid_t child_tid);
+static bool process_wait_for_load (tid_t child_tid);
 
 static bool
 file_exists (const char *file_name)
@@ -67,10 +67,11 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (process_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
-      palloc_free_page (process_name - pg_ofs (process_name)); 
-  else
-      tid = process_wait_for_load (tid);
+  if (tid == TID_ERROR || !process_wait_for_load (tid))
+    {
+      tid = TID_ERROR;
+      palloc_free_page (process_name - pg_ofs (process_name));
+    }
 
   return tid;
 }
@@ -105,6 +106,8 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name - pg_ofs (file_name));
   struct child *self_child_ptr = thread_current ()->self_child_ptr;
+
+  self_child_ptr->load_successful = success;
   if (!success) 
     {
       self_child_ptr->tid = TID_ERROR;
@@ -172,14 +175,14 @@ process_wait (tid_t child_tid)
       return TID_ERROR;
 }
 
-static int
+static bool
 process_wait_for_load (tid_t child_tid)
 {
   ASSERT (child_tid != TID_ERROR);
   struct child *cp = find_child (thread_current (), child_tid, &cp);
   ASSERT (cp != NULL);
   sema_down (&cp->load_sema);
-  return cp->tid;
+  return cp->load_successful;
 }
 
 /* Free the current process's resources. */

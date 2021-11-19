@@ -157,12 +157,14 @@ syscall_exit (int status)
 			child_ptr->exit_status = status;
 			lock_release (&cur->self_lock);
 			sema_up (&child_ptr->sema);
+      sema_up (&child_ptr->load_sema);
 		}
 	else lock_release (&cur->self_lock);
 
   /* Allow writes back to the executable */
   if (cur->executable)
     file_allow_write (thread_current ()->executable);
+
 
   thread_exit ();
 }
