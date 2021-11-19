@@ -309,7 +309,7 @@ static int
 read_from_file (int fd, void *buffer, unsigned size)
 {
   /* Fetch the corresponding file mapped with the value of fd
-     Read the file if the file fetched is valid, otherwise return -1 */
+     Read from the file if the file fetched is valid, otherwise return -1 */
   struct file *fp = get_file (&thread_current ()->hash_fd, fd);
   if (fp == NULL) return -1;
   int cnt = file_read (fp, buffer, size);
@@ -322,6 +322,9 @@ read_from_file (int fd, void *buffer, unsigned size)
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
+  /* Additional sanity check to verify the buffer, check if the fd value
+     is below the maximum range of open files, and check if the fd value
+     is not equal to 0 (STDIN_FILENO) for syscall_write */
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
@@ -329,6 +332,8 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   unsigned bytes_written;
 
+  /* Acquires the lock to first check the fd value to either write to the
+     console, or write to a specific file */
   acquire_filesys ();
 
   if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
@@ -336,23 +341,29 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   release_filesys ();
 
+
+  /* Returns the total count of bytes written */
   return bytes_written;
 }
 
+/* Helper function for syscall_write to return the bytes written to the console */
 static int
 write_to_console (const char *buffer, unsigned size)
 {
   int bytes_written = 0;
 
-  /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE 
-   * if necessary and write them to the console */
+  /* Break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE 
+     if necessary and write them to the console */
   for (int32_t offset   = 0, bytes_remaining = size, bytes_to_write; 
        bytes_remaining  > 0;
        bytes_remaining -= MAX_CONSOLE_BUFFER_SIZE,
        offset          += MAX_CONSOLE_BUFFER_SIZE) 
     {
+      /* Buffer into chunks */
       bytes_to_write = (bytes_remaining - offset <= MAX_CONSOLE_BUFFER_SIZE) ?
           bytes_remaining : MAX_CONSOLE_BUFFER_SIZE; 
+      
+      /* Writes to the console and increment the byte counts */
       putbuf (&buffer[offset], bytes_to_write);
       bytes_written += bytes_to_write;
     }
@@ -360,11 +371,14 @@ write_to_console (const char *buffer, unsigned size)
   return bytes_written;
 }
 
+/* Helper function for syscall_write to return the bytes written to the file */
 static int
 write_to_file (int fd, const char *buffer, unsigned size)
 {
+  /* Fetch the corresponding file mapped with the value of fd
+     Write to the file if the file fetched is valid, otherwise return -1 */
   struct file *fp = get_file (&thread_current ()->hash_fd, fd);
-  ASSERT (fp != NULL);
+  if (fp == NULL) return -1;
   return file_write (fp, buffer, size);
 }
 
