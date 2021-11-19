@@ -21,5 +21,6 @@ int get_free_fd (void);
 struct fd_item *get_fd_item (struct hash *fd_hash_table, int fd);
 struct file *get_file (struct hash *fd_hash_table, int fd);
 bool remove_file (struct hash *fd_hash_table, int fd);
+void fd_hash_free (struct hash_elem *e, void *aux UNUSED);
 
 #endif 
