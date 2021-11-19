@@ -87,12 +87,12 @@ typedef int tid_t;
 struct thread
   {
     /* Owned by thread.c. */
-    tid_t tid;                          /* Thread identifier. */
-    enum thread_status status;          /* Thread state. */
-    char name[16];                      /* Name (for debugging purposes). */
-    uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. */
-    struct list_elem allelem;           /* List element for all threads list. */
+    tid_t tid;                      /* Thread identifier. */
+    enum thread_status status;      /* Thread state. */
+    char name[16];                  /* Name (for debugging purposes). */
+    uint8_t *stack;                 /* Saved stack pointer. */
+    int priority;                   /* Priority. */
+    struct list_elem allelem;       /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -102,12 +102,12 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 
     /* For process_wait */
-		struct child *self_child_ptr;       /* Pointer to own child struct. */
-    struct list children;               /* List of children processes. */
-    struct lock self_lock;              /* Lock to update exit status. */
-    int fd_cnt;                         /* Unique file descriptor for hash_fd */
-    struct hash hash_fd;                /* Hashtable to map fds to file ptrs */
-    struct file *executable;            /* Current executable file */
+		struct child *self_child_ptr;    /* Pointer to own child struct. */
+    struct list children;            /* List of children processes. */
+    struct lock self_lock;           /* Lock to update exit status. */
+    int fd_cnt;                      /* Unique file descriptor for hash_fd */
+    struct hash *hash_fd_ptr;        /* Hashtable to map fds to file ptrs */
+    struct file *executable;         /* Current executable file */
 
 #endif
 

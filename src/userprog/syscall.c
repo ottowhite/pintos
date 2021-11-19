@@ -252,7 +252,7 @@ static int
 syscall_filesize (int fd UNUSED)
 {
   /* Fetches the corresponding file */
-  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) syscall_exit (-1);
 
   /* Acquire the lock to access files */
@@ -300,7 +300,7 @@ read_from_console (void *buffer, unsigned size)
 static int
 read_from_file (int fd, void *buffer, unsigned size)
 {
-  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) return -1;
   int cnt = file_read (fp, buffer, size);
   return cnt;
@@ -352,7 +352,7 @@ write_to_console (const char *buffer, unsigned size)
 static int
 write_to_file (int fd, const char *buffer, unsigned size)
 {
-  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   ASSERT (fp != NULL);
   return file_write (fp, buffer, size);
 }
@@ -362,7 +362,7 @@ static void
 syscall_seek (int fd UNUSED, unsigned position UNUSED)
 {
   /* Fetches the corresponding file */
-  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) syscall_exit (-1);
 
   /* Acquires the lock to access files */
@@ -378,7 +378,7 @@ static unsigned
 syscall_tell (int fd UNUSED)
 {
   /* Fetches the corresponding file */
-  struct file *fp = get_file (&thread_current ()->hash_fd, fd);
+  struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) syscall_exit (-1);
   
   /* Acquires the lock to access files */
@@ -396,14 +396,14 @@ static void
 syscall_close (int fd UNUSED)
 {
   /* Fetches the corresponding file */
-  struct fd_item *fd_item_ptr = get_fd_item (&thread_current ()->hash_fd, fd);
+  struct fd_item *fd_item_ptr = get_fd_item (thread_current ()->hash_fd_ptr, fd);
   if (fd_item_ptr == NULL) syscall_exit (-1);
 
   /* Acquires the lock to access files and free the fd_item struct allocated
      upon syscall_open */
   acquire_filesys ();
   
-  hash_delete (&thread_current ()->hash_fd, &fd_item_ptr->hash_elem);
+  hash_delete (thread_current ()->hash_fd_ptr, &fd_item_ptr->hash_elem);
   file_close (fd_item_ptr->file_ptr);
   free (fd_item_ptr);
   

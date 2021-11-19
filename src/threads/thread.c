@@ -237,15 +237,15 @@ thread_create (const char *name, int priority,
   /* Initialise to 2 to skip reserved STDIN_FILENO and STDOUT_FILENO fds */
   t->fd_cnt = 2;
 
-  t->hash_fd = * (struct hash *) malloc (sizeof (struct hash));
-  if (&t->hash_fd == NULL) 
+  t->hash_fd_ptr = malloc (sizeof (struct hash));
+  if (t->hash_fd_ptr == NULL) 
       goto allocate_hash_fd_fail;
 
-  if (!hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL)) 
+  if (!hash_init (t->hash_fd_ptr, &fd_hash_func, &fd_hash_less_func, NULL)) 
       goto init_hash_fd_fail;
 
   /*  Initialise third party child struct for synchronisation with parent */
-	struct child *child_ptr = (struct child *) malloc (sizeof (struct child));
+	struct child *child_ptr = malloc (sizeof (struct child));
 	if (child_ptr == NULL)
       goto allocate_child_fail;
 
@@ -263,8 +263,8 @@ thread_create (const char *name, int priority,
   return tid;
 
   // Free resources on thread creation failure
-  allocate_child_fail:   hash_destroy (&t->hash_fd, &fd_hash_free);
-  init_hash_fd_fail:     free (&t->hash_fd);
+  allocate_child_fail:   hash_destroy (t->hash_fd_ptr, &fd_hash_free);
+  init_hash_fd_fail:     free (t->hash_fd_ptr);
   allocate_hash_fd_fail: palloc_free_page (t);
 
   return TID_ERROR;

@@ -224,7 +224,7 @@ process_exit (void)
       free ((void *) child_ptr);
     }
 
-    hash_destroy (&cur->hash_fd, &fd_hash_free);
+    hash_destroy (cur->hash_fd_ptr, &fd_hash_free);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

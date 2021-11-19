@@ -12,7 +12,7 @@ init_fd_item (struct fd_item *fd_item_ptr, struct thread *t, struct file *fp)
   fd_item_ptr->fd = t->fd_cnt++;
   fd_item_ptr->pid = (pid_t) t->tid;
   fd_item_ptr->file_ptr = fp;
-  hash_insert (&t->hash_fd, &(fd_item_ptr->hash_elem));
+  hash_insert (t->hash_fd_ptr, &(fd_item_ptr->hash_elem));
 }
 
 static struct fd_item
