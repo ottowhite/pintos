@@ -386,11 +386,12 @@ write_to_file (int fd, const char *buffer, unsigned size)
 static void
 syscall_seek (int fd UNUSED, unsigned position UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetch the corresponding file mapped with the value of fd
+     Exit with -1 if fetch fails */
   struct file *fp = get_file (&thread_current ()->hash_fd, fd);
   if (fp == NULL) syscall_exit (-1);
 
-  /* Acquires the lock to access files */
+  /* Acquires the lock to seek the given position of the file */
   acquire_filesys ();
 
   file_seek(fp, position);
