@@ -250,11 +250,12 @@ syscall_open (const char *file)
 static int
 syscall_filesize (int fd UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetches the corresponding file mapped from the fd value
+     Exit if the file is invalid */
   struct file *fp = get_file (&thread_current ()->hash_fd, fd);
   if (fp == NULL) syscall_exit (-1);
 
-  /* Acquire the lock to access files */
+  /* Acquire the lock to fetch the file size */
   acquire_filesys ();
   
   int length = file_length (fp);
