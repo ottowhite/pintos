@@ -40,6 +40,7 @@ static int  read_from_file       (int fd, void *buffer, unsigned size);
 static int  write_to_console     (const char *buffer, unsigned size);
 static int  write_to_file        (int fd, const char *buffer, unsigned size);
 
+/* A jump table that contains a function pointer and the number of arguments */
 static struct syscall 
 syscall_func_map[] = 
   {
@@ -58,6 +59,7 @@ syscall_func_map[] =
     {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
   };
 
+/* Initialisation of the syscall handler */
 void
 syscall_init (void) 
 {
@@ -86,17 +88,21 @@ syscall_handler (struct intr_frame *f)
   f->eax = invoke_function (syscall_ptr, argc, f->esp);
 }
 
+/* Verifies the arguments set upon the stack */
 static bool 
 verify_args (int argc, const uint32_t *esp) 
 {
+  /* The argc value from the jump table is passed in
+     for the number of iterations */
   for (int i = argc; i >= 1; i--) if (!verify_ptr (&esp[i])) return false;
   return true;
 }
 
+/* Checks whether a given pointer is valid for use */
 static bool
 verify_ptr (const void *ptr)
 {
-  /* Verify address in user space and in page directory*/
+  /* Verifies the address in user space and page directory */
   if (ptr != NULL && 
       is_user_vaddr (ptr) && 
       pagedir_get_page (active_pd (), ptr) != NULL) 
@@ -105,6 +111,8 @@ verify_ptr (const void *ptr)
     return false;
 }
 
+/* Invokes the corresponding function of the syscall number
+   by using the jump table. The args must be verified in prior */
 static uint32_t 
 invoke_function (const void *syscall_ptr, int argc, const uint32_t *esp) 
 {
@@ -188,8 +196,11 @@ syscall_wait (pid_t pid)
 static bool
 syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 {
+  /* Sanity check */
   if (file == NULL || !verify_ptr (file)) syscall_exit (-1);
-  /* Acquire the lock to access files */
+
+  /* Acquires the lock to create the file, 
+     and returns an error if the file is invalid */
   acquire_filesys ();
   
   bool result = filesys_create (file, initial_size);
@@ -203,12 +214,14 @@ syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 static bool
 syscall_remove (const char *file UNUSED)
 {
-  /* Acquire the lock to access files */
+  /* Acquires the lock to remove the file, 
+     and returns an error if the file is invalid */
   acquire_filesys ();
 
   bool remove = filesys_remove (file);
   
   release_filesys ();
+
   return remove;
 }
 
