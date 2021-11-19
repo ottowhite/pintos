@@ -132,7 +132,7 @@ start_process (void *file_name_)
 }
 
 static struct child *
-find_child (struct thread *parent, tid_t child_tid, struct child **cp)
+find_child (struct thread *parent, tid_t child_tid)
 {
   struct list_elem *e;
   /* Iterates the list of children to match the given tid. */
@@ -156,7 +156,7 @@ int
 process_wait (tid_t child_tid) 
 {
   /* Checks whether the given tid matches one of current thread's children */
-  struct child *cp = find_child (thread_current (), child_tid, &cp);
+  struct child *cp = find_child (thread_current (), child_tid);
 
 	/* If a child thread with the given tid is found, waits until it finishes
      to run and to deallocates its corresponding child struct after
@@ -184,7 +184,7 @@ static bool
 process_wait_for_load (tid_t child_tid)
 {
   ASSERT (child_tid != TID_ERROR);
-  struct child *cp = find_child (thread_current (), child_tid, &cp);
+  struct child *cp = find_child (thread_current (), child_tid);
   ASSERT (cp != NULL);
   sema_down (&cp->load_sema);
 
