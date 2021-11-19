@@ -18,7 +18,7 @@ init_fd_item (struct fd_item *fd_item_ptr, struct thread *t, struct file *fp)
    This fake fd_item will have the same fd and pid value of the fd_item
    which is for sought in get_fd_item and remove_item */
 static struct fd_item
-create_fake_fd_item (int fd, pid_t tid)
+create_fake_fd_item (int fd)
 {
   struct fd_item fake_fd_item;
   fake_fd_item.fd = fd;
@@ -32,7 +32,7 @@ get_fd_item (struct hash *fd_hash_table, int fd)
 {
   /* Create a fake fd_item to pass in hash_find */
   struct fd_item fake_fd_item 
-    = create_fake_fd_item (fd, thread_current ()->tid);
+    = create_fake_fd_item (fd);
 
   /* Searches the hash_elem with the same fd value of the fake fd_item.
      returns null if the hash_elem could not be found */
@@ -57,7 +57,7 @@ remove_file (struct hash *fd_hash_table, int fd)
 {
   /* Create a fake fd_item to pass in hash_delete */
   struct fd_item fake_fd_item 
-      = create_fake_fd_item (fd, thread_current ()->tid);
+      = create_fake_fd_item (fd);
 
   /* Searches to delete the hash_elem with the same fd value of the fake fd_item.
      returns null if the hash_elem could not be found */
