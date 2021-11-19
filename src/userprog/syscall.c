@@ -13,6 +13,7 @@
 #include "userprog/process.h"
 #include "userprog/fd_table.h"
 #include "devices/shutdown.h"
+#include "devices/input.h"
 
 /* System call helper functions */
 static void     syscall_halt     (void);
@@ -40,6 +41,7 @@ static int  read_from_file       (int fd, void *buffer, unsigned size);
 static int  write_to_console     (const char *buffer, unsigned size);
 static int  write_to_file        (int fd, const char *buffer, unsigned size);
 
+/* A jump table that contains a function pointer and the number of arguments */
 static struct syscall 
 syscall_func_map[] = 
   {
@@ -58,6 +60,7 @@ syscall_func_map[] =
     {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
   };
 
+/* Initialisation of the syscall handler */
 void
 syscall_init (void) 
 {
@@ -86,17 +89,21 @@ syscall_handler (struct intr_frame *f)
   f->eax = invoke_function (syscall_ptr, argc, f->esp);
 }
 
+/* Verifies the arguments set upon the stack */
 static bool 
 verify_args (int argc, const uint32_t *esp) 
 {
+  /* The argc value from the jump table is passed in
+     for the number of iterations */
   for (int i = argc; i >= 1; i--) if (!verify_ptr (&esp[i])) return false;
   return true;
 }
 
+/* Checks whether a given pointer is valid for use */
 static bool
 verify_ptr (const void *ptr)
 {
-  /* Verify address in user space and in page directory*/
+  /* Verifies the address in user space and page directory */
   if (ptr != NULL && 
       is_user_vaddr (ptr) && 
       pagedir_get_page (active_pd (), ptr) != NULL) 
@@ -105,6 +112,8 @@ verify_ptr (const void *ptr)
     return false;
 }
 
+/* Invokes the corresponding function of the syscall number
+   by using the jump table. The args must be verified in prior */
 static uint32_t 
 invoke_function (const void *syscall_ptr, int argc, const uint32_t *esp) 
 {
@@ -148,7 +157,7 @@ syscall_exit (int status)
 
 	/* Set exit status and call sema up. For process_wait. */
 
-	/* Acquire lock to prevent race conditions between process writting to the 
+	/* Acquire lock to prevent race conditions between process writing to the 
 	 * struct child, and its parent deallocating that struct when exiting. */
 	lock_acquire (&cur->self_lock);
 	struct child *child_ptr = cur->self_child_ptr;
@@ -164,7 +173,6 @@ syscall_exit (int status)
   /* Allow writes back to the executable */
   if (cur->executable)
     file_allow_write (thread_current ()->executable);
-
 
   thread_exit ();
 }
@@ -189,8 +197,11 @@ syscall_wait (pid_t pid)
 static bool
 syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 {
+  /* Sanity check */
   if (file == NULL || !verify_ptr (file)) syscall_exit (-1);
-  /* Acquire the lock to access files */
+
+  /* Acquires the lock to create the file, 
+     and returns an error if the file is invalid */
   acquire_filesys ();
   
   bool result = filesys_create (file, initial_size);
@@ -204,12 +215,14 @@ syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 static bool
 syscall_remove (const char *file UNUSED)
 {
-  /* Acquire the lock to access files */
+  /* Acquires the lock to remove the file, 
+     and returns an error if the file is invalid */
   acquire_filesys ();
 
   bool remove = filesys_remove (file);
   
   release_filesys ();
+
   return remove;
 }
 
@@ -251,11 +264,12 @@ syscall_open (const char *file)
 static int
 syscall_filesize (int fd UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetches the corresponding file mapped from the fd value
+     Exit if the file is invalid */
   struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) syscall_exit (-1);
 
-  /* Acquire the lock to access files */
+  /* Acquire the lock to fetch the file size */
   acquire_filesys ();
   
   int length = file_length (fp);
@@ -269,6 +283,9 @@ syscall_filesize (int fd UNUSED)
 static int
 syscall_read (int fd, void *buffer, unsigned size)
 {
+  /* Additional sanity check to verify the buffer, check if the fd value
+     is below the maximum range of open files, and check if the fd value
+     is not equal to 1 (STDOUT_FILENO) for syscall_read */
   if (buffer == NULL || 
       fd >= MAX_OPEN_FILES ||
       fd == STDOUT_FILENO ||
@@ -276,6 +293,8 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   unsigned bytes_read;
 
+  /* Acquires the lock to first check the fd value to either read from the
+     console, or read from a specific file */
   acquire_filesys ();
 
   if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
@@ -283,9 +302,11 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   release_filesys ();
 
+  /* Returns the total count of bytes read */
   return bytes_read;
 }
 
+/* Helper function for syscall_read to return the bytes read from the console */
 static int
 read_from_console (void *buffer, unsigned size)
 {
@@ -297,12 +318,16 @@ read_from_console (void *buffer, unsigned size)
   return cnt;
 }
 
+/* Helper function for syscall_read to return the bytes read from the file */
 static int
 read_from_file (int fd, void *buffer, unsigned size)
 {
+  /* Fetch the corresponding file mapped with the value of fd
+     Read from the file if the file fetched is valid, otherwise return -1 */
   struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) return -1;
   int cnt = file_read (fp, buffer, size);
+
   return cnt;
 }
 
@@ -311,6 +336,9 @@ read_from_file (int fd, void *buffer, unsigned size)
 static int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
+  /* Additional sanity check to verify the buffer, check if the fd value
+     is below the maximum range of open files, and check if the fd value
+     is not equal to 0 (STDIN_FILENO) for syscall_write */
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
@@ -318,6 +346,8 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   unsigned bytes_written;
 
+  /* Acquires the lock to first check the fd value to either write to the
+     console, or write to a specific file */
   acquire_filesys ();
 
   if (fd == STDOUT_FILENO) bytes_written = write_to_console (buffer, size);
@@ -325,23 +355,29 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   release_filesys ();
 
+
+  /* Returns the total count of bytes written */
   return bytes_written;
 }
 
+/* Helper function for syscall_write to return the bytes written to the console */
 static int
 write_to_console (const char *buffer, unsigned size)
 {
   int bytes_written = 0;
 
-  /* here we break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE 
-   * if necessary and write them to the console */
+  /* Break the buffer into chunks of size MAX_CONSOLE_BUFFER_SIZE 
+     if necessary and write them to the console */
   for (int32_t offset   = 0, bytes_remaining = size, bytes_to_write; 
        bytes_remaining  > 0;
        bytes_remaining -= MAX_CONSOLE_BUFFER_SIZE,
        offset          += MAX_CONSOLE_BUFFER_SIZE) 
     {
+      /* Buffer into chunks */
       bytes_to_write = (bytes_remaining - offset <= MAX_CONSOLE_BUFFER_SIZE) ?
           bytes_remaining : MAX_CONSOLE_BUFFER_SIZE; 
+      
+      /* Writes to the console and increment the byte counts */
       putbuf (&buffer[offset], bytes_to_write);
       bytes_written += bytes_to_write;
     }
@@ -349,11 +385,14 @@ write_to_console (const char *buffer, unsigned size)
   return bytes_written;
 }
 
+/* Helper function for syscall_write to return the bytes written to the file */
 static int
 write_to_file (int fd, const char *buffer, unsigned size)
 {
+  /* Fetch the corresponding file mapped with the value of fd
+     Write to the file if the file fetched is valid, otherwise return -1 */
   struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
-  ASSERT (fp != NULL);
+  if (fp == NULL) return -1;
   return file_write (fp, buffer, size);
 }
 
@@ -361,11 +400,12 @@ write_to_file (int fd, const char *buffer, unsigned size)
 static void
 syscall_seek (int fd UNUSED, unsigned position UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetch the corresponding file mapped with the value of fd
+     Exit with -1 if fetch fails */
   struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) syscall_exit (-1);
 
-  /* Acquires the lock to access files */
+  /* Acquires the lock to seek the given position of the file */
   acquire_filesys ();
 
   file_seek(fp, position);
@@ -377,11 +417,12 @@ syscall_seek (int fd UNUSED, unsigned position UNUSED)
 static unsigned
 syscall_tell (int fd UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetch the corresponding file mapped with the value of fd
+     Exit with -1 if fetch fails */
   struct file *fp = get_file (thread_current ()->hash_fd_ptr, fd);
   if (fp == NULL) syscall_exit (-1);
   
-  /* Acquires the lock to access files */
+  /* Acquires the lock to tell the current position in the file */
   acquire_filesys ();
   
   int tell = file_tell (fp);
@@ -395,12 +436,13 @@ syscall_tell (int fd UNUSED)
 static void
 syscall_close (int fd UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetch the corresponding file mapped with the value of fd
+     Exit with -1 if fetch fails */
   struct fd_item *fd_item_ptr = get_fd_item (thread_current ()->hash_fd_ptr, fd);
   if (fd_item_ptr == NULL) syscall_exit (-1);
 
   /* Acquires the lock to access files and free the fd_item struct allocated
-     upon syscall_open */
+     upon syscall_open before closing */
   acquire_filesys ();
   
   hash_delete (thread_current ()->hash_fd_ptr, &fd_item_ptr->hash_elem);
