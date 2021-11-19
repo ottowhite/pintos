@@ -422,12 +422,13 @@ syscall_tell (int fd UNUSED)
 static void
 syscall_close (int fd UNUSED)
 {
-  /* Fetches the corresponding file */
+  /* Fetch the corresponding file mapped with the value of fd
+     Exit with -1 if fetch fails */
   struct fd_item *fd_item_ptr = get_fd_item (&thread_current ()->hash_fd, fd);
   if (fd_item_ptr == NULL) syscall_exit (-1);
 
   /* Acquires the lock to access files and free the fd_item struct allocated
-     upon syscall_open */
+     upon syscall_open before closing */
   acquire_filesys ();
   
   hash_delete (&thread_current ()->hash_fd, &fd_item_ptr->hash_elem);
