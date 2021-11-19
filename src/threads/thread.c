@@ -226,25 +226,28 @@ thread_create (const char *name, int priority,
 	t->self_child_ptr = NULL;
 #ifdef USERPROG
 
-  // process_wait
 
 	/* Special case for initial thread,
 	   list of children needs to be initialized here. */
   if (thread_current () == initial_thread)
       list_init (&thread_current ()->children);
 
-  // TODO: Free memory on failure
-  // hash table for file descriptors
-  t->hash_fd = * (struct hash *) malloc (sizeof (struct hash));
-  if (&t->hash_fd == NULL) 
-      return TID_ERROR;
-  if (!hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL)) 
-      return TID_ERROR;
+  /* Initialise hash table for file descriptors */
+
+  /* Initialise to 2 to skip reserved STDIN_FILENO and STDOUT_FILENO fds */
   t->fd_cnt = 2;
 
+  t->hash_fd = * (struct hash *) malloc (sizeof (struct hash));
+  if (&t->hash_fd == NULL) 
+      goto allocate_hash_fd_fail;
+
+  if (!hash_init (&(t->hash_fd), &fd_hash_func, &fd_hash_less_func, NULL)) 
+      goto init_hash_fd_fail;
+
+  /*  Initialise third party child struct for synchronisation with parent */
 	struct child *child_ptr = (struct child *) malloc (sizeof (struct child));
 	if (child_ptr == NULL)
-		  return TID_ERROR;
+      goto allocate_child_fail;
 
   child_process_init (child_ptr, t, t->tid);
 	
@@ -258,6 +261,13 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
 
   return tid;
+
+  // Free resources on thread creation failure
+  allocate_child_fail:   hash_destroy (&t->hash_fd, &fd_hash_free);
+  init_hash_fd_fail:     free (&t->hash_fd);
+  allocate_hash_fd_fail: palloc_free_page (t);
+
+  return TID_ERROR;
 }
 
 /* Initialize required elements for a process. */

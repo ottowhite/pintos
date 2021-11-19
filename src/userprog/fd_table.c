@@ -1,7 +1,7 @@
 #include "userprog/fd_table.h"
 #include "userprog/syscall.h"
+#include "threads/malloc.h"
 #include <hash.h>
-#include <stdlib.h>
 
 hash_hash_func *fd_hash_func_ptr;
 hash_less_func *fd_hash_less_func_ptr;
