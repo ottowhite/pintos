@@ -10,6 +10,7 @@
 #include "userprog/parse.h"
 #include "userprog/load_arguments.h"
 #include "userprog/process.h"
+#include "userprog/fd_table.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -218,6 +219,8 @@ process_exit (void)
       /* releases the child struct */
       free ((void *) child_ptr);
     }
+
+    hash_destroy (&cur->hash_fd, &fd_hash_free);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
