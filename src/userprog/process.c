@@ -88,7 +88,7 @@ process_execute (const char *file_name)
 
   if (!file_exists (process_name)) 
   {
-    palloc_free_page (process_name - pg_ofs (process_name));
+    palloc_free_page (pg_round_down (process_name));
     return TID_ERROR; 
   }
 
@@ -97,7 +97,7 @@ process_execute (const char *file_name)
   if (tid == TID_ERROR || !process_wait_for_load (tid))
     {
       tid = TID_ERROR;
-      palloc_free_page (process_name - pg_ofs (process_name));
+      palloc_free_page (pg_round_down (process_name));
     }
   return tid;
 }
@@ -132,7 +132,7 @@ start_process (void *file_name_)
   /* check that esp has not overflowed the initial page */
   success &= pg_round_up (initial_esp) == pg_round_up (if_.esp);
 
-  palloc_free_page (file_name - pg_ofs (file_name));
+  palloc_free_page (pg_round_down (file_name));
   struct child *self_child_ptr = thread_current ()->self_child_ptr;
 
   self_child_ptr->load_successful = success;
