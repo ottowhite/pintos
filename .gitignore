@@ -25,3 +25,6 @@
 
 #ignore tags
 tags
+
+#ignore my syntax highlighting config
+.syntastic_c_config
