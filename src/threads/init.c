@@ -72,9 +72,6 @@ static void usage (void);
 static void locate_block_devices (void);
 static void locate_block_device (enum block_type, const char *name);
 #endif
-#ifdef VM
-static struct hash ft;
-#endif
 
 int main (void) NO_RETURN;
 
@@ -105,7 +102,7 @@ main (void)
   malloc_init ();
   paging_init ();
 #ifdef VM
-  ft_init (&ft);
+  ft_init ();
 #endif
 
   /* Segmentation. */
@@ -144,7 +141,7 @@ main (void)
   /* Finish up. */
   shutdown ();
 #ifdef VM
-  ft_free (&ft);
+  ft_free ();
 #endif
   thread_exit ();
 }
