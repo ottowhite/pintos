@@ -37,6 +37,9 @@
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
 #endif
+#ifdef VM
+#include "vm/ft.h"
+#endif
 
 /* Page directory with kernel mappings only. */
 uint32_t *init_page_dir;
@@ -69,6 +72,9 @@ static void usage (void);
 static void locate_block_devices (void);
 static void locate_block_device (enum block_type, const char *name);
 #endif
+#ifdef VM
+static struct hash ft;
+#endif
 
 int main (void) NO_RETURN;
 
@@ -98,6 +104,9 @@ main (void)
   palloc_init (user_page_limit);
   malloc_init ();
   paging_init ();
+#ifdef VM
+  ft_init (&ft);
+#endif
 
   /* Segmentation. */
 #ifdef USERPROG
@@ -134,6 +143,9 @@ main (void)
 
   /* Finish up. */
   shutdown ();
+#ifdef VM
+  ft_free (&ft);
+#endif
   thread_exit ();
 }
 
