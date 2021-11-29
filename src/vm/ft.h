@@ -19,10 +19,9 @@ struct fte
   bool shared;
   bool pinned;
   void *frame_location;
-  int frame_index;
   enum retrieval_method retrieval_method;
   int amount_occupied;
-  struct hash_elem elem;
+  struct hash_elem hash_elem;
 };
 
 void initialize_ft (struct hash *ft_ptr);
