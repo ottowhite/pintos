@@ -32,7 +32,7 @@ deallocate_ft (struct hash *ft)
 static unsigned
 fte_hash_func (const struct hash_elem *e, void *aux UNUSED)
 {
-  return 0;
+  return hash_entry (e, struct fte, elem)->fid;
 }
 
 static bool 

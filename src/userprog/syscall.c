@@ -316,8 +316,8 @@ syscall_read (int fd, void *buffer, unsigned size)
      console, or read from a specific file */
   acquire_filesys ();
 
-  if (fd == STDIN_FILENO)  bytes_read = read_from_console (buffer, size);
-  else                     bytes_read = read_from_file (fd, buffer, size);
+  if (fd == STDIN_FILENO) bytes_read = read_from_console (buffer, size);
+  else                    bytes_read = read_from_file (fd, buffer, size);
 
   release_filesys ();
 
