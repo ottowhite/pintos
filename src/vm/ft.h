@@ -9,4 +9,16 @@ enum retrieval_method
   SWAP
 };
 
+struct fte 
+{
+  int fid;
+  bool swapped;
+  bool shared;
+  bool pinned;
+  void *frame_location;
+  int frame_index;
+  enum retrieval_method retrieval_method;
+  int amount_occupied;
+};
+
 #endif
