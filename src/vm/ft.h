@@ -24,10 +24,10 @@ struct fte
   struct hash_elem hash_elem;
 };
 
-void initialize_ft (struct hash *ft_ptr);
-void deallocate_ft (struct hash *ft_ptr);
-void insert_fte    (struct hash *ft_ptr,
-                    void *frame_location,
-                    enum retrieval_method retrieval_method,
-                    int amount_occupied);
+void ft_init    (struct hash *ft_ptr);
+void ft_free    (struct hash *ft_ptr);
+void fte_insert (struct hash *ft_ptr,
+                 void *frame_location,
+                 enum retrieval_method retrieval_method,
+                 int amount_occupied);
 #endif

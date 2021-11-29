@@ -6,8 +6,8 @@
 #include "userprog/syscall.h"
 #include "vm/ft.h"
 
-void initialize_ft (struct hash *ft_ptr);
-void deallocate_ft (struct hash *ft_ptr);
+void ft_init (struct hash *ft_ptr);
+void ft_free (struct hash *ft_ptr);
 
 static unsigned fte_hash_func       (const struct hash_elem *e_ptr, void *aux);
 static bool     fte_less_func       (const struct hash_elem *a_ptr,
@@ -20,7 +20,7 @@ static int fid_cnt;
 
 /* Initilizes the frame table as a hash map of struct ftes */
 void 
-initialize_ft (struct hash *ft_ptr)
+ft_init (struct hash *ft_ptr)
 {
   hash_init (ft_ptr, &fte_hash_func, &fte_less_func, NULL);
   lock_init (&ft_lock);
@@ -32,7 +32,7 @@ initialize_ft (struct hash *ft_ptr)
    All threads must have terminated before this so the frame table content 
    is consistent and hash clear doesn't yield undefined behaviour. */
 void 
-deallocate_ft (struct hash *ft_ptr)
+ft_free (struct hash *ft_ptr)
 {
   lock_acquire (&ft_lock);
   hash_destroy (ft_ptr, &fte_deallocate_func);
@@ -40,7 +40,7 @@ deallocate_ft (struct hash *ft_ptr)
 }
 
 void 
-insert_fte (struct hash *ft_ptr,
+fte_insert (struct hash *ft_ptr,
             void *frame_location,
             enum retrieval_method retrieval_method,
             int amount_occupied)
