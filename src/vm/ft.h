@@ -1,6 +1,8 @@
 #ifndef VM_FT_H
 #define VM_FT_H
 
+#include <hash.h>
+
 /* Retrieval methods for frame table entries being evicted */
 enum retrieval_method
 {
@@ -9,6 +11,7 @@ enum retrieval_method
   SWAP
 };
 
+/* Frame / swap table entry */
 struct fte 
 {
   int fid;
@@ -20,5 +23,8 @@ struct fte
   enum retrieval_method retrieval_method;
   int amount_occupied;
 };
+
+void initialize_ft (struct hash *ft);
+void deallocate_ft (struct hash *ft);
 
 #endif
