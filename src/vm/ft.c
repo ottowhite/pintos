@@ -5,11 +5,11 @@
 void initialize_ft (struct hash *ft);
 void deallocate_ft (struct hash *ft);
 
-static unsigned fte_hash_func (const struct hash_elem *e, void *aux);
-static bool fte_less_func (const struct hash_elem *a,
-                           const struct hash_elem *b,
-                           void *aux UNUSED);
-static void fte_deallocate_func (struct hash_elem *e, void *aux UNUSED);
+static unsigned fte_hash_func       (const struct hash_elem *e, void *aux);
+static bool     fte_less_func       (const struct hash_elem *a,
+                                     const struct hash_elem *b,
+                                     void *aux UNUSED);
+static void     fte_deallocate_func (struct hash_elem *e, void *aux UNUSED);
 
 
 /* Initilizes the frame table as a hash map of struct ftes */
@@ -24,13 +24,13 @@ initialize_ft (struct hash *ft)
    All threads must have terminated before this so the frame table content 
    is consistent and hash clear doesn't yield undefined behaviour. */
 void 
-deallocate_ft (struct hash *ft UNUSED)
+deallocate_ft (struct hash *ft)
 {
   hash_destroy (ft, &fte_deallocate_func);
 }
 
 static unsigned
-fte_hash_func (const struct hash_elem *e, void *aux)
+fte_hash_func (const struct hash_elem *e, void *aux UNUSED)
 {
   return 0;
 }
@@ -40,7 +40,8 @@ fte_less_func (const struct hash_elem *a,
                const struct hash_elem *b,
                void *aux UNUSED) 
 {
-  return false;
+  return hash_entry (a, struct fte, elem)->fid <
+         hash_entry (b, struct fte, elem)->fid;
 }
 
 static void

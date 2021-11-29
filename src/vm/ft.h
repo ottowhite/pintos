@@ -22,6 +22,7 @@ struct fte
   int frame_index;
   enum retrieval_method retrieval_method;
   int amount_occupied;
+  struct hash_elem elem;
 };
 
 void initialize_ft (struct hash *ft);
