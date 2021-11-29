@@ -47,5 +47,8 @@ fte_less_func (const struct hash_elem *a,
 static void
 fte_deallocate_func (struct hash_elem *e, void *aux UNUSED)
 {
+  // TODO (complete once allocation is done)
+  // Free all resources associated with a particular frame at the end of 
+  // execution. This should in theory have to run on no FTEs
   return;
 }
