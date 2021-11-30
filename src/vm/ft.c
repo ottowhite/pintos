@@ -23,6 +23,7 @@ static struct fte *fte_construct       (void *frame_location,
                                         int amount_occupied);
 
 static struct lock ft_lock;
+static struct lock fid_lock;
 static int fid_cnt;
 static struct hash ft;
 
@@ -32,6 +33,7 @@ ft_init (void)
 {
   hash_init (&ft, &fte_hash_func, &fte_less_func, NULL);
   lock_init (&ft_lock);
+  lock_init (&fid_lock);
   fid_cnt = 0;
 }
 
@@ -62,12 +64,11 @@ ft_get_frame (bool zeroed)
   if (frame_ptr == NULL) return NULL;
 
   /* Coarse grained insertion to the frame / swap table */
-  lock_acquire (&ft_lock);
   /* Inserts a pinned frame until installed in page table */
   struct fte *fte_ptr = fte_construct (frame_ptr, SWAP, PGSIZE);
   if (fte_ptr == NULL) return NULL;
+
   fte_insert (fte_ptr);
-  lock_release (&ft_lock);
 
   return fte_ptr;
 }
@@ -82,7 +83,9 @@ fte_construct (void *frame_location,
   struct fte *fte_ptr = malloc (sizeof (struct fte));
   if (fte_ptr == NULL) return NULL;
 
+  lock_acquire (&fid_lock);
   fte_ptr->fid              = fid_cnt++;
+  lock_release (&fid_lock);
   fte_ptr->swapped          = false;
   fte_ptr->shared           = true;
   fte_ptr->pinned           = false;
@@ -96,16 +99,18 @@ fte_construct (void *frame_location,
 static void
 fte_insert (struct fte *fte_ptr)
 {
+  lock_acquire (&ft_lock);
   hash_insert (&ft, &fte_ptr->hash_elem);
   
   // TODO: Set the frame table presence bit in bitmap
   int frame_index = (fte_ptr->frame_location - PHYS_BASE) / PGSIZE;
+  lock_release (&ft_lock);
 }
 
 /* Removes a frame table entry from the frame table and frees the kernel
    space */
 void
-fte_remove (struct fte *fte_ptr)
+ft_remove (struct fte *fte_ptr)
 {
   lock_acquire (&ft_lock);
   hash_delete (&ft, &fte_ptr->hash_elem);

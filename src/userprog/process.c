@@ -582,7 +582,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         /* Add the page to the process's address space. */
         if (!install_page_unpin_frame (upage, kpage, writable, fte_ptr)) 
         {
-          // TODO: Free the pinned frame
+          ft_remove (fte_ptr);
           palloc_free_page (kpage);
           return false; 
         }        
@@ -624,7 +624,7 @@ setup_stack (void **esp)
         *esp = PHYS_BASE;
       else 
         {
-          // TODO: Free the pinned frame
+          ft_remove (fte_ptr);
           palloc_free_page (kpage);
         }
         
