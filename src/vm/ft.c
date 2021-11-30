@@ -4,6 +4,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
+#include "threads/thread.h"
 #include "userprog/syscall.h" 
 #include "vm/ft.h"
 
@@ -21,6 +22,7 @@ static void        fte_insert          (struct fte *fte_ptr);
 static struct fte *fte_construct       (void *frame_location,
                                         enum retrieval_method retrieval_method,
                                         int amount_occupied);
+static void        fte_remove          (struct fte *fte_ptr);
 
 static struct lock ft_lock;
 static struct lock fid_lock;
@@ -73,6 +75,12 @@ ft_get_frame (bool zeroed)
   return fte_ptr;
 }
 
+void 
+ft_remove_frame (struct fte *fte_ptr)
+{
+  palloc_free_page (fte_ptr->frame_location);
+  fte_remove (fte_ptr);
+}
 /* Constructs a pinned frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
@@ -89,6 +97,7 @@ fte_construct (void *frame_location,
   fte_ptr->swapped          = false;
   fte_ptr->shared           = true;
   fte_ptr->pinned           = false;
+  fte_ptr->owner            = thread_current ()->tid;
   fte_ptr->frame_location   = frame_location;
   fte_ptr->retrieval_method = retrieval_method;
   fte_ptr->amount_occupied  = amount_occupied;
@@ -106,8 +115,8 @@ fte_insert (struct fte *fte_ptr)
 
 /* Removes a frame table entry from the frame table and frees the 
    space used to store it. Doesn't free the user page. */
-void
-ft_remove (struct fte *fte_ptr)
+static void
+fte_remove (struct fte *fte_ptr)
 {
   lock_acquire (&ft_lock);
 
@@ -142,3 +151,4 @@ fte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
   // ft_lock held by caller
   free (hash_entry (e_ptr, struct fte, hash_elem));
 }
+

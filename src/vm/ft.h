@@ -23,15 +23,16 @@ struct fte
   bool swapped;
   bool shared;
   bool pinned;
+  uint32_t owner;
   void *frame_location;
   enum retrieval_method retrieval_method;
   int amount_occupied;
   struct hash_elem hash_elem;
 };
 
-void        ft_init      (void);
-void        ft_destroy   (void);
-struct fte *ft_get_frame (bool zeroed);
-void        ft_remove    (struct fte *fte_ptr);
+void        ft_init         (void);
+void        ft_destroy      (void);
+struct fte *ft_get_frame    (bool zeroed);
+void        ft_remove_frame (struct fte *fte_ptr);
 
 #endif
