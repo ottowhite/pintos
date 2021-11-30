@@ -10,16 +10,17 @@
 void ft_init (void);
 void ft_free (void);
 
-static unsigned fte_hash_func       (const struct hash_elem *e_ptr, 
-                                     void *aux UNUSED);
-static bool     fte_less_func       (const struct hash_elem *a_ptr,
-                                     const struct hash_elem *b_ptr,
-                                     void *aux UNUSED);
-static void     fte_deallocate_func (struct hash_elem *e_ptr, 
-                                     void *aux UNUSED);
-static void     fte_insert          (void *frame_location,
-                                     enum retrieval_method retrieval_method,
-                                     int amount_occupied);
+static unsigned    fte_hash_func       (const struct hash_elem *e_ptr, 
+                                        void *aux UNUSED);
+static bool        fte_less_func       (const struct hash_elem *a_ptr,
+                                        const struct hash_elem *b_ptr,
+                                        void *aux UNUSED);
+static void        fte_deallocate_func (struct hash_elem *e_ptr, 
+                                        void *aux UNUSED);
+static void        fte_insert          (struct fte *fte_ptr);
+static struct fte *fte_construct       (void *frame_location,
+                                        enum retrieval_method retrieval_method,
+                                        int amount_occupied);
 
 static struct lock ft_lock;
 static int fid_cnt;
@@ -46,44 +47,59 @@ ft_free (void)
   lock_release (&ft_lock);
 }
 
-void *
-ft_get_frame (enum page_type type)
+/* Obtains a user pool page and constructs a pinned frame table entry
+   to go with it. Returns NULL if either failed.
+   Returned frames must be unpinned after they have been installed to a page
+   table */
+struct fte *
+ft_get_frame (bool zeroed)
 {
+  /* I expect this interface will change over time */
   /* Gets a page from the user pool, zeroed if stack page */
   enum palloc_flags flags = PAL_USER;
-  if (type == STACK) flags |= PAL_ZERO;
+  if (zeroed) flags |= PAL_ZERO;
   void *frame_ptr = palloc_get_page (flags);
-  if (frame_ptr == NULL) syscall_exit (-1);
+  if (frame_ptr == NULL) return NULL;
 
   /* Coarse grained insertion to the frame / swap table */
   lock_acquire (&ft_lock);
-  fte_insert (frame_ptr, SWAP, PGSIZE);
+  /* Inserts a pinned frame until installed in page table */
+  struct fte *fte_ptr = fte_construct (frame_ptr, SWAP, PGSIZE);
+  if (fte_ptr == NULL) return NULL;
+  fte_insert (fte_ptr);
   lock_release (&ft_lock);
 
-  return frame_ptr;
+  return fte_ptr;
 }
 
-static void 
-fte_insert (void *frame_location,
-            enum retrieval_method retrieval_method,
-            int amount_occupied)
+/* Constructs a pinned frame table entry stored in the kernel pool
+   returns NULL if memory allocation failed */
+static struct fte * 
+fte_construct (void *frame_location,
+               enum retrieval_method retrieval_method,
+               int amount_occupied)
 {
   struct fte *fte_ptr = malloc (sizeof (struct fte));
-  if (fte_ptr == NULL) syscall_exit (-1);
+  if (fte_ptr == NULL) return NULL;
 
   fte_ptr->fid              = fid_cnt++;
   fte_ptr->swapped          = false;
-  fte_ptr->shared           = false;
+  fte_ptr->shared           = true;
   fte_ptr->pinned           = false;
   fte_ptr->frame_location   = frame_location;
   fte_ptr->retrieval_method = retrieval_method;
   fte_ptr->amount_occupied  = amount_occupied;
-
-  hash_insert (&ft, &fte_ptr->hash_elem);
     
-  // TODO: Set the frame table presence bit in bitmap
-  int frame_index = (frame_location - PHYS_BASE) / PGSIZE;
+  return fte_ptr;
+}
 
+static void
+fte_insert (struct fte *fte_ptr)
+{
+  hash_insert (&ft, &fte_ptr->hash_elem);
+  
+  // TODO: Set the frame table presence bit in bitmap
+  int frame_index = (fte_ptr->frame_location - PHYS_BASE) / PGSIZE;
 }
 
 static unsigned

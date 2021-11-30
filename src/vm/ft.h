@@ -29,7 +29,8 @@ struct fte
   struct hash_elem hash_elem;
 };
 
-void ft_init       (void);
-void ft_free       (void);
-void *ft_get_frame (enum page_type type);
+void        ft_init      (void);
+void        ft_free      (void);
+struct fte *ft_get_frame (bool zeroed);
+
 #endif
