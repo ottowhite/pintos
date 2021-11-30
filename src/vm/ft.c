@@ -101,20 +101,19 @@ fte_insert (struct fte *fte_ptr)
 {
   lock_acquire (&ft_lock);
   hash_insert (&ft, &fte_ptr->hash_elem);
-  
-  // TODO: Set the frame table presence bit in bitmap
-  int frame_index = (fte_ptr->frame_location - PHYS_BASE) / PGSIZE;
   lock_release (&ft_lock);
 }
 
-/* Removes a frame table entry from the frame table and frees the kernel
-   space */
+/* Removes a frame table entry from the frame table and frees the 
+   space used to store it. Doesn't free the user page. */
 void
 ft_remove (struct fte *fte_ptr)
 {
   lock_acquire (&ft_lock);
+
   hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
+
   lock_release (&ft_lock);
 }
 
