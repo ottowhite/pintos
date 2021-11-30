@@ -30,7 +30,8 @@ struct fte
 };
 
 void        ft_init      (void);
-void        ft_free      (void);
+void        ft_destroy   (void);
 struct fte *ft_get_frame (bool zeroed);
+void        ft_remove    (struct fte *fte_ptr);
 
 #endif

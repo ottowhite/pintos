@@ -4,11 +4,11 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
-#include "userprog/syscall.h"
+#include "userprog/syscall.h" 
 #include "vm/ft.h"
 
 void ft_init (void);
-void ft_free (void);
+void ft_destroy (void);
 
 static unsigned    fte_hash_func       (const struct hash_elem *e_ptr, 
                                         void *aux UNUSED);
@@ -40,7 +40,7 @@ ft_init (void)
    All threads must have terminated before this so the frame table content 
    is consistent and hash clear doesn't yield undefined behaviour. */
 void 
-ft_free (void)
+ft_destroy (void)
 {
   lock_acquire (&ft_lock);
   hash_destroy (&ft, &fte_deallocate_func);
@@ -100,6 +100,17 @@ fte_insert (struct fte *fte_ptr)
   
   // TODO: Set the frame table presence bit in bitmap
   int frame_index = (fte_ptr->frame_location - PHYS_BASE) / PGSIZE;
+}
+
+/* Removes a frame table entry from the frame table and frees the kernel
+   space */
+void
+fte_remove (struct fte *fte_ptr)
+{
+  lock_acquire (&ft_lock);
+  hash_delete (&ft, &fte_ptr->hash_elem);
+  free (fte_ptr);
+  lock_release (&ft_lock);
 }
 
 static unsigned

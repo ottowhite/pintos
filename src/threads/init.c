@@ -141,7 +141,7 @@ main (void)
   /* Finish up. */
   shutdown ();
 #ifdef VM
-  ft_free ();
+  ft_destroy ();
 #endif
   thread_exit ();
 }
