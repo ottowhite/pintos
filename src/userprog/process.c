@@ -21,6 +21,7 @@
 #include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/ft.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -484,6 +485,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
 /* load() helpers. */
 
 static bool install_page (void *upage, void *kpage, bool writable);
+static bool install_page_unpin_frame (void *upage, 
+                                      void *kpage, 
+                                      bool writable, 
+                                      struct fte *fte_ptr);
 
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
@@ -568,14 +573,16 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       if (kpage == NULL){
         
         /* Get a new page of memory. */
-        kpage = palloc_get_page (PAL_USER);
+        struct fte *fte_ptr = ft_get_frame (false);
+        kpage = fte_ptr->frame_location;
         if (kpage == NULL){
           return false;
         }
         
         /* Add the page to the process's address space. */
-        if (!install_page (upage, kpage, writable)) 
+        if (!install_page_unpin_frame (upage, kpage, writable, fte_ptr)) 
         {
+          // TODO: Free the pinned frame
           palloc_free_page (kpage);
           return false; 
         }        
@@ -605,14 +612,22 @@ setup_stack (void **esp)
   uint8_t *kpage;
   bool success = false;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  struct fte *fte_ptr = ft_get_frame (true);
+  kpage = fte_ptr->frame_location;
   if (kpage != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+      success = install_page_unpin_frame (((uint8_t *) PHYS_BASE) - PGSIZE, 
+                                          kpage, 
+                                          true, 
+                                          fte_ptr);
       if (success)
         *esp = PHYS_BASE;
-      else
-        palloc_free_page (kpage);
+      else 
+        {
+          // TODO: Free the pinned frame
+          palloc_free_page (kpage);
+        }
+        
     }
   return success;
 }
@@ -635,4 +650,17 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+static bool
+install_page_unpin_frame (void *upage, 
+                          void *kpage, 
+                          bool writable, 
+                          struct fte *fte_ptr)
+{
+  bool success = install_page (upage, kpage, writable);
+  /* Creating a page table entry failed due to being unable to allocate
+     memory */
+  if (success) fte_ptr->pinned = false;
+  return success;
 }
