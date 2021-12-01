@@ -120,8 +120,8 @@ fte_construct (pid_t owner,
   fte_ptr->fid              = fid_cnt++;
   lock_release (&fid_lock);
   fte_ptr->swapped          = false;
-  fte_ptr->shared           = true;
-  fte_ptr->pinned           = false;
+  fte_ptr->shared           = false;
+  fte_ptr->pinned           = true;
   fte_ptr->owner            = owner;
   fte_ptr->frame_location   = frame_location;
   fte_ptr->retrieval_method = retrieval_method;
