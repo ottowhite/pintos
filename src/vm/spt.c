@@ -8,7 +8,8 @@ static unsigned spte_hash_func       (const struct hash_elem *e_ptr,
 static bool     spte_less_func       (const struct hash_elem *a_ptr,
                                       const struct hash_elem *b_ptr,
                                       void *aux UNUSED);
-static void  spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED);
+static void     spte_deallocate_func (struct hash_elem *e_ptr, 
+                                      void *aux UNUSED);
 
 static unsigned
 spte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
@@ -40,5 +41,6 @@ spt_init (struct hash *spt_ptr)
 void 
 spt_destroy (struct hash *spt_ptr)
 {
+  /* TODO: Close associated files if necesary (and if not shared) */
   hash_destroy (spt_ptr, &spte_deallocate_func);
 }
