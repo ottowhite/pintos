@@ -1,5 +1,6 @@
 #include <hash.h>
 #include <debug.h>
+#include <string.h>
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -89,7 +90,8 @@ ft_get_frame (pid_t owner,
       return NULL;
     }
   
-  /* Read in the necessary data from the filesystem */
+  /* Read in the necessary data from the filesystem, zero out unallocated 
+     space */
   if (frame_type == EXECUTABLE_CODE || 
       frame_type == EXECUTABLE_DATA ||
       frame_type == MMAP) 
@@ -97,6 +99,7 @@ ft_get_frame (pid_t owner,
       acquire_filesys ();
       inode_read_at (inode_ptr, frame_ptr, amount_occupied, offset);
       release_filesys ();
+      memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
     }
 
   /* Coarse grained insertion to the frame / swap table */
