@@ -586,6 +586,10 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
           ft_remove_frame (fte_ptr);
           return false; 
         }        
+      } else {
+        // TODO: Find the existing fte and overwrite it, store in
+        // fte_ptr
+        fte_ptr = NULL;
       }
 
       /* Load data into the page. */
