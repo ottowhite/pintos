@@ -66,8 +66,8 @@ userprog_SRC += userprog/fd_table.c		# Mapping file descriptors to files
 
 # No virtual memory code yet.
 #vm_SRC = vm/file.c			# Some file.
-vm_SRC = vm/ft.c			# Frame / swap table
-vm_SRC = vm/spt.c			# Frame / swap table
+vm_SRC  = vm/ft.c			# Frame / swap table
+vm_SRC += vm/spt.c			# Frame / swap table
 
 # Filesystem code.
 filesys_SRC  = filesys/filesys.c	# Filesystem core.
