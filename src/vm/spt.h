@@ -26,8 +26,13 @@ struct spte
   struct hash_elem hash_elem;
 };
 
-void spt_init    (struct hash *spt_ptr);
-void spt_destroy (struct hash *spt_ptr);
-
+void         spt_init      (struct hash *spt_ptr);
+void         spt_destroy   (struct hash *spt_ptr);
+struct spte *spt_add_entry (struct hash *spt_ptr,
+                            void *uaddr,
+                            enum frame_type frame_type,
+                            struct inode *inode_ptr,
+                            off_t offset,
+                            int amount_occupied);
 
 #endif
