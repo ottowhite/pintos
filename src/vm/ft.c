@@ -7,6 +7,7 @@
 #include "threads/thread.h"
 #include "userprog/syscall.h" 
 #include "vm/ft.h"
+#include "vm/spt.h"
 
 void ft_init (void);
 void ft_destroy (void);
@@ -19,7 +20,8 @@ static bool        fte_less_func       (const struct hash_elem *a_ptr,
 static void        fte_deallocate_func (struct hash_elem *e_ptr, 
                                         void *aux UNUSED);
 static void        fte_insert          (struct fte *fte_ptr);
-static struct fte *fte_construct       (void *frame_location,
+static struct fte *fte_construct       (pid_t owner,
+                                        void *frame_location,
                                         enum retrieval_method retrieval_method,
                                         int amount_occupied);
 static void        fte_remove          (struct fte *fte_ptr);
@@ -56,18 +58,40 @@ ft_destroy (void)
    Returned frames must be unpinned after they have been installed to a page
    table */
 struct fte *
-ft_get_frame (bool zeroed)
+ft_get_frame (pid_t owner, 
+              enum frame_type frame_type, 
+              struct inode *inode_ptr,
+              off_t offset, 
+              int amount_occupied)
 {
   /* I expect this interface will change over time */
   /* Gets a page from the user pool, zeroed if stack page */
-  enum palloc_flags flags = PAL_USER;
-  if (zeroed) flags |= PAL_ZERO;
-  void *frame_ptr = palloc_get_page (flags);
+
+  void *frame_ptr = palloc_get_page (frame_type == STACK
+                                        ? PAL_USER | PAL_ZERO 
+                                        : PAL_USER);
   if (frame_ptr == NULL) return NULL;
 
   /* Coarse grained insertion to the frame / swap table */
+
   /* Inserts a pinned frame until installed in page table */
-  struct fte *fte_ptr = fte_construct (frame_ptr, SWAP, PGSIZE);
+
+  enum retrieval_method retrieval_method;
+  switch (frame_type) 
+    {
+      case     STACK:           retrieval_method = SWAP;       break;
+      case     EXECUTABLE_CODE: retrieval_method = DELETE;     break;
+      case     EXECUTABLE_DATA: retrieval_method = DELETE;     break;
+      case     ALL_ZERO:        retrieval_method = DELETE;     break;
+      case     MMAP:            retrieval_method = WRITE_READ; break;
+      default: NOT_REACHED ();
+    }
+
+  // TODO: Populate the page with data from the filesystem if necessary
+
+  struct fte *fte_ptr 
+      = fte_construct (owner, frame_ptr, retrieval_method, amount_occupied);
+
   if (fte_ptr == NULL) return NULL;
 
   fte_insert (fte_ptr);
@@ -84,7 +108,8 @@ ft_remove_frame (struct fte *fte_ptr)
 /* Constructs a pinned frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
-fte_construct (void *frame_location,
+fte_construct (pid_t owner,
+               void *frame_location,
                enum retrieval_method retrieval_method,
                int amount_occupied)
 {
@@ -97,7 +122,7 @@ fte_construct (void *frame_location,
   fte_ptr->swapped          = false;
   fte_ptr->shared           = true;
   fte_ptr->pinned           = false;
-  fte_ptr->owner            = thread_current ()->tid;
+  fte_ptr->owner            = owner;
   fte_ptr->frame_location   = frame_location;
   fte_ptr->retrieval_method = retrieval_method;
   fte_ptr->amount_occupied  = amount_occupied;

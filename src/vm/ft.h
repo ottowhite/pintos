@@ -3,6 +3,7 @@
 
 #include <hash.h>
 #include "userprog/syscall.h"
+#include "vm/spt.h"
 
 /* Retrieval methods for frame table entries being evicted */
 enum retrieval_method
@@ -10,11 +11,6 @@ enum retrieval_method
   DELETE,
   WRITE_READ,
   SWAP
-};
-
-enum page_type
-{
-  STACK
 };
 
 /* Frame / swap table entry */
@@ -33,7 +29,10 @@ struct fte
 
 void        ft_init         (void);
 void        ft_destroy      (void);
-struct fte *ft_get_frame    (bool zeroed);
 void        ft_remove_frame (struct fte *fte_ptr);
-
+struct fte *ft_get_frame    (pid_t owner, 
+                             enum frame_type frame_type, 
+                             struct inode *inode_ptr,
+                             off_t offset,
+                             int amount_occupied);
 #endif
