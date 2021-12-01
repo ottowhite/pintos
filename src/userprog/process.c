@@ -642,12 +642,12 @@ install_page (void *upage, void *kpage, bool writable)
 bool
 install_page_unpin_frame (void *upage, 
                           void *kpage, 
-                          bool writable, 
-                          struct fte *fte_ptr)
+                          bool *pinned,
+                          bool writable)
 {
   bool success = install_page (upage, kpage, writable);
   /* Creating a page table entry failed due to being unable to allocate
      memory */
-  if (success) fte_ptr->pinned = false;
+  if (success) *pinned = false;
   return success;
 }

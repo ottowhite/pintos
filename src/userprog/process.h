@@ -13,7 +13,7 @@ void process_exit (void);
 void process_activate (void);
 bool install_page_unpin_frame (void *upage, 
                                void *kpage, 
-                               bool writable, 
-                               struct fte *fte_ptr);
+                               bool *pinned,
+                               bool writable);
 
 #endif /* userprog/process.h */

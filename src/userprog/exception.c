@@ -171,8 +171,8 @@ page_fault (struct intr_frame *f)
       /* Returns false if installation failed, frame left pinned */
       bool success = install_page_unpin_frame (spte_ptr->uaddr, 
                                                fte_ptr->frame_location, 
-                                               writable, 
-                                               fte_ptr);
+                                               &fte_ptr->pinned,
+                                               writable);
 
       if (!success) 
         {
