@@ -26,9 +26,12 @@ static struct fte *fte_construct       (pid_t owner,
                                         int amount_occupied);
 static void        fte_remove          (struct fte *fte_ptr);
 
+static enum retrieval_method 
+    get_retrieval_method (enum frame_type frame_type);
+
 static struct lock ft_lock;
 static struct lock fid_lock;
-static int fid_cnt;
+static int         fid_cnt;
 static struct hash ft;
 
 /* Initilizes the frame table as a hash map of struct ftes */
@@ -72,31 +75,33 @@ ft_get_frame (pid_t owner,
                                         : PAL_USER);
   if (frame_ptr == NULL) return NULL;
 
-  /* Coarse grained insertion to the frame / swap table */
-
-  /* Inserts a pinned frame until installed in page table */
-
-  enum retrieval_method retrieval_method;
-  switch (frame_type) 
-    {
-      case     STACK:           retrieval_method = SWAP;       break;
-      case     EXECUTABLE_CODE: retrieval_method = DELETE;     break;
-      case     EXECUTABLE_DATA: retrieval_method = DELETE;     break;
-      case     ALL_ZERO:        retrieval_method = DELETE;     break;
-      case     MMAP:            retrieval_method = WRITE_READ; break;
-      default: NOT_REACHED ();
-    }
-
   // TODO: Populate the page with data from the filesystem if necessary
+  enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
+  /* Constructs a pinned frame (unpinned when installed in page table) */
   struct fte *fte_ptr 
       = fte_construct (owner, frame_ptr, retrieval_method, amount_occupied);
 
   if (fte_ptr == NULL) return NULL;
 
+  /* Coarse grained insertion to the frame / swap table */
   fte_insert (fte_ptr);
 
   return fte_ptr;
+}
+
+static enum retrieval_method
+get_retrieval_method (enum frame_type frame_type)
+{
+  switch (frame_type) 
+    {
+      case     STACK:           return SWAP;
+      case     EXECUTABLE_CODE: return DELETE;
+      case     EXECUTABLE_DATA: return DELETE;
+      case     ALL_ZERO:        return DELETE;
+      case     MMAP:            return WRITE_READ;
+      default: NOT_REACHED ();
+    }
 }
 
 void 
