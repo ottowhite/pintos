@@ -2,6 +2,7 @@
 #define VM_FT_H
 
 #include <hash.h>
+#include "userprog/syscall.h"
 
 /* Retrieval methods for frame table entries being evicted */
 enum retrieval_method
@@ -23,7 +24,7 @@ struct fte
   bool swapped;
   bool shared;
   bool pinned;
-  uint32_t owner;
+  pid_t owner;
   void *frame_location;
   enum retrieval_method retrieval_method;
   int amount_occupied;
