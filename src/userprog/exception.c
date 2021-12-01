@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "userprog/gdt.h"
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -153,20 +154,24 @@ page_fault (struct intr_frame *f)
     {
       // TODO: Deal with failures
 
-      /* returns null if read failed, obtaining frame, or allocating fte failed */
+      /* Returns null if read failed, obtaining frame, or allocating fte failed */
       struct fte *fte_ptr = ft_get_frame (thread_current ()->tid,
                                           spte_ptr->frame_type,
                                           spte_ptr->inode_ptr,
                                           spte_ptr->offset,
                                           spte_ptr->amount_occupied);
-      /* returns false if installation failed, frame left pinned */
 
-      // TODO: Obtain whether or not the page is writable, install it
+      /* Determine whether our new frame is writable */
       enum frame_type frame_type = spte_ptr->frame_type;
       bool writable = frame_type == STACK ||
                       frame_type == EXECUTABLE_DATA ||
                       frame_type == MMAP;
-      // install_page_unpin_frame (void *upage, void *kpage, bool writable, struct fte *fte_ptr)
+
+      /* Returns false if installation failed, frame left pinned */
+      install_page_unpin_frame (spte_ptr->uaddr, 
+                                fte_ptr->frame_location, 
+                                writable, 
+                                fte_ptr);
     } 
   else 
     {
