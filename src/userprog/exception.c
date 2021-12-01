@@ -139,6 +139,7 @@ page_fault (struct intr_frame *f)
   intr_enable ();
 
   /* Count page faults. */
+  // TODO: Only increment if it is a true page fault
   page_fault_cnt++;
 
   /* Determine cause. */
@@ -146,6 +147,7 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
+  // TODO: Only exit if is a true page fault
   syscall_exit (-1);
 
   /* To implement virtual memory, delete the rest of the function
@@ -156,6 +158,9 @@ page_fault (struct intr_frame *f)
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
+
+
+  
   kill (f);
 }
 
