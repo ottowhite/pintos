@@ -76,7 +76,7 @@ ft_get_frame (pid_t owner,
   void *frame_ptr = palloc_get_page (frame_type == STACK
                                         ? PAL_USER | PAL_ZERO 
                                         : PAL_USER);
-  if (frame_ptr == NULL) return NULL;
+  if (frame_ptr == NULL) goto fail_1;
 
   enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
@@ -84,11 +84,7 @@ ft_get_frame (pid_t owner,
   struct fte *fte_ptr 
       = fte_construct (owner, frame_ptr, retrieval_method, amount_occupied);
 
-  if (fte_ptr == NULL) 
-    {
-      palloc_free_page (frame_ptr);
-      return NULL;
-    }
+  if (fte_ptr == NULL) goto fail_2;
   
   /* Read in the necessary data from the filesystem, zero out unallocated 
      space */
@@ -97,9 +93,12 @@ ft_get_frame (pid_t owner,
       frame_type == MMAP) 
     {
       acquire_filesys ();
-      // TODO: free the kpage if file read doesn't return correct no bytes
-      inode_read_at (inode_ptr, frame_ptr, amount_occupied, offset);
+      int bytes_read 
+          = inode_read_at (inode_ptr, frame_ptr, amount_occupied, offset);
       release_filesys ();
+
+      if (bytes_read != amount_occupied) goto fail_2;
+
       memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
     }
 
@@ -107,6 +106,9 @@ ft_get_frame (pid_t owner,
   fte_insert (fte_ptr);
 
   return fte_ptr;
+
+  fail_2: palloc_free_page (frame_ptr);
+  fail_1: return NULL;
 }
 
 static enum retrieval_method
