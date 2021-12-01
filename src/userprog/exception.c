@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "vm/spt.h"
+#include "vm/ft.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -149,7 +150,18 @@ page_fault (struct intr_frame *f)
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
   if (spte_ptr != NULL) {
-    // TODO: There is an SPT entry, load the page
+    // TODO: Deal with failures
+
+    /* returns null if read failed, obtaining frame, or allocating fte failed */
+    struct fte *fte_ptr = ft_get_frame (thread_current ()->tid,
+                                        spte_ptr->frame_type,
+                                        spte_ptr->inode_ptr,
+                                        spte_ptr->offset,
+                                        spte_ptr->amount_occupied);
+    /* returns false if installation failed, frame left pinned */
+
+    // TODO: Obtain whether or not the page is writable, install it
+    // install_page_unpin_frame (void *upage, void *kpage, bool writable, struct fte *fte_ptr)
   } else {
     // No SPT entry; genuine segmentation fault
 
