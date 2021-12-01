@@ -88,6 +88,23 @@ spt_remove_entry (void)
   return;
 }
 
+/* Attempts to find supplementary page table entry, returns NULL if not
+   present */
+struct spte *
+spt_find_entry (struct hash *spt_ptr, void *uaddr)
+{
+  /* Create fake supplementary page table entry to search by */
+  struct spte s;
+  s.uaddr = uaddr;
+
+  /* Attempt to locate entry */
+  struct hash_elem *hash_elem_ptr = hash_find (spt_ptr, &s.hash_elem);
+
+  /* Return NULL on failure or the surrounding struct spte on success */
+  if (hash_elem_ptr == NULL) return NULL;
+  return hash_entry (hash_elem_ptr, struct spte, hash_elem);
+}
+
 /* Constructs a supplmental page table entry, returns NULL
    if memory allocation fails */
 static struct spte *
