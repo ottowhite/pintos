@@ -37,10 +37,16 @@ spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
   free (hash_entry (e_ptr, struct spte, hash_elem));
 }
 
-void 
+bool 
 spt_init (struct hash *spt_ptr)
 {
-  hash_init (spt_ptr, &spte_hash_func, &spte_less_func, NULL);
+  spt_ptr = malloc (sizeof (struct hash));
+
+  if (spt_ptr == NULL || 
+      !hash_init (spt_ptr, &spte_hash_func, &spte_less_func, NULL))
+      return false;
+  else
+      return true;
 }
 
 void 
@@ -48,6 +54,7 @@ spt_destroy (struct hash *spt_ptr)
 {
   /* TODO: Close associated files if necesary (and if not shared) */
   hash_destroy (spt_ptr, &spte_deallocate_func);
+  free (spt_ptr);
 }
 
 /* Constructs supplementary page table entry and inserts it to given 
