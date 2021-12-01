@@ -152,14 +152,15 @@ page_fault (struct intr_frame *f)
                                           pg_round_down (fault_addr));
   if (spte_ptr != NULL) 
     {
-      // TODO: Deal with failures
-
+      // TODO: Deal with failures more elegantly
+      
       /* Returns null if read failed, obtaining frame, or allocating fte failed */
       struct fte *fte_ptr = ft_get_frame (thread_current ()->tid,
                                           spte_ptr->frame_type,
                                           spte_ptr->inode_ptr,
                                           spte_ptr->offset,
                                           spte_ptr->amount_occupied);
+      if (fte_ptr == NULL) syscall_exit (-1);
 
       /* Determine whether our new frame is writable */
       enum frame_type frame_type = spte_ptr->frame_type;
@@ -168,10 +169,16 @@ page_fault (struct intr_frame *f)
                       frame_type == MMAP;
 
       /* Returns false if installation failed, frame left pinned */
-      install_page_unpin_frame (spte_ptr->uaddr, 
-                                fte_ptr->frame_location, 
-                                writable, 
-                                fte_ptr);
+      bool success = install_page_unpin_frame (spte_ptr->uaddr, 
+                                               fte_ptr->frame_location, 
+                                               writable, 
+                                               fte_ptr);
+
+      if (!success) 
+        {
+          ft_remove_frame (fte_ptr);
+          syscall_exit (-1);
+        }
     } 
   else 
     {
@@ -199,4 +206,3 @@ page_fault (struct intr_frame *f)
 
 
 }
-
