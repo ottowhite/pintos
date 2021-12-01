@@ -569,33 +569,30 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Check if virtual page already allocated */
       struct thread *t = thread_current ();
       uint8_t *kpage = pagedir_get_page (t->pagedir, upage);
-      struct fte *fte_ptr;
       
       if (kpage == NULL){
         
         /* Get a new page of memory. */
-        fte_ptr = ft_get_frame (false);
-        kpage = fte_ptr->frame_location;
+        kpage = palloc_get_page (PAL_USER);
         if (kpage == NULL){
           return false;
         }
         
         /* Add the page to the process's address space. */
-        if (!install_page_unpin_frame (upage, kpage, writable, fte_ptr)) 
+        if (!install_page (upage, kpage, writable)) 
         {
-          ft_remove_frame (fte_ptr);
+          palloc_free_page (kpage);
           return false; 
         }        
       } else {
-        // TODO: Find the existing fte and overwrite it, store in
-        // fte_ptr
-        fte_ptr = NULL;
+        // TODO: Find the existing fte and overwrite it, store in fte_ptr
+        // fte_ptr = NULL;
       }
 
       /* Load data into the page. */
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
-          ft_remove_frame (fte_ptr);
+          palloc_free_page (kpage);
           return false; 
         }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
@@ -616,18 +613,14 @@ setup_stack (void **esp)
   uint8_t *kpage;
   bool success = false;
 
-  struct fte *fte_ptr = ft_get_frame (true);
-  kpage = fte_ptr->frame_location;
+  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
-      success = install_page_unpin_frame (((uint8_t *) PHYS_BASE) - PGSIZE, 
-                                          kpage, 
-                                          true, 
-                                          fte_ptr);
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
         *esp = PHYS_BASE;
       else 
-        ft_remove_frame (fte_ptr);
+        palloc_free_page (kpage);
         
     }
   return success;

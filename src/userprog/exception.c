@@ -150,7 +150,6 @@ page_fault (struct intr_frame *f)
                                           pg_round_down (fault_addr));
   if (spte_ptr != NULL) {
     // TODO: There is an SPT entry, load the page
-    
   } else {
     // No SPT entry; genuine segmentation fault
 
