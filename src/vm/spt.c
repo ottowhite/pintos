@@ -36,3 +36,9 @@ spt_init (struct hash *spt_ptr)
 {
   hash_init (spt_ptr, &spte_hash_func, &spte_less_func, NULL);
 }
+
+void 
+spt_destroy (struct hash *spt_ptr)
+{
+  hash_destroy (spt_ptr, &spte_deallocate_func);
+}
