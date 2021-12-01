@@ -15,6 +15,9 @@
 #include "userprog/process.h"
 #include "userprog/fd_table.h"
 #endif
+#ifdef VM
+#include "vm/spt.h"
+#endif
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -255,6 +258,10 @@ thread_create (const char *name, int priority,
 	list_push_back (&thread_current ()->children, &child_ptr->elem);
 
 
+#endif
+
+#ifdef VM
+  if (!spt_init (t->spt_ptr)) return TID_ERROR;
 #endif
 
   /* Add to run queue. */

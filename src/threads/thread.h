@@ -110,6 +110,9 @@ struct thread
     struct file *executable;         /* Current executable file */
 
 #endif
+#ifdef VM
+    struct hash *spt_ptr;
+#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
