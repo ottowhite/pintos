@@ -149,41 +149,48 @@ page_fault (struct intr_frame *f)
 
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
-  if (spte_ptr != NULL) {
-    // TODO: Deal with failures
+  if (spte_ptr != NULL) 
+    {
+      // TODO: Deal with failures
 
-    /* returns null if read failed, obtaining frame, or allocating fte failed */
-    struct fte *fte_ptr = ft_get_frame (thread_current ()->tid,
-                                        spte_ptr->frame_type,
-                                        spte_ptr->inode_ptr,
-                                        spte_ptr->offset,
-                                        spte_ptr->amount_occupied);
-    /* returns false if installation failed, frame left pinned */
+      /* returns null if read failed, obtaining frame, or allocating fte failed */
+      struct fte *fte_ptr = ft_get_frame (thread_current ()->tid,
+                                          spte_ptr->frame_type,
+                                          spte_ptr->inode_ptr,
+                                          spte_ptr->offset,
+                                          spte_ptr->amount_occupied);
+      /* returns false if installation failed, frame left pinned */
 
-    // TODO: Obtain whether or not the page is writable, install it
-    // install_page_unpin_frame (void *upage, void *kpage, bool writable, struct fte *fte_ptr)
-  } else {
-    // No SPT entry; genuine segmentation fault
+      // TODO: Obtain whether or not the page is writable, install it
+      enum frame_type frame_type = spte_ptr->frame_type;
+      bool writable = frame_type == STACK ||
+                      frame_type == EXECUTABLE_DATA ||
+                      frame_type == MMAP;
+      // install_page_unpin_frame (void *upage, void *kpage, bool writable, struct fte *fte_ptr)
+    } 
+  else 
+    {
+      // No SPT entry; genuine segmentation fault
 
-    /* Count page faults. */
-    page_fault_cnt++;
+      /* Count page faults. */
+      page_fault_cnt++;
 
-    syscall_exit (-1);
+      syscall_exit (-1);
 
-    // TODO: Remove this, replace with code to deal with genuine seg
-    // faults
-    
-    /* To implement virtual memory, delete the rest of the function
-       body, and replace it with code that brings in the page to
-       which fault_addr refers. */
-    printf ("Page fault at %p: %s error %s page in %s context.\n",
-            fault_addr,
-            not_present ? "not present" : "rights violation",
-            write ? "writing" : "reading",
-            user ? "user" : "kernel");
+      // TODO: Remove this, replace with code to deal with genuine seg
+      // faults
+      
+      /* To implement virtual memory, delete the rest of the function
+         body, and replace it with code that brings in the page to
+         which fault_addr refers. */
+      printf ("Page fault at %p: %s error %s page in %s context.\n",
+              fault_addr,
+              not_present ? "not present" : "rights violation",
+              write ? "writing" : "reading",
+              user ? "user" : "kernel");
 
-    kill (f);
-  }
+      kill (f);
+    }
 
 
 }
