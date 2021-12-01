@@ -83,8 +83,11 @@ ft_get_frame (pid_t owner,
   struct fte *fte_ptr 
       = fte_construct (owner, frame_ptr, retrieval_method, amount_occupied);
 
-  // TODO: Free frame_ptr on failure
-  if (fte_ptr == NULL) return NULL;
+  if (fte_ptr == NULL) 
+    {
+      palloc_free_page (frame_ptr);
+      return NULL;
+    }
   
   /* Read in the necessary data from the filesystem */
   if (frame_type == EXECUTABLE_CODE || 
