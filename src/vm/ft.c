@@ -97,6 +97,7 @@ ft_get_frame (pid_t owner,
       frame_type == MMAP) 
     {
       acquire_filesys ();
+      // TODO: free the kpage if file read doesn't return correct no bytes
       inode_read_at (inode_ptr, frame_ptr, amount_occupied, offset);
       release_filesys ();
       memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);

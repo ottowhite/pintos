@@ -584,12 +584,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
           palloc_free_page (kpage);
           return false; 
         }        
-      } else {
-        // TODO: Find the existing fte and overwrite it, store in fte_ptr
-        // fte_ptr = NULL;
-      }
+      } 
 
-      /* Load data into the page. */
+      /* Load data into the page. Overwriting if page already present */
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
           palloc_free_page (kpage);
