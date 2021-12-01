@@ -6,6 +6,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h" 
+#include "filesys/inode.h"
+#include "filesys/filesys.h"
 #include "vm/ft.h"
 #include "vm/spt.h"
 
@@ -75,14 +77,24 @@ ft_get_frame (pid_t owner,
                                         : PAL_USER);
   if (frame_ptr == NULL) return NULL;
 
-  // TODO: Populate the page with data from the filesystem if necessary
   enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
   /* Constructs a pinned frame (unpinned when installed in page table) */
   struct fte *fte_ptr 
       = fte_construct (owner, frame_ptr, retrieval_method, amount_occupied);
 
+  // TODO: Free frame_ptr on failure
   if (fte_ptr == NULL) return NULL;
+  
+  /* Read in the necessary data from the filesystem */
+  if (frame_type == EXECUTABLE_CODE || 
+      frame_type == EXECUTABLE_DATA ||
+      frame_type == MMAP) 
+    {
+      acquire_filesys ();
+      inode_read_at (inode_ptr, frame_ptr, amount_occupied, offset);
+      release_filesys ();
+    }
 
   /* Coarse grained insertion to the frame / swap table */
   fte_insert (fte_ptr);
