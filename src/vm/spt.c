@@ -41,12 +41,13 @@ bool
 spt_init (struct hash *spt_ptr)
 {
   spt_ptr = malloc (sizeof (struct hash));
+  if (spt_ptr == NULL) return false;
 
-  if (spt_ptr == NULL || 
-      !hash_init (spt_ptr, &spte_hash_func, &spte_less_func, NULL))
-      return false;
-  else
-      return true;
+  if (!hash_init (spt_ptr, &spte_hash_func, &spte_less_func, NULL)) {
+    free (spt_ptr);
+    return false;
+  }
+  return true;
 }
 
 void 
