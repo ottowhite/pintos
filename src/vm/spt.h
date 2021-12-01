@@ -26,5 +26,7 @@ struct spte
   struct hash_elem hash_elem;
 };
 
+void spt_init (struct hash *spt_ptr);
+
 
 #endif

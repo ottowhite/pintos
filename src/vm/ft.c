@@ -11,7 +11,7 @@
 void ft_init (void);
 void ft_destroy (void);
 
-static int         fte_hash_func       (const struct hash_elem *e_ptr, 
+static unsigned    fte_hash_func       (const struct hash_elem *e_ptr, 
                                         void *aux UNUSED);
 static bool        fte_less_func       (const struct hash_elem *a_ptr,
                                         const struct hash_elem *b_ptr,
@@ -126,7 +126,7 @@ fte_remove (struct fte *fte_ptr)
   lock_release (&ft_lock);
 }
 
-static int
+static unsigned
 fte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
 {
   return hash_entry (e_ptr, struct fte, hash_elem)->fid;
