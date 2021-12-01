@@ -71,6 +71,13 @@ spt_add_entry (struct hash *spt_ptr,
   return spte_ptr;
 }
 
+void
+spt_remove_entry (void)
+{
+  // TODO when I know exactly what will be the most convienient interface
+  return;
+}
+
 /* Constructs a supplmental page table entry, returns NULL
    if memory allocation fails */
 static struct spte *
