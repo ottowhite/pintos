@@ -261,7 +261,7 @@ thread_create (const char *name, int priority,
 #endif
 
 #ifdef VM
-  if (!spt_init (t->spt_ptr)) return TID_ERROR;
+  if (!spt_init (&t->spt_ptr)) return TID_ERROR;
 #endif
 
   /* Add to run queue. */
@@ -394,6 +394,11 @@ thread_exit (void)
 {
   ASSERT (!intr_context ());
 
+  struct thread *t_ptr = thread_current ();
+
+#ifdef VM
+  spt_destroy (t_ptr->spt_ptr);
+#endif
 #ifdef USERPROG
   process_exit ();
 #endif
@@ -402,8 +407,8 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
-  list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+  list_remove (&t_ptr->allelem);
+  t_ptr->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
 }
