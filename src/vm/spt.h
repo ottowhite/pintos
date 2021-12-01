@@ -26,7 +26,7 @@ struct spte
   struct hash_elem hash_elem;
 };
 
-bool         spt_init         (struct hash *spt_ptr);
+bool         spt_init         (struct hash **spt_ptr_ptr);
 void         spt_destroy      (struct hash *spt_ptr);
 void         spt_remove_entry (void);
 struct spte *spt_add_entry    (struct hash *spt_ptr,

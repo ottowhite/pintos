@@ -40,13 +40,13 @@ spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
 /* Attempts to initialise the supplementary page table 
    Returns false if failed and true if succeeeded. */
 bool 
-spt_init (struct hash *spt_ptr)
+spt_init (struct hash **spt_ptr_ptr)
 {
-  spt_ptr = malloc (sizeof (struct hash));
-  if (spt_ptr == NULL) return false;
+  *spt_ptr_ptr = malloc (sizeof (struct hash));
+  if (*spt_ptr_ptr == NULL) return false;
 
-  if (!hash_init (spt_ptr, &spte_hash_func, &spte_less_func, NULL)) {
-    free (spt_ptr);
+  if (!hash_init (*spt_ptr_ptr, &spte_hash_func, &spte_less_func, NULL)) {
+    free (*spt_ptr_ptr);
     return false;
   }
   return true;
