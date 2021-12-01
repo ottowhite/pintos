@@ -23,6 +23,8 @@ struct spte
   struct inode *inode_ptr;
   off_t offset;
   int amount_occupied;
+  struct hash_elem hash_elem;
 };
+
 
 #endif
