@@ -37,6 +37,8 @@ spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
   free (hash_entry (e_ptr, struct spte, hash_elem));
 }
 
+/* Attempts to initialise the supplementary page table 
+   Returns false if failed and true if succeeeded. */
 bool 
 spt_init (struct hash *spt_ptr)
 {
