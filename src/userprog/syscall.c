@@ -106,11 +106,22 @@ verify_ptr (const void *ptr)
 {
   /* Verifies the address in user space and page directory */
   if (ptr != NULL && 
-      is_user_vaddr (ptr) && 
-      pagedir_get_page (active_pd (), ptr) != NULL) 
-    return true;
+      is_user_vaddr (ptr))
+    {
+      if (pagedir_get_page (active_pd (), ptr) == NULL) 
+        {
+          if (spt_find_entry (thread_current ()->spt_ptr, 
+                              pg_round_down (ptr)) != NULL) 
+              // TODO: Pin this frame until syscall finished
+              *((int *) ptr);
+          else
+              return false;
+        }
+    }
   else 
-    return false;
+      return false;
+
+  return true;
 }
 
 /* Checks that the entire buffer (up to size) is in valid memory and returns 
@@ -362,6 +373,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
       !verify_buffer (buffer, strlen (buffer))) syscall_exit (-1);
+
 
   unsigned bytes_written;
 
