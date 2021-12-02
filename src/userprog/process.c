@@ -235,7 +235,7 @@ process_exit (void)
 
 	/* Sets thread pointer of child struct of current thread to null,
 	   since the thread is about to be terminated. */
-	cur->self_child_ptr->thread_ptr = NULL;
+	if (cur->tid != TID_MAIN) cur->self_child_ptr->thread_ptr = NULL;
 
 	/* List elem to iterate through the thread's children list */
 	struct list_elem *e;
@@ -262,7 +262,7 @@ process_exit (void)
       free ((void *) child_ptr);
     }
 
-    hash_destroy (cur->hash_fd_ptr, &fd_hash_free);
+    if (cur->tid != TID_MAIN) hash_destroy (cur->hash_fd_ptr, &fd_hash_free);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

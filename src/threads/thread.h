@@ -22,6 +22,7 @@ enum thread_status
    You can redefine this to whatever type you like. */
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
+#define TID_MAIN ((tid_t) 1)            /* Main thread tid. */
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
