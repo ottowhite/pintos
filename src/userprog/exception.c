@@ -166,15 +166,18 @@ page_fault (struct intr_frame *f)
       enum frame_type frame_type = spte_ptr->frame_type;
 
       /* Returns false if installation failed, frame left pinned */
-      bool success = install_page_unpin_frame (spte_ptr->uaddr, 
-                                               fte_ptr->frame_location, 
-                                               &fte_ptr->pinned,
-                                               spte_ptr->writable);
+      bool success = install_page (spte_ptr->uaddr, 
+                                   fte_ptr->frame_location, 
+                                   spte_ptr->writable);
 
       if (!success) 
         {
           ft_remove_frame (fte_ptr);
           syscall_exit (-1);
+        }
+      else
+        {
+          fte_ptr->pinned = false;
         }
     } 
   else 

@@ -44,7 +44,7 @@ ft_init (void)
   hash_init (&ft, &fte_hash_func, &fte_less_func, NULL);
   lock_init (&ft_lock);
   lock_init (&fid_lock);
-  fid_cnt = 0;
+  fid_cnt = 1; // 0 is reserved for no owner
 }
 
 /* Deallocate the frame / swap table and all entries. 

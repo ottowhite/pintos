@@ -485,8 +485,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
 /* load() helpers. */
 
-static bool install_page (void *upage, void *kpage, bool writable);
-
 /* Checks whether PHDR describes a valid, loadable segment in
    FILE and returns true if so, false otherwise. */
 static bool
@@ -577,6 +575,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       if (spte_ptr == NULL) 
         {
           spt_add_entry (t->spt_ptr,
+                         0,           // 0 fid infers no frame exists yet
                          upage,
                          frame_type,
                          (frame_type == ALL_ZERO) ? NULL : file->inode,
@@ -608,17 +607,29 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
-  uint8_t *kpage;
   bool success = false;
+  struct thread *t_ptr = thread_current ();
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL) 
+  struct fte *fte_ptr = ft_get_frame (t_ptr->tid,
+                                      ALL_ZERO,
+                                      NULL,
+                                      0,
+                                      PGSIZE);
+  
+
+  if (fte_ptr != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+      uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
+      success = install_page (uaddr, fte_ptr->frame_location, true);
       if (success)
-        *esp = PHYS_BASE;
+        {
+          *esp = PHYS_BASE;
+          spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
+              PGSIZE, true);
+          fte_ptr->pinned = false;
+        }
       else 
-        palloc_free_page (kpage);
+        ft_remove_frame (fte_ptr);
         
     }
   return success;
@@ -633,7 +644,7 @@ setup_stack (void **esp)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-static bool
+bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();
@@ -642,17 +653,4 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
-}
-
-bool
-install_page_unpin_frame (void *upage, 
-                          void *kpage, 
-                          bool *pinned,
-                          bool writable)
-{
-  bool success = install_page (upage, kpage, writable);
-  /* Creating a page table entry failed due to being unable to allocate
-     memory */
-  if (success) *pinned = false;
-  return success;
 }

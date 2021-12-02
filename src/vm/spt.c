@@ -11,6 +11,7 @@ static bool         spte_less_func       (const struct hash_elem *a_ptr,
 static void         spte_deallocate_func (struct hash_elem *e_ptr, 
                                           void *aux UNUSED);
 static struct spte *spte_construct       (void *uaddr,
+                                          uint32_t fid,
                                           enum frame_type frame_type,
                                           struct inode *inode_ptr,
                                           off_t offset,
@@ -66,6 +67,7 @@ spt_destroy (struct hash *spt_ptr)
    fail */
 struct spte *
 spt_add_entry (struct hash *spt_ptr,
+               uint32_t fid,
                void *uaddr,
                enum frame_type frame_type,
                struct inode *inode_ptr,
@@ -73,7 +75,7 @@ spt_add_entry (struct hash *spt_ptr,
                int amount_occupied,
                bool writable)
 {
-  struct spte *spte_ptr = spte_construct (uaddr, frame_type, 
+  struct spte *spte_ptr = spte_construct (uaddr, fid, frame_type, 
       inode_ptr, offset, amount_occupied, writable);
 
   if (spte_ptr == NULL) return NULL;
@@ -111,6 +113,7 @@ spt_find_entry (struct hash *spt_ptr, void *uaddr)
    if memory allocation fails */
 static struct spte *
 spte_construct (void *uaddr,
+                uint32_t fid,
                 enum frame_type frame_type,
                 struct inode *inode_ptr,
                 off_t offset,
@@ -121,6 +124,7 @@ spte_construct (void *uaddr,
   if (spte_ptr == NULL) return NULL;
 
   spte_ptr->uaddr           = uaddr;
+  spte_ptr->fid             = fid;
   spte_ptr->frame_type      = frame_type;
   spte_ptr->inode_ptr       = inode_ptr;
   spte_ptr->offset          = offset;
