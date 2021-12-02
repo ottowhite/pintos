@@ -1,2 +1,2 @@
-make clean && make check -j16 | grep -w "FAIL" | uniq -u | sort > failures.txt
-
+make clean && make check -j16 | grep "\<FAIL tests\>\|\<pass tests\>\|\<Warning\>" | sort -u > failures.txt
+cat failures.txt
