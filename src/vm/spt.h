@@ -5,6 +5,7 @@
 
 #include "filesys/off_t.h"
 #include "filesys/file.h"
+#include "filesys/inode.h"
 
 enum frame_type
 {

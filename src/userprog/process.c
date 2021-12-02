@@ -22,6 +22,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/ft.h"
+#include "vm/spt.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -564,36 +565,38 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       
       /* Check if virtual page already allocated */
       struct thread *t = thread_current ();
-      uint8_t *kpage = pagedir_get_page (t->pagedir, upage);
+      struct spte *spte_ptr = spt_find_entry (t->spt_ptr, upage);
       
-      if (kpage == NULL){
-        
-        /* Get a new page of memory. */
-        kpage = palloc_get_page (PAL_USER);
-        if (kpage == NULL){
-          return false;
-        }
-        
-        /* Add the page to the process's address space. */
-        if (!install_page (upage, kpage, writable)) 
-        {
-          palloc_free_page (kpage);
-          return false; 
-        }        
-      } 
+      enum frame_type frame_type 
+          = writable ? EXECUTABLE_DATA : EXECUTABLE_CODE;
 
-      /* Load data into the page. Overwriting if page already present */
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
+      if (spte_ptr == NULL) 
         {
-          palloc_free_page (kpage);
-          return false; 
+          spt_add_entry (t->spt_ptr,
+                         upage,
+                         frame_type,
+                         file->inode,
+                         ofs,
+                         page_read_bytes);
         }
-      memset (kpage + page_read_bytes, 0, page_zero_bytes);
+      else
+        {
+          /* If either frame had type executable data, this one should too
+             to make it writable */
+          if (frame_type == EXECUTABLE_DATA ||
+              spte_ptr->frame_type == EXECUTABLE_DATA)
+              frame_type = EXECUTABLE_DATA;
+
+          spte_ptr->amount_occupied = page_read_bytes;
+          spte_ptr->frame_type      = frame_type;
+        }
+
 
       /* Advance. */
+      ofs        += page_read_bytes;
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
-      upage += PGSIZE;
+      upage      += PGSIZE;
     }
   return true;
 }
