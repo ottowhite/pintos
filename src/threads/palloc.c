@@ -61,6 +61,18 @@ palloc_init (size_t user_page_limit)
              user_pages, "user pool");
 }
 
+/* Updates the bitmap of a pool and returns the value of
+   bitmap_scan_and_flip. */
+static size_t
+update_pool_bitmap (enum palloc_flags flags, size_t page_cnt, bool value) 
+{
+  struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
+  lock_acquire (&pool->lock);
+  size_t page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, value);
+  lock_release (&pool->lock);
+  return page_idx;
+}
+
 /* Obtains and returns a group of PAGE_CNT contiguous free pages.
    If PAL_USER is set, the pages are obtained from the user pool,
    otherwise from the kernel pool.  If PAL_ZERO is set in FLAGS,
@@ -72,14 +84,11 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
 {
   struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
   void *pages;
-  size_t page_idx;
 
   if (page_cnt == 0)
     return NULL;
 
-  lock_acquire (&pool->lock);
-  page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, false);
-  lock_release (&pool->lock);
+  size_t page_idx = update_pool_bitmap (flags, page_cnt, false);
 
   if (page_idx != BITMAP_ERROR)
     pages = pool->base + PGSIZE * page_idx;
@@ -99,6 +108,7 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
 
   return pages;
 }
+
 
 /* Obtains a single free page and returns its kernel virtual
    address.
