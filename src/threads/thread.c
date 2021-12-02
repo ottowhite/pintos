@@ -397,7 +397,7 @@ thread_exit (void)
   struct thread *t_ptr = thread_current ();
 
 #ifdef VM
-  spt_destroy (t_ptr->spt_ptr);
+  if (t_ptr != initial_thread) spt_destroy (t_ptr->spt_ptr);
 #endif
 #ifdef USERPROG
   process_exit ();

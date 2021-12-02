@@ -196,7 +196,6 @@ page_fault (struct intr_frame *f)
           page_fault_cnt++;
           syscall_exit (-1);
           kill (f);
-
         }
     }
 }
