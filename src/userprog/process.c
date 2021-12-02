@@ -566,27 +566,29 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /* Check if virtual page already allocated */
       struct thread *t = thread_current ();
       struct spte *spte_ptr = spt_find_entry (t->spt_ptr, upage);
-      
-      enum frame_type frame_type 
-          = writable ? EXECUTABLE_DATA : EXECUTABLE_CODE;
+
+      enum frame_type frame_type;
+
+      if (page_zero_bytes == PGSIZE) frame_type = ALL_ZERO;
+      else if (writable)             frame_type = EXECUTABLE_DATA;
+      else if (!writable)            frame_type = EXECUTABLE_CODE;
+      else                           NOT_REACHED ();
 
       if (spte_ptr == NULL) 
         {
           spt_add_entry (t->spt_ptr,
                          upage,
                          frame_type,
-                         file->inode,
-                         ofs,
-                         page_read_bytes);
+                         (frame_type == ALL_ZERO) ? NULL : file->inode,
+                         (frame_type == ALL_ZERO) ? 0    : ofs,
+                         page_read_bytes,
+                         writable);
         }
       else
         {
           /* If either frame had type executable data, this one should too
              to make it writable */
-          if (frame_type == EXECUTABLE_DATA ||
-              spte_ptr->frame_type == EXECUTABLE_DATA)
-              frame_type = EXECUTABLE_DATA;
-
+          spte_ptr->writable       |= writable;
           spte_ptr->amount_occupied = page_read_bytes;
           spte_ptr->frame_type      = frame_type;
         }

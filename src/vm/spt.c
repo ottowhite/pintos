@@ -14,7 +14,8 @@ static struct spte *spte_construct       (void *uaddr,
                                           enum frame_type frame_type,
                                           struct inode *inode_ptr,
                                           off_t offset,
-                                          int amount_occupied);
+                                          int amount_occupied,
+                                          bool writable);
 
 static unsigned
 spte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
@@ -69,10 +70,11 @@ spt_add_entry (struct hash *spt_ptr,
                enum frame_type frame_type,
                struct inode *inode_ptr,
                off_t offset,
-               int amount_occupied)
+               int amount_occupied,
+               bool writable)
 {
   struct spte *spte_ptr = spte_construct (uaddr, frame_type, 
-      inode_ptr, offset, amount_occupied);
+      inode_ptr, offset, amount_occupied, writable);
 
   if (spte_ptr == NULL) return NULL;
 
@@ -112,7 +114,8 @@ spte_construct (void *uaddr,
                 enum frame_type frame_type,
                 struct inode *inode_ptr,
                 off_t offset,
-                int amount_occupied)
+                int amount_occupied,
+                bool writable)
 {
   struct spte *spte_ptr = malloc (sizeof (struct spte));
   if (spte_ptr == NULL) return NULL;
@@ -122,6 +125,7 @@ spte_construct (void *uaddr,
   spte_ptr->inode_ptr       = inode_ptr;
   spte_ptr->offset          = offset;
   spte_ptr->amount_occupied = amount_occupied;
+  spte_ptr->writable        = writable;
 
   return spte_ptr;
 }

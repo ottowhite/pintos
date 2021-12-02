@@ -101,6 +101,10 @@ ft_get_frame (pid_t owner,
 
       memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
     }
+  else if (frame_type == ALL_ZERO)
+    {
+      memset (frame_ptr, 0, PGSIZE);
+    }
 
   /* Coarse grained insertion to the frame / swap table */
   fte_insert (fte_ptr);

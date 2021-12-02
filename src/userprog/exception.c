@@ -164,15 +164,12 @@ page_fault (struct intr_frame *f)
 
       /* Determine whether our new frame is writable */
       enum frame_type frame_type = spte_ptr->frame_type;
-      bool writable = frame_type == STACK ||
-                      frame_type == EXECUTABLE_DATA ||
-                      frame_type == MMAP;
 
       /* Returns false if installation failed, frame left pinned */
       bool success = install_page_unpin_frame (spte_ptr->uaddr, 
                                                fte_ptr->frame_location, 
                                                &fte_ptr->pinned,
-                                               writable);
+                                               spte_ptr->writable);
 
       if (!success) 
         {

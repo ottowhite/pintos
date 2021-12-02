@@ -2,6 +2,7 @@
 #define VM_SPT_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "filesys/off_t.h"
 #include "filesys/file.h"
@@ -24,6 +25,7 @@ struct spte
   struct inode *inode_ptr;
   off_t offset;
   int amount_occupied;
+  bool writable;
   struct hash_elem hash_elem;
 };
 
@@ -36,6 +38,7 @@ struct spte *spt_add_entry    (struct hash *spt_ptr,
                                enum frame_type frame_type,
                                struct inode *inode_ptr,
                                off_t offset,
-                               int amount_occupied);
+                               int amount_occupied,
+                               bool writable);
 
 #endif
