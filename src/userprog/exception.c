@@ -182,27 +182,27 @@ page_fault (struct intr_frame *f)
     } 
   else 
     {
-      // No SPT entry; genuine segmentation fault
 
-      /* Count page faults. */
-      page_fault_cnt++;
+      /* Fault was a valid stack access, we need to bring in a new page */
+      if (fault_addr == f->esp - 4 ||
+          fault_addr == f->esp - 32)
+        {
+          // TODO: add the frame then spte after
+          struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
+              0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, PGSIZE, true);
+        }
+      else
+        {
+          page_fault_cnt++;
+          printf ("Page fault at %p: %s error %s page in %s context.\n",
+                  fault_addr,
+                  not_present ? "not present" : "rights violation",
+                  write ? "writing" : "reading",
+                  user ? "user" : "kernel");
 
-      syscall_exit (-1);
+          syscall_exit (-1);
+          kill (f);
 
-      // TODO: Remove this, replace with code to deal with genuine seg
-      // faults
-      
-      /* To implement virtual memory, delete the rest of the function
-         body, and replace it with code that brings in the page to
-         which fault_addr refers. */
-      printf ("Page fault at %p: %s error %s page in %s context.\n",
-              fault_addr,
-              not_present ? "not present" : "rights violation",
-              write ? "writing" : "reading",
-              user ? "user" : "kernel");
-
-      kill (f);
+        }
     }
-
-
 }
