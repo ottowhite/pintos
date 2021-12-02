@@ -63,7 +63,7 @@ palloc_init (size_t user_page_limit)
 
 /* Updates the bitmap of a pool and returns the value of
    bitmap_scan_and_flip. */
-static size_t
+size_t
 update_pool_bitmap (enum palloc_flags flags, size_t page_cnt, bool value) 
 {
   struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;

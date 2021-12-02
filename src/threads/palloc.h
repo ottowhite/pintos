@@ -1,7 +1,8 @@
 #ifndef THREADS_PALLOC_H
 #define THREADS_PALLOC_H
-
+ 
 #include <stddef.h>
+#include <stdbool.h>
 
 /* How to allocate pages. */
 enum palloc_flags
@@ -16,5 +17,8 @@ void *palloc_get_page (enum palloc_flags);
 void *palloc_get_multiple (enum palloc_flags, size_t page_cnt);
 void palloc_free_page (void *);
 void palloc_free_multiple (void *, size_t page_cnt);
+size_t update_pool_bitmap (enum palloc_flags flags, 
+                           size_t page_cnt, 
+                           bool value);
 
 #endif /* threads/palloc.h */
