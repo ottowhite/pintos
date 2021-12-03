@@ -45,4 +45,5 @@ void
 mmap_delete_entry (struct mmape *mmape_ptr)
 {
   list_remove (&mmape_ptr->list_elem);
+  free (mmape_ptr);
 }
