@@ -13,5 +13,9 @@ struct mmape
 };
 
 void mmap_init (struct list *list_ptr);
+bool mmap_add_entry (struct list *list_ptr, 
+                     mapid_t mid, 
+                     void *uaddr, 
+                     size_t filesize);
 
 #endif
