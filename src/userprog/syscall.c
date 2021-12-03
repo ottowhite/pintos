@@ -22,8 +22,8 @@ static uint32_t invoke_function (const void *syscall_ptr,
 
 /* Pointer verification helpers */
 static bool verify_ptr            (const void *ptr);
-static bool verify_ptr_privileged (const void *ptr, bool writable);
-static bool verify_buffer         (const void *buffer, int size, bool writable);
+static bool verify_ptr_privileged (const void *ptr, bool write);
+static bool verify_buffer         (const void *buffer, int size, bool write);
 static bool verify_args           (int argc, const uint32_t *esp);
 
 /* System calls */
@@ -105,10 +105,10 @@ verify_args (int argc, const uint32_t *esp)
   return true;
 }
 
-/* Verifies the given pointer, if writable is false we will return false
-   if the page is not writable */
+/* Verifies the given pointer, additionally if write is true but the page is 
+   not writable we will return false. */
 static bool 
-verify_ptr_privileged (const void *ptr, bool writable)
+verify_ptr_privileged (const void *ptr, bool write)
 {
   /* Verifies the address in user space and page directory */
   if (ptr != NULL && 
@@ -116,8 +116,11 @@ verify_ptr_privileged (const void *ptr, bool writable)
     {
       if (pagedir_get_page (active_pd (), ptr) == NULL) 
         {
-          if (spt_find_entry (thread_current ()->spt_ptr, 
-                              pg_round_down (ptr)) == NULL) 
+
+          struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
+                                                  pg_round_down (ptr));
+
+          if (spte_ptr == NULL || (write && !spte_ptr->writable)) 
               return false;
           else
             {
@@ -140,13 +143,13 @@ verify_ptr_privileged (const void *ptr, bool writable)
 static bool
 verify_ptr (const void *ptr)
 {
-  return verify_ptr_privileged (ptr, true);
+  return verify_ptr_privileged (ptr, false);
 }
 
 /* Checks that the entire buffer (up to size) is in valid memory and returns 
    false if not */
 static bool
-verify_buffer (const void *buffer, int size, bool writable) 
+verify_buffer (const void *buffer, int size, bool write) 
 {
   /* Check that the first memory location in the buffer is valid, and that 
      every memory location on the end of a page + 1 (i.e. the next page over) 
@@ -156,7 +159,7 @@ verify_buffer (const void *buffer, int size, bool writable)
        loc <= buffer_top; 
        loc = pg_round_up(loc) + 1) 
   {
-    if (!verify_ptr (loc)) {
+    if (!verify_ptr_privileged (loc, write)) {
       return false;
     }
   }
