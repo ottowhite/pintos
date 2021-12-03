@@ -87,7 +87,7 @@ syscall_handler (struct intr_frame *f)
   int syscall_no = *((int *) f->esp);
 
   /* Ensure our syscall_no refers to a defined system call */
-  ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_CLOSE);
+  ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_MUNMAP);
 
   /* Read the argc and function_ptr values from our syscall_func_map */
   int   argc        = syscall_func_map[syscall_no].argc;
@@ -513,7 +513,7 @@ static mapid_t
 syscall_mmap (int fd, void *addr)
 {
   // TODO: Implement
-  return 0;
+  return 69;
 }
 static void 
 syscall_munmap (mapid_t mapping UNUSED)
