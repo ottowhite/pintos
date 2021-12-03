@@ -15,7 +15,17 @@
 #include "devices/shutdown.h"
 #include "devices/input.h"
 
-/* System call helper functions */
+static void     syscall_handler (struct intr_frame *f);
+static uint32_t invoke_function (const void *syscall_ptr, 
+                                 int argc, 
+                                 const uint32_t *esp);
+
+/* Pointer verification helpers */
+static bool verify_ptr    (const void *ptr);
+static bool verify_buffer (const void *buffer, int size);
+static bool verify_args   (int argc, const uint32_t *esp);
+
+/* System calls */
 static void     syscall_halt     (void);
        void     syscall_exit     (int status);
 static pid_t    syscall_exec     (const char *cmd_line);
@@ -30,13 +40,7 @@ static void     syscall_seek     (int fd, unsigned position);
 static unsigned syscall_tell     (int fd);
 static void     syscall_close    (int fd);
 
-static void     syscall_handler (struct intr_frame *f);
-static bool     verify_ptr      (const void *ptr);
-static bool     verify_buffer   (const void *buffer, int size);
-static bool     verify_args     (int argc, const uint32_t *esp);
-static uint32_t invoke_function (const void *syscall_ptr, 
-                                 int argc, 
-                                 const uint32_t *esp);
+/* Filesystem interaction helpers */
 static int  read_from_console    (void *buffer, unsigned size);
 static int  read_from_file       (int fd, void *buffer, unsigned size);
 static int  write_to_console     (const char *buffer, unsigned size);
@@ -322,9 +326,9 @@ syscall_read (int fd, void *buffer, unsigned size)
   /* Additional sanity check to verify the buffer, check if the fd value
      is below the maximum range of open files, and check if the fd value
      is not equal to 1 (STDOUT_FILENO) for syscall_read */
-  if (buffer == NULL || 
+  if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES ||
-      fd == STDOUT_FILENO ||
+      fd == STDOUT_FILENO  ||
       !verify_buffer (buffer, size)) syscall_exit (-1);
 
   unsigned bytes_read;
