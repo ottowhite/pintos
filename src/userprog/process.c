@@ -625,8 +625,10 @@ setup_stack (void **esp)
     goto fail_2;
   
   /* attempt to add the new page to the supplemental page table */
-  spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
-                 PGSIZE, true) != NULL;
+  success = spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
+                           PGSIZE, true) != NULL;
+  if (!success)
+    goto fail_2;
   *esp = PHYS_BASE;
   fte_ptr->pinned = false;
 
