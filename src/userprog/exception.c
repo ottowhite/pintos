@@ -155,15 +155,8 @@ page_fault (struct intr_frame *f)
       // TODO: Deal with failures more elegantly
       
       /* Returns null if read failed, obtaining frame, or allocating fte failed */
-      struct fte *fte_ptr = ft_get_frame (thread_current ()->tid,
-                                          spte_ptr->frame_type,
-                                          spte_ptr->inode_ptr,
-                                          spte_ptr->offset,
-                                          spte_ptr->amount_occupied);
+      struct fte *fte_ptr = ft_get_frame (spte_ptr);
       if (fte_ptr == NULL) syscall_exit (-1);
-
-      /* Determine whether our new frame is writable */
-      enum frame_type frame_type = spte_ptr->frame_type;
 
       /* Returns false if installation failed, frame left pinned */
       bool success = install_page (spte_ptr->uaddr, 

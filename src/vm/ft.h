@@ -27,12 +27,13 @@ struct fte
   struct hash_elem hash_elem;
 };
 
-void        ft_init         (void);
-void        ft_destroy      (void);
-void        ft_remove_frame (struct fte *fte_ptr);
-struct fte *ft_get_frame    (pid_t owner, 
-                             enum frame_type frame_type, 
-                             struct inode *inode_ptr,
-                             off_t offset,
-                             int amount_occupied);
+void        ft_init                 (void);
+void        ft_destroy              (void);
+void        ft_remove_frame         (struct fte *fte_ptr);
+struct fte *ft_get_frame            (struct spte *spte_ptr);
+struct fte *ft_get_frame_preemptive (pid_t owner, 
+                                     enum frame_type frame_type, 
+                                     struct inode *inode_ptr,
+                                     off_t offset,
+                                     int amount_occupied);
 #endif

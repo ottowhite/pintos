@@ -64,11 +64,24 @@ ft_destroy (void)
    Returned frames must be unpinned after they have been installed to a page
    table */
 struct fte *
-ft_get_frame (pid_t owner, 
-              enum frame_type frame_type, 
-              struct inode *inode_ptr,
-              off_t offset, 
-              int amount_occupied)
+ft_get_frame (struct spte *spte_ptr)
+{
+  return ft_get_frame_preemptive (thread_current ()->tid,
+                                  spte_ptr->frame_type,
+                                  spte_ptr->inode_ptr,
+                                  spte_ptr->offset,
+                                  spte_ptr->amount_occupied);
+}
+
+/* Generalised version of ft_get_frame.
+   Useful for getting frames before their spt entry exists.
+   These frames should be registered in an spt table after acquired. */
+struct fte *
+ft_get_frame_preemptive (pid_t owner, 
+                         enum frame_type frame_type, 
+                         struct inode *inode_ptr,
+                         off_t offset, 
+                         int amount_occupied)
 {
   /* I expect this interface will change over time */
   /* Gets a page from the user pool, zeroed if stack page */
