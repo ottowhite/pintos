@@ -18,7 +18,7 @@ bool mmap_add_entry (struct list *list_ptr,
                      void *uaddr, 
                      size_t filesize);
 
-struct mmape *mmap_locate_entry (struct list *list_ptr, mapid_t mid);
-void          mmap_delete_entry (struct mmape *mmape_ptr);
+struct mmape *mmap_remove_entry (struct list *list_ptr, mapid_t mid);
+
 
 #endif

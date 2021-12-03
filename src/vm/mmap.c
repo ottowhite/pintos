@@ -1,6 +1,10 @@
 #include "threads/malloc.h"
 #include "vm/mmap.h"
 
+/* mmap_remove_entry helper functions */
+static struct mmape *mmap_locate_entry (struct list *list_ptr, mapid_t mid);
+static void          mmap_delete_entry (struct mmape *mmape_ptr);
+
 void mmap_init (struct list *list_ptr)
 {
   list_init (list_ptr);
@@ -19,9 +23,18 @@ mmap_add_entry (struct list *list_ptr,
   list_push_front (list_ptr, &mmape_ptr->list_elem);
 }
 
+/* Locates and deletes an mmap entry, returns NULL if not located */
+struct mmape *
+mmap_remove_entry (struct list *list_ptr, mapid_t mid)
+{
+  struct mmape *mmape_ptr = mmap_locate_entry (list_ptr, mid);
+  if (mmape_ptr != NULL) mmap_delete_entry (mmape_ptr);
+  return mmape_ptr;
+}
+
 /* Iterates over the given list and returns the mmape pointer if found,
    returns NULL otherwise. */
-struct mmape * 
+static struct mmape * 
 mmap_locate_entry (struct list *list_ptr, mapid_t mid)
 {
   bool found = false;
@@ -41,7 +54,7 @@ mmap_locate_entry (struct list *list_ptr, mapid_t mid)
   return (found) ? mmape_ptr : NULL;
 }
 
-void
+static void
 mmap_delete_entry (struct mmape *mmape_ptr)
 {
   list_remove (&mmape_ptr->list_elem);
