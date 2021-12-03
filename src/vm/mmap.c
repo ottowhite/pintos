@@ -10,6 +10,7 @@ void mmap_init (struct list *list_ptr)
   list_init (list_ptr);
 }
 
+/* Allocates space for a new mmap entry, returns false if malloc fails */
 bool 
 mmap_add_entry (struct list *list_ptr, 
                 mapid_t mid, 
@@ -17,10 +18,14 @@ mmap_add_entry (struct list *list_ptr,
                 size_t filesize)
 {
   struct mmape *mmape_ptr = malloc (sizeof (struct mmape));
+  if (mmape_ptr == NULL) return false;
+
   mmape_ptr->mid          = mid;
   mmape_ptr->uaddr        = uaddr;
   mmape_ptr->filesize     = filesize;
   list_push_front (list_ptr, &mmape_ptr->list_elem);
+
+  return true;
 }
 
 /* Locates and deletes an mmap entry, returns NULL if not located */
