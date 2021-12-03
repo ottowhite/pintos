@@ -21,9 +21,10 @@ static uint32_t invoke_function (const void *syscall_ptr,
                                  const uint32_t *esp);
 
 /* Pointer verification helpers */
-static bool verify_ptr    (const void *ptr);
-static bool verify_buffer (const void *buffer, int size);
-static bool verify_args   (int argc, const uint32_t *esp);
+static bool verify_ptr            (const void *ptr);
+static bool verify_ptr_privileged (const void *ptr, bool writable);
+static bool verify_buffer         (const void *buffer, int size, bool writable);
+static bool verify_args           (int argc, const uint32_t *esp);
 
 /* System calls */
 static void     syscall_halt     (void);
@@ -104,9 +105,10 @@ verify_args (int argc, const uint32_t *esp)
   return true;
 }
 
-/* Checks whether a given pointer is valid for use */
-static bool
-verify_ptr (const void *ptr)
+/* Verifies the given pointer, if writable is false we will return false
+   if the page is not writable */
+static bool 
+verify_ptr_privileged (const void *ptr, bool writable)
 {
   /* Verifies the address in user space and page directory */
   if (ptr != NULL && 
@@ -134,10 +136,17 @@ verify_ptr (const void *ptr)
   return true;
 }
 
+/* Checks whether a given pointer is valid for use */
+static bool
+verify_ptr (const void *ptr)
+{
+  return verify_ptr_privileged (ptr, true);
+}
+
 /* Checks that the entire buffer (up to size) is in valid memory and returns 
    false if not */
 static bool
-verify_buffer (const void *buffer, int size) 
+verify_buffer (const void *buffer, int size, bool writable) 
 {
   /* Check that the first memory location in the buffer is valid, and that 
      every memory location on the end of a page + 1 (i.e. the next page over) 
@@ -329,7 +338,7 @@ syscall_read (int fd, void *buffer, unsigned size)
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES ||
       fd == STDOUT_FILENO  ||
-      !verify_buffer (buffer, size)) syscall_exit (-1);
+      !verify_buffer (buffer, size, false)) syscall_exit (-1);
 
   unsigned bytes_read;
 
@@ -382,7 +391,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
-      !verify_buffer (buffer, strlen (buffer))) syscall_exit (-1);
+      !verify_buffer (buffer, strlen (buffer), true)) syscall_exit (-1);
 
 
   unsigned bytes_written;
