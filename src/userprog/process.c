@@ -611,11 +611,8 @@ setup_stack (void **esp)
   bool success;
   struct thread *t_ptr = thread_current ();
 
-  struct fte *fte_ptr = ft_get_frame (t_ptr->tid,
-                                      ALL_ZERO,
-                                      NULL,
-                                      0,
-                                      PGSIZE);
+  struct fte *fte_ptr = ft_get_frame_preemptive 
+    (t_ptr->tid, ALL_ZERO, NULL, 0, PGSIZE);
   success = fte_ptr != NULL;
   
   if (!success) 
@@ -628,9 +625,9 @@ setup_stack (void **esp)
     goto fail_2;
   
   /* attempt to add the new page to the supplemental page table */
-  *esp = PHYS_BASE;
   spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
                  PGSIZE, true) != NULL;
+  *esp = PHYS_BASE;
   fte_ptr->pinned = false;
 
   return true;
