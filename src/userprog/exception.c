@@ -153,10 +153,9 @@ page_fault (struct intr_frame *f)
 
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
-  if (spte_ptr != NULL) 
-      attempt_frame_load (spte_ptr);
-  else 
-      grow_stack_or_fail (f, fault_addr);
+
+  if (spte_ptr != NULL) attempt_frame_load (spte_ptr);
+  else                  grow_stack_or_fail (f, fault_addr);
 }
 
 /* Attempts to load the given frame from an spte entry */
