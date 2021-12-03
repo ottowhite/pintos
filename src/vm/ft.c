@@ -38,6 +38,12 @@ static struct fte *fte_construct (pid_t owner,
 /* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
 
+/* Helper for reading from inode when creating frame */
+static off_t read_from_inode (void *frame_ptr, 
+                              struct inode *inode_ptr, 
+                              off_t offset,
+                              off_t bytes_to_read);
+
 
 /* Initilizes the frame table as a hash map of struct ftes */
 void 
@@ -85,9 +91,7 @@ ft_get_frame_preemptive (pid_t owner,
                          off_t offset, 
                          int amount_occupied)
 {
-  /* I expect this interface will change over time */
   /* Gets a page from the user pool, zeroed if stack page */
-
   void *frame_ptr = palloc_get_page (frame_type == STACK
                                         ? PAL_USER | PAL_ZERO 
                                         : PAL_USER);
@@ -107,19 +111,13 @@ ft_get_frame_preemptive (pid_t owner,
       frame_type == EXECUTABLE_DATA ||
       frame_type == MMAP) 
     {
-      acquire_filesys ();
-      int bytes_read 
-          = inode_read_at (inode_ptr, frame_ptr, amount_occupied, offset);
-      release_filesys ();
-
-      if (bytes_read != amount_occupied) goto fail_2;
+      if (read_from_inode (frame_ptr, inode_ptr, offset, amount_occupied) 
+          != amount_occupied) goto fail_2;
 
       memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
     }
   else if (frame_type == ALL_ZERO)
-    {
       memset (frame_ptr, 0, PGSIZE);
-    }
 
   /* Coarse grained insertion to the frame / swap table */
   fte_insert (fte_ptr);
@@ -130,6 +128,22 @@ ft_get_frame_preemptive (pid_t owner,
   fail_1: return NULL;
 }
 
+/* Locks the filesystem whilst reading bytes_to_read bytes from the inode 
+   at the given offset into the frame_ptr, returns bytes read */
+static off_t
+read_from_inode (void *frame_ptr, 
+                 struct inode *inode_ptr, 
+                 off_t offset,
+                 off_t bytes_to_read)
+{
+  acquire_filesys ();
+  off_t bytes_read 
+      = inode_read_at (inode_ptr, frame_ptr, bytes_to_read, offset);
+  release_filesys ();
+  return bytes_read;
+}
+
+/* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method
 get_retrieval_method (enum frame_type frame_type)
 {
@@ -144,6 +158,7 @@ get_retrieval_method (enum frame_type frame_type)
     }
 }
 
+/* Frees a frame, deallocates and removes the assocated ft entry. */
 void 
 ft_remove_frame (struct fte *fte_ptr)
 {
