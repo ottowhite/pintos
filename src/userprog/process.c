@@ -611,28 +611,28 @@ setup_stack (void **esp)
   bool success;
   struct thread *t_ptr = thread_current ();
 
-  struct fte *fte_ptr = ft_get_frame_preemptive 
-    (t_ptr->tid, ALL_ZERO, NULL, 0, PGSIZE);
-  success = fte_ptr != NULL;
+  struct fte *fte_ptr = ft_get_frame_preemptive (t_ptr->tid, ALL_ZERO, NULL, 
+      0, PGSIZE);
   
-  if (!success) 
-    goto fail_1;
+  if (fte_ptr == NULL) 
+      goto fail_1;
   
   /* try and add the new frame to the page table */
   uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
-  success = install_page (uaddr, fte_ptr->frame_location, true);
-  if (!success)
-    goto fail_2;
+  if (!install_page (uaddr, fte_ptr->frame_location, true))
+      goto fail_2;
   
   /* attempt to add the new page to the supplemental page table */
-  success = spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
-                           PGSIZE, true) != NULL;
-  if (!success)
-    goto fail_2;
+  if (spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
+      PGSIZE, true) == NULL)
+      goto fail_3;
+
   *esp = PHYS_BASE;
   fte_ptr->pinned = false;
 
   return true;
+  
+  fail_3: pagedir_clear_page (t_ptr->pagedir, uaddr);
   fail_2: ft_remove_frame (fte_ptr); 
   fail_1: return false;
 }
@@ -653,6 +653,6 @@ install_page (void *upage, void *kpage, bool writable)
 
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
-  return (pagedir_get_page (t->pagedir, upage) == NULL
-          && pagedir_set_page (t->pagedir, upage, kpage, writable));
+  return (pagedir_get_page (t->pagedir, upage) == NULL &&
+          pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
