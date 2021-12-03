@@ -12,30 +12,32 @@
 #include "vm/ft.h"
 #include "vm/spt.h"
 
-void ft_init (void);
-void ft_destroy (void);
-
-static unsigned    fte_hash_func       (const struct hash_elem *e_ptr, 
-                                        void *aux UNUSED);
-static bool        fte_less_func       (const struct hash_elem *a_ptr,
-                                        const struct hash_elem *b_ptr,
-                                        void *aux UNUSED);
-static void        fte_deallocate_func (struct hash_elem *e_ptr, 
-                                        void *aux UNUSED);
-static void        fte_insert          (struct fte *fte_ptr);
-static struct fte *fte_construct       (pid_t owner,
-                                        void *frame_location,
-                                        enum retrieval_method retrieval_method,
-                                        int amount_occupied);
-static void        fte_remove          (struct fte *fte_ptr);
-
-static enum retrieval_method 
-    get_retrieval_method (enum frame_type frame_type);
-
+/* Frame table globals */
+static struct hash ft;
+static int         fid_cnt;
 static struct lock ft_lock;
 static struct lock fid_lock;
-static int         fid_cnt;
-static struct hash ft;
+
+/* Frame table hashmap implementation helpers */
+static unsigned fte_hash_func       (const struct hash_elem *e_ptr, 
+                                     void *aux UNUSED);
+static bool     fte_less_func       (const struct hash_elem *a_ptr,
+                                     const struct hash_elem *b_ptr,
+                                     void *aux UNUSED);
+static void     fte_deallocate_func (struct hash_elem *e_ptr, 
+                                     void *aux UNUSED);
+
+/* Frame table entry helpers */
+static void        fte_insert    (struct fte *fte_ptr);
+static void        fte_remove    (struct fte *fte_ptr);
+static struct fte *fte_construct (pid_t owner,
+                                  void *frame_location,
+                                  enum retrieval_method retrieval_method,
+                                  int amount_occupied);
+
+/* Helper to obtain retrieval methods by frame type */
+static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
+
 
 /* Initilizes the frame table as a hash map of struct ftes */
 void 
@@ -148,6 +150,7 @@ ft_remove_frame (struct fte *fte_ptr)
   palloc_free_page (fte_ptr->frame_location);
   fte_remove (fte_ptr);
 }
+
 /* Constructs a pinned frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
