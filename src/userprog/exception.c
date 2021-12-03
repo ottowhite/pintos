@@ -182,7 +182,7 @@ page_fault (struct intr_frame *f)
         {
           // TODO: add the frame then spte after
           struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
-              0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, PGSIZE, true);
+              0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
         }
       else
         {

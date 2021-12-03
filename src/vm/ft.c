@@ -102,26 +102,24 @@ ft_get_frame_preemptive (pid_t owner,
   /* Constructs a pinned frame (unpinned when installed in page table) */
   struct fte *fte_ptr 
       = fte_construct (owner, frame_ptr, retrieval_method, amount_occupied);
-
+  
   if (fte_ptr == NULL) goto fail_2;
   
-  /* Read in the necessary data from the filesystem, zero out unallocated 
-     space */
-  if (frame_type == EXECUTABLE_CODE || 
-      frame_type == EXECUTABLE_DATA ||
-      frame_type == MMAP) 
+  /* Read in the necessary data from the filesystem if frame type requires */
+  if (frame_type == EXECUTABLE_CODE  || 
+      frame_type == EXECUTABLE_DATA  ||
+      frame_type == MMAP)
     {
       if (read_from_inode (frame_ptr, inode_ptr, offset, amount_occupied) 
-          != amount_occupied) goto fail_2;
-
-      memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
+              != amount_occupied)
+          goto fail_2;
     }
-  else if (frame_type == ALL_ZERO)
-      memset (frame_ptr, 0, PGSIZE);
+
+  /* Zero pad the remaining bits */
+  memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
 
   /* Coarse grained insertion to the frame / swap table */
   fte_insert (fte_ptr);
-
   return fte_ptr;
 
   fail_2: palloc_free_page (frame_ptr);

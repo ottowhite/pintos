@@ -611,7 +611,7 @@ setup_stack (void **esp)
   struct thread *t_ptr = thread_current ();
 
   struct fte *fte_ptr 
-      = ft_get_frame_preemptive (t_ptr->tid, ALL_ZERO, NULL, 0, PGSIZE);
+      = ft_get_frame_preemptive (t_ptr->tid, ALL_ZERO, NULL, 0, 0);
 
   if (fte_ptr != NULL) 
     {
