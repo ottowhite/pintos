@@ -111,11 +111,17 @@ verify_ptr (const void *ptr)
       if (pagedir_get_page (active_pd (), ptr) == NULL) 
         {
           if (spt_find_entry (thread_current ()->spt_ptr, 
-                              pg_round_down (ptr)) != NULL) 
-              // TODO: Pin this frame until syscall finished
-              *((int *) ptr);
-          else
+                              pg_round_down (ptr)) == NULL) 
               return false;
+          else
+            {
+              // TODO: Pin this frame until syscall finished
+              /* Compiler will optimise out this de-reference unless it
+                 is stored in a variable marked volatile. Intentionally
+                 triggers a page fault to bring in the page. */
+              volatile int garbage; 
+              garbage = *((int *) ptr);
+            }
         }
     }
   else 
