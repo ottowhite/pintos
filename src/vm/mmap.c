@@ -40,3 +40,9 @@ mmap_locate_entry (struct list *list_ptr, mapid_t mid)
 
   return (found) ? mmape_ptr : NULL;
 }
+
+void
+mmap_delete_entry (struct mmape *mmape_ptr)
+{
+  list_remove (&mmape_ptr->list_elem);
+}
