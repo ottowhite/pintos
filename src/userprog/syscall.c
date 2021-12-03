@@ -513,6 +513,12 @@ static mapid_t
 syscall_mmap (int fd, void *addr)
 {
   // TODO: Implement
+  if (addr == 0           ||
+      fd == STDIN_FILENO  ||
+      fd == STDOUT_FILENO || 
+      addr != pg_round_down (addr))
+    return -1;
+
   return 69;
 }
 static void 
