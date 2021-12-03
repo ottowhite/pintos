@@ -12,4 +12,6 @@ struct mmape
   struct list_elem list_elem;
 };
 
+void mmap_init (struct list *list_ptr);
+
 #endif
