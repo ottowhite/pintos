@@ -170,6 +170,7 @@ page_fault (struct intr_frame *f)
         }
       else
         {
+          spte_ptr->fid = fte_ptr->fid;
           fte_ptr->pinned = false;
         }
     } 
