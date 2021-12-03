@@ -18,7 +18,7 @@ static int         fid_cnt;
 static struct lock ft_lock;
 static struct lock fid_lock;
 
-/* Frame table hashmap implementation helpers */
+/* Frame table hashmap helpers */
 static unsigned fte_hash_func       (const struct hash_elem *e_ptr, 
                                      void *aux UNUSED);
 static bool     fte_less_func       (const struct hash_elem *a_ptr,

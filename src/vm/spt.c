@@ -3,41 +3,24 @@
 #include "threads/malloc.h"
 #include "vm/spt.h"
 
-static unsigned     spte_hash_func       (const struct hash_elem *e_ptr, 
-                                          void *aux UNUSED);
-static bool         spte_less_func       (const struct hash_elem *a_ptr,
-                                          const struct hash_elem *b_ptr,
-                                          void *aux UNUSED);
-static void         spte_deallocate_func (struct hash_elem *e_ptr, 
-                                          void *aux UNUSED);
-static struct spte *spte_construct       (void *uaddr,
-                                          uint32_t fid,
-                                          enum frame_type frame_type,
-                                          struct inode *inode_ptr,
-                                          off_t offset,
-                                          int amount_occupied,
-                                          bool writable);
 
-static unsigned
-spte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
-{
-  return hash_entry (e_ptr, struct spte, hash_elem)->uaddr;
-}
+/* SPT hashmap helpers */
+static unsigned spte_hash_func       (const struct hash_elem *e_ptr, 
+                                      void *aux UNUSED);
+static bool     spte_less_func       (const struct hash_elem *a_ptr,
+                                      const struct hash_elem *b_ptr,
+                                      void *aux UNUSED);
+static void     spte_deallocate_func (struct hash_elem *e_ptr, 
+                                      void *aux UNUSED);
 
-static bool 
-spte_less_func (const struct hash_elem *a_ptr,
-                const struct hash_elem *b_ptr,
-                void *aux UNUSED) 
-{
-  return hash_entry (a_ptr, struct spte, hash_elem)->uaddr <
-         hash_entry (b_ptr, struct spte, hash_elem)->uaddr;
-}
+static struct spte *spte_construct (void *uaddr,
+                                    uint32_t fid,
+                                    enum frame_type frame_type,
+                                    struct inode *inode_ptr,
+                                    off_t offset,
+                                    int amount_occupied,
+                                    bool writable);
 
-static void
-spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
-{
-  free (hash_entry (e_ptr, struct spte, hash_elem));
-}
 
 /* Attempts to initialise the supplementary page table 
    Returns false if failed and true if succeeeded. */
@@ -47,10 +30,12 @@ spt_init (struct hash **spt_ptr_ptr)
   *spt_ptr_ptr = malloc (sizeof (struct hash));
   if (*spt_ptr_ptr == NULL) return false;
 
-  if (!hash_init (*spt_ptr_ptr, &spte_hash_func, &spte_less_func, NULL)) {
-    free (*spt_ptr_ptr);
-    return false;
-  }
+  if (!hash_init (*spt_ptr_ptr, &spte_hash_func, &spte_less_func, NULL)) 
+    {
+      free (*spt_ptr_ptr);
+      return false;
+    }
+
   return true;
 }
 
@@ -99,11 +84,11 @@ struct spte *
 spt_find_entry (struct hash *spt_ptr, void *uaddr)
 {
   /* Create fake supplementary page table entry to search by */
-  struct spte s;
-  s.uaddr = uaddr;
+  struct spte spte;
+  spte.uaddr = uaddr;
 
   /* Attempt to locate entry */
-  struct hash_elem *hash_elem_ptr = hash_find (spt_ptr, &s.hash_elem);
+  struct hash_elem *hash_elem_ptr = hash_find (spt_ptr, &spte.hash_elem);
 
   /* Return NULL on failure or the surrounding struct spte on success */
   if (hash_elem_ptr == NULL) return NULL;
@@ -133,4 +118,25 @@ spte_construct (void *uaddr,
   spte_ptr->writable        = writable;
 
   return spte_ptr;
+}
+
+static unsigned
+spte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
+{
+  return hash_entry (e_ptr, struct spte, hash_elem)->uaddr;
+}
+
+static bool 
+spte_less_func (const struct hash_elem *a_ptr,
+                const struct hash_elem *b_ptr,
+                void *aux UNUSED) 
+{
+  return hash_entry (a_ptr, struct spte, hash_elem)->uaddr <
+         hash_entry (b_ptr, struct spte, hash_elem)->uaddr;
+}
+
+static void
+spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
+{
+  free (hash_entry (e_ptr, struct spte, hash_elem));
 }
