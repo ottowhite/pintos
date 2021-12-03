@@ -40,6 +40,8 @@ static int      syscall_write    (int fd, const void *buffer, unsigned size);
 static void     syscall_seek     (int fd, unsigned position);
 static unsigned syscall_tell     (int fd);
 static void     syscall_close    (int fd);
+static mapid_t  syscall_mmap     (int fd, void *addr);
+static void     syscall_munmap   (mapid_t mapping);
 
 /* Filesystem interaction helpers */
 static int  read_from_console    (void *buffer, unsigned size);
@@ -51,19 +53,21 @@ static int  write_to_file        (int fd, const char *buffer, unsigned size);
 static struct syscall 
 syscall_func_map[] = 
   {
-    {&syscall_halt,     .argc = 0},  /* SYS_HALT */      
-    {&syscall_exit,     .argc = 1},  /* SYS_EXIT */      
-    {&syscall_exec,     .argc = 1},  /* SYS_EXEC */      
-    {&syscall_wait,     .argc = 1},  /* SYS_WAIT */      
-    {&syscall_create,   .argc = 2},  /* SYS_CREATE */    
-    {&syscall_remove,   .argc = 1},  /* SYS_REMOVE */    
-    {&syscall_open,     .argc = 1},  /* SYS_OPEN */      
-    {&syscall_filesize, .argc = 1},  /* SYS_FILESIZE */  
-    {&syscall_read,     .argc = 3},  /* SYS_READ */      
-    {&syscall_write,    .argc = 3},  /* SYS_WRITE */     
-    {&syscall_seek,     .argc = 2},  /* SYS_SEEK */      
-    {&syscall_tell,     .argc = 1},  /* SYS_TELL */      
-    {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
+    {&syscall_halt,     .argc = 0}, 
+    {&syscall_exit,     .argc = 1}, 
+    {&syscall_exec,     .argc = 1}, 
+    {&syscall_wait,     .argc = 1}, 
+    {&syscall_create,   .argc = 2}, 
+    {&syscall_remove,   .argc = 1}, 
+    {&syscall_open,     .argc = 1}, 
+    {&syscall_filesize, .argc = 1}, 
+    {&syscall_read,     .argc = 3}, 
+    {&syscall_write,    .argc = 3}, 
+    {&syscall_seek,     .argc = 2}, 
+    {&syscall_tell,     .argc = 1}, 
+    {&syscall_close,    .argc = 1}, 
+    {&syscall_mmap,     .argc = 2}, 
+    {&syscall_munmap,   .argc = 1}, 
   };
 
 /* Initialisation of the syscall handler */
@@ -503,4 +507,16 @@ syscall_close (int fd UNUSED)
   release_filesys ();
 
   free (fd_item_ptr);
+}
+
+static mapid_t 
+syscall_mmap (int fd, void *addr)
+{
+  // TODO: Implement
+  return 0;
+}
+static void 
+syscall_munmap (mapid_t mapping UNUSED)
+{
+  // TODO: Implement
 }
