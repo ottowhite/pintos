@@ -608,28 +608,34 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
-  bool success = false;
+  bool success;
   struct thread *t_ptr = thread_current ();
 
-  struct fte *fte_ptr 
-      = ft_get_frame_preemptive (t_ptr->tid, ALL_ZERO, NULL, 0, 0);
+  struct fte *fte_ptr = ft_get_frame (t_ptr->tid,
+                                      ALL_ZERO,
+                                      NULL,
+                                      0,
+                                      PGSIZE);
+  success = fte_ptr != NULL;
+  
+  if (!success) 
+    goto fail_1;
+  
+  /* try and add the new frame to the page table */
+  uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
+  success = install_page (uaddr, fte_ptr->frame_location, true);
+  if (!success)
+    goto fail_2;
+  
+  /* attempt to add the new page to the supplemental page table */
+  *esp = PHYS_BASE;
+  spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
+                 PGSIZE, true) != NULL;
+  fte_ptr->pinned = false;
 
-  if (fte_ptr != NULL) 
-    {
-      uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
-      success = install_page (uaddr, fte_ptr->frame_location, true);
-      if (success)
-        {
-          *esp = PHYS_BASE;
-          spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
-              PGSIZE, true);
-          fte_ptr->pinned = false;
-        }
-      else 
-        ft_remove_frame (fte_ptr);
-        
-    }
-  return success;
+  return true;
+  fail_2: ft_remove_frame (fte_ptr); 
+  fail_1: return false;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
