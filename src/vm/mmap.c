@@ -16,5 +16,5 @@ mmap_add_entry (struct list *list_ptr,
   mmape_ptr->mid          = mid;
   mmape_ptr->uaddr        = uaddr;
   mmape_ptr->filesize     = filesize;
-  mmap_init (list_ptr);
+  list_push_front (list_ptr, &mmape_ptr->list_elem);
 }
