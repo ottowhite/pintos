@@ -301,13 +301,9 @@ syscall_open (const char *file)
   struct fd_item *new_fd_item = malloc (sizeof (struct fd_item));
   if (new_fd_item == NULL) syscall_exit (-1);
 
-  /* Acquires the lock to store the file_to_open in a new fd_item struct
-     and push the struct into the current thread's hash table */
-  acquire_filesys ();
-
+  /* Stores the file_to_open in a new fd_item struct and pushes
+     the struct into the current thread's hash table */
   init_fd_item (new_fd_item, thread_current (), file_to_open);
-
-  release_filesys ();
 
   return new_fd_item->fd;
 }
@@ -494,13 +490,15 @@ syscall_close (int fd UNUSED)
   struct fd_item *fd_item_ptr = get_fd_item (thread_current ()->hash_fd_ptr, fd);
   if (fd_item_ptr == NULL) syscall_exit (-1);
 
-  /* Acquires the lock to access files and free the fd_item struct allocated
-     upon syscall_open before closing */
+  /* deletes the entry associated with the file from the hash table */
+  hash_delete (thread_current ()->hash_fd_ptr, &fd_item_ptr->hash_elem);
+
+  /* Acquires the lock to close file */
   acquire_filesys ();
   
-  hash_delete (thread_current ()->hash_fd_ptr, &fd_item_ptr->hash_elem);
   file_close (fd_item_ptr->file_ptr);
-  free (fd_item_ptr);
   
   release_filesys ();
+
+  free (fd_item_ptr);
 }
