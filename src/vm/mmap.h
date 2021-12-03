@@ -9,6 +9,7 @@ struct mmape
   mapid_t mid;
   void *uaddr;
   size_t filesize;
+  struct list_elem list_elem;
 };
 
 #endif
