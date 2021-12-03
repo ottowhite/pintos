@@ -1,4 +1,14 @@
 #ifndef VM_MMAP_H
 #define VM_MMAP_H
 
+#include <list.h>
+#include "lib/user/syscall.h"
+
+struct mmape
+{
+  mapid_t mid;
+  void *uaddr;
+  size_t filesize;
+};
+
 #endif
