@@ -565,16 +565,11 @@ syscall_mmap (int fd, void *addr)
 
   return 69;
 
-  fail_1:
+fail_1:
 
-  for (; loc > mmap_top; 
-       loc              = pg_round_down (loc) - 1, 
-       bytes_remaining += PGSIZE, 
-       offset          -= PGSIZE) 
-    {
-      // TODO: Free the allocated sptes 
-
-    }
+  /* Remove all allocated spt entries */
+  while (loc > mmap_top) 
+      spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
 
   return -1;
 
