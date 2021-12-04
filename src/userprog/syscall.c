@@ -563,11 +563,11 @@ syscall_mmap (int fd, void *addr)
         == NULL) goto fail_1;
   }
 
-  return 69;
+  return 0;
 
 fail_1:
 
-  /* Remove all allocated spt entries */
+  /* Remove all allocated spt entries associated with the mmapped file. */
   while (loc > mmap_top) 
       spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
 

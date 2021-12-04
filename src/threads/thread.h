@@ -113,6 +113,8 @@ struct thread
 #endif
 #ifdef VM
     struct hash *spt_ptr;
+    struct list mmap_list;
+    int mid;
 #endif
 
     /* Owned by thread.c. */
