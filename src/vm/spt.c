@@ -71,11 +71,19 @@ spt_add_entry (struct hash *spt_ptr,
   return spte_ptr;
 }
 
-void
-spt_remove_entry (void)
+/* Finds and removes a supplementary page table entry at uaddr, freeing 
+   associated memory.
+   Returns true on success, and fale if entry not found */
+bool
+spt_remove_entry (struct hash *spt_ptr, void *uaddr)
 {
-  // TODO when I know exactly what will be the most convienient interface
-  return;
+  struct spte *spte_ptr = spt_find_entry (spt_ptr, uaddr);
+
+  if (spte_ptr == NULL || 
+      hash_delete (spt_ptr, &spte_ptr->hash_elem) == NULL) return false;
+
+  free (spte_ptr);
+  return true;
 }
 
 /* Attempts to find supplementary page table entry, returns NULL if not

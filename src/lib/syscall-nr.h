@@ -20,8 +20,8 @@ enum
     SYS_CLOSE     = 12,    /* Close a file. */
 
     /* Task 3 and optionally task 4. */
-    SYS_MMAP,                   /* Map a file into memory. */
-    SYS_MUNMAP,                 /* Remove a memory mapping. */
+    SYS_MMAP      = 13,         /* Map a file into memory. */
+    SYS_MUNMAP    = 14,         /* Remove a memory mapping. */
 
     /* Task 4 only. */
     SYS_CHDIR,                  /* Change the current directory. */

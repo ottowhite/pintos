@@ -14,6 +14,7 @@
 #include "userprog/fd_table.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
+#include "vm/mmap.h"
 
 static void     syscall_handler (struct intr_frame *f);
 static uint32_t invoke_function (const void *syscall_ptr, 
@@ -40,6 +41,8 @@ static int      syscall_write    (int fd, const void *buffer, unsigned size);
 static void     syscall_seek     (int fd, unsigned position);
 static unsigned syscall_tell     (int fd);
 static void     syscall_close    (int fd);
+static mapid_t  syscall_mmap     (int fd, void *addr);
+static void     syscall_munmap   (mapid_t mapping);
 
 /* Filesystem interaction helpers */
 static int  read_from_console    (void *buffer, unsigned size);
@@ -51,19 +54,21 @@ static int  write_to_file        (int fd, const char *buffer, unsigned size);
 static struct syscall 
 syscall_func_map[] = 
   {
-    {&syscall_halt,     .argc = 0},  /* SYS_HALT */      
-    {&syscall_exit,     .argc = 1},  /* SYS_EXIT */      
-    {&syscall_exec,     .argc = 1},  /* SYS_EXEC */      
-    {&syscall_wait,     .argc = 1},  /* SYS_WAIT */      
-    {&syscall_create,   .argc = 2},  /* SYS_CREATE */    
-    {&syscall_remove,   .argc = 1},  /* SYS_REMOVE */    
-    {&syscall_open,     .argc = 1},  /* SYS_OPEN */      
-    {&syscall_filesize, .argc = 1},  /* SYS_FILESIZE */  
-    {&syscall_read,     .argc = 3},  /* SYS_READ */      
-    {&syscall_write,    .argc = 3},  /* SYS_WRITE */     
-    {&syscall_seek,     .argc = 2},  /* SYS_SEEK */      
-    {&syscall_tell,     .argc = 1},  /* SYS_TELL */      
-    {&syscall_close,    .argc = 1},  /* SYS_CLOSE */     
+    {&syscall_halt,     .argc = 0}, 
+    {&syscall_exit,     .argc = 1}, 
+    {&syscall_exec,     .argc = 1}, 
+    {&syscall_wait,     .argc = 1}, 
+    {&syscall_create,   .argc = 2}, 
+    {&syscall_remove,   .argc = 1}, 
+    {&syscall_open,     .argc = 1}, 
+    {&syscall_filesize, .argc = 1}, 
+    {&syscall_read,     .argc = 3}, 
+    {&syscall_write,    .argc = 3}, 
+    {&syscall_seek,     .argc = 2}, 
+    {&syscall_tell,     .argc = 1}, 
+    {&syscall_close,    .argc = 1}, 
+    {&syscall_mmap,     .argc = 2}, 
+    {&syscall_munmap,   .argc = 1}, 
   };
 
 /* Initialisation of the syscall handler */
@@ -83,7 +88,7 @@ syscall_handler (struct intr_frame *f)
   int syscall_no = *((int *) f->esp);
 
   /* Ensure our syscall_no refers to a defined system call */
-  ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_CLOSE);
+  ASSERT (SYS_HALT <= syscall_no && syscall_no <= SYS_MUNMAP);
 
   /* Read the argc and function_ptr values from our syscall_func_map */
   int   argc        = syscall_func_map[syscall_no].argc;
@@ -503,4 +508,87 @@ syscall_close (int fd UNUSED)
   release_filesys ();
 
   free (fd_item_ptr);
+}
+
+static mapid_t 
+syscall_mmap (int fd, void *addr)
+{
+  /* Fail if addr is 0, we are attempting to write to reserved fds,
+     or the addr is not page aligned */
+  if (addr == 0           ||
+      fd == STDIN_FILENO  ||
+      fd == STDOUT_FILENO || 
+      addr != pg_round_down (addr))
+      goto fail_1;
+
+  struct thread *t_ptr = thread_current ();
+
+  /* Fail if the file is not mapped to a file descriptor */
+  struct file *file_ptr = get_file (t_ptr->hash_fd_ptr, fd);
+  if (file_ptr == NULL) 
+      goto fail_1;
+
+  /* Fail if the file has length equal to 0 */
+  off_t filesize = file_length (file_ptr);
+  if (filesize == 0) 
+      goto fail_1;
+
+  /* Fail if the mmapped file will overflow the stack */
+  void *mmap_top = addr + filesize;
+  if ((uint32_t) mmap_top >= (uint32_t) STACK_LIMIT) 
+      goto fail_1;
+
+  /* Fail if mmapped file will overwrite any supplemental pages */
+  for (void *loc = addr; 
+       loc <= mmap_top; 
+       loc = pg_round_up(loc) + 1) 
+  {
+    if (spt_find_entry (t_ptr->spt_ptr, loc) != NULL)
+        goto fail_1;
+  }
+
+  /* Add the mmapped file pages to our SPT */
+  off_t bytes_remaining = filesize;
+  off_t offset = 0;
+  void *loc = addr;
+  for (loc = addr; loc <= mmap_top; 
+       loc              = pg_round_up(loc) + 1, 
+       bytes_remaining -= PGSIZE, 
+       offset          += PGSIZE) 
+  {
+    int amount_occupied = (bytes_remaining > PGSIZE) ? PGSIZE
+                                                     : bytes_remaining;
+    if (spt_add_entry (t_ptr->spt_ptr, 0, loc, MMAP, file_ptr->inode, offset, 
+        amount_occupied, true)== NULL) 
+        goto fail_2;
+  }
+
+  if (!mmap_add_entry (&t_ptr->mmap_list, (t_ptr->mid_cnt)++, addr, filesize))
+      goto fail_2;
+
+  return 0;
+
+fail_2: /* Remove all allocated spt entries associated with the mmapped file */
+        while (loc > mmap_top) 
+            spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE);
+fail_1: return -1;
+
+
+
+}
+static void 
+syscall_munmap (mapid_t mapping)
+{
+  struct thread *t_ptr = thread_current ();
+
+  /* try and retrieve the mmap entry, and fail skip to the end if not found */
+  struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
+  if (mmape_ptr == NULL)
+    goto fail;
+  
+  /* Remove all allocated spt entries associated with the mmapped file. */
+  void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
+  while (loc >= mmape_ptr->uaddr) 
+    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
+  fail: ;
 }
