@@ -519,21 +519,24 @@ syscall_mmap (int fd, void *addr)
       fd == STDIN_FILENO  ||
       fd == STDOUT_FILENO || 
       addr != pg_round_down (addr))
-    goto fail_1;
+      goto fail_1;
 
   struct thread *t_ptr = thread_current ();
 
   /* Fail if the file is not mapped to a file descriptor */
   struct file *file_ptr = get_file (t_ptr->hash_fd_ptr, fd);
-  if (file_ptr == NULL) goto fail_1;;
+  if (file_ptr == NULL) 
+      goto fail_1;
 
   /* Fail if the file has length equal to 0 */
   off_t filesize = file_length (file_ptr);
-  if (filesize == 0) goto fail_1;
+  if (filesize == 0) 
+      goto fail_1;
 
   /* Fail if the mmapped file will overflow the stack */
   void *mmap_top = addr + filesize;
-  if ((uint32_t) mmap_top >= (uint32_t) STACK_LIMIT) goto fail_1;
+  if ((uint32_t) mmap_top >= (uint32_t) STACK_LIMIT) 
+      goto fail_1;
 
   /* Fail if mmapped file will overwrite any supplemental pages */
   for (void *loc = addr; 
@@ -553,24 +556,20 @@ syscall_mmap (int fd, void *addr)
        bytes_remaining -= PGSIZE, 
        offset          += PGSIZE) 
   {
-    if (spt_add_entry (t_ptr->spt_ptr,
-                       0,               /* No fid yet */
-                       loc,
-                       MMAP, 
-                       file_ptr->inode, 
-                       offset, 
-                       (bytes_remaining > PGSIZE) ? PGSIZE : bytes_remaining, 
-                       true)            /* Writable */
-        == NULL) goto fail_2;
+    int amount_occupied = (bytes_remaining > PGSIZE) ? PGSIZE
+                                                     : bytes_remaining;
+    if (spt_add_entry (t_ptr->spt_ptr, 0, loc, MMAP, file_ptr->inode, offset, 
+        amount_occupied, true)== NULL) 
+        goto fail_2;
   }
 
   /*  */
   struct mmape *mmape_ptr = malloc (sizeof (struct mmape));
-  if (mmape_ptr == NULL) goto fail_2;
+  if (mmape_ptr == NULL) 
+      goto fail_2;
 
   if (!mmap_add_entry (&t_ptr->mmap_list, (t_ptr->mid_cnt)++, addr, filesize))
       goto fail_3;
-  list_push_front (&t_ptr->mmap_list, &mmape_ptr->list_elem);
 
   return 0;
 
