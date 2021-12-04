@@ -563,17 +563,11 @@ syscall_mmap (int fd, void *addr)
         goto fail_2;
   }
 
-  /*  */
-  struct mmape *mmape_ptr = malloc (sizeof (struct mmape));
-  if (mmape_ptr == NULL) 
-      goto fail_2;
-
   if (!mmap_add_entry (&t_ptr->mmap_list, (t_ptr->mid_cnt)++, addr, filesize))
-      goto fail_3;
+      goto fail_2;
 
   return 0;
 
-fail_3: free (mmape_ptr);
 fail_2: /* Remove all allocated spt entries associated with the mmapped file */
         while (loc > mmap_top) 
             spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
