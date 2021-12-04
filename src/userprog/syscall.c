@@ -519,6 +519,13 @@ syscall_mmap (int fd, void *addr)
       addr != pg_round_down (addr))
     return -1;
 
+  struct file *file_ptr = get_file (thread_current ()->hash_fd_ptr, fd);
+  if (file_ptr == NULL) return -1;
+
+  off_t filesize = file_length (file_ptr);
+  if (filesize == 0) return -1;
+
+
   return 69;
 }
 static void 

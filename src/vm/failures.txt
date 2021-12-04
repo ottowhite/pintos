@@ -1,4 +1,3 @@
-FAIL tests/vm/mmap-bad-fd
 FAIL tests/vm/mmap-clean
 FAIL tests/vm/mmap-close
 FAIL tests/vm/mmap-exit
@@ -97,6 +96,7 @@ pass tests/userprog/write-boundary
 pass tests/userprog/write-normal
 pass tests/userprog/write-stdin
 pass tests/userprog/write-zero
+pass tests/vm/mmap-bad-fd
 pass tests/vm/mmap-misalign
 pass tests/vm/mmap-null
 pass tests/vm/mmap-unmap
@@ -109,4 +109,4 @@ pass tests/vm/pt-grow-bad
 pass tests/vm/pt-grow-pusha
 pass tests/vm/pt-grow-stack
 pass tests/vm/pt-write-code
-Warning: 23 of 111 tests failed!
+Warning: 22 of 111 tests failed!
