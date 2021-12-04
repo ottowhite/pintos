@@ -570,7 +570,7 @@ syscall_mmap (int fd, void *addr)
 
 fail_2: /* Remove all allocated spt entries associated with the mmapped file */
         while (loc > mmap_top) 
-            spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
+            spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE);
 fail_1: return -1;
 
 
