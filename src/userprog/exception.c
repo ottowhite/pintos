@@ -190,8 +190,9 @@ static void
 grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  if (fault_addr == f_ptr->esp - 4 ||
-      fault_addr == f_ptr->esp - 32)
+  if ((fault_addr == f_ptr->esp - 4   ||
+       fault_addr == f_ptr->esp - 32) &&
+       fault_addr > STACK_LIMIT)
     {
       // TODO: add the frame then spte after
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
