@@ -31,7 +31,7 @@ struct spte
 
 bool         spt_init         (struct hash **spt_ptr_ptr);
 void         spt_destroy      (struct hash *spt_ptr);
-void         spt_remove_entry (void);
+bool         spt_remove_entry (struct hash *spt_ptr, void *uaddr);
 struct spte *spt_find_entry   (struct hash *spt_ptr, void *uaddr);
 struct spte *spt_add_entry    (struct hash *spt_ptr,
                                uint32_t fid,
