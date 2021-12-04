@@ -143,14 +143,6 @@ page_fault (struct intr_frame *f)
      be assured of reading CR2 before it changed). */
   intr_enable ();
 
-  /* Determine cause. */
-  /* True: not-present page, false: writing r/o page. */
-  bool not_present = (f->error_code & PF_P) == 0;
-  /* True: access was write, false: access was read. */
-  bool write       = (f->error_code & PF_W) != 0;
-  /* True: access by user, false: access by kernel. */
-  bool user        = (f->error_code & PF_U) != 0;
-
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
 
