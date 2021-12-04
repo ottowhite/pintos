@@ -577,5 +577,10 @@ fail_1:
 static void 
 syscall_munmap (mapid_t mapping UNUSED)
 {
-  // TODO: Implement
+  struct thread *t_ptr = thread_current ();
+  struct mmap *mmap_ptr = mmap_remove_entry (t_ptr->mmap_list, mapping);
+  if (mmap_ptr == NULL)
+    goto fail;
+
+  fail: ;
 }
