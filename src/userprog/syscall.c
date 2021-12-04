@@ -577,7 +577,18 @@ fail_1: return -1;
 
 }
 static void 
-syscall_munmap (mapid_t mapping UNUSED)
+syscall_munmap (mapid_t mapping)
 {
-  // TODO: Implement
+  struct thread *t_ptr = thread_current ();
+
+  /* try and retrieve the mmap entry, and fail skip to the end if not found */
+  struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
+  if (mmape_ptr == NULL)
+    goto fail;
+  
+  /* Remove all allocated spt entries associated with the mmapped file. */
+  void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
+  while (loc >= mmape_ptr->uaddr) 
+    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
+  fail: ;
 }
