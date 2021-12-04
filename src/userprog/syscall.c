@@ -543,9 +543,40 @@ syscall_mmap (int fd, void *addr)
         return -1;
   }
 
-
+  /* Add the mmapped file pages to our SPT */
+  off_t bytes_remaining = filesize;
+  off_t offset = 0;
+  void *loc = addr;
+  for (loc = addr; loc <= mmap_top; 
+       loc              = pg_round_up(loc) + 1, 
+       bytes_remaining -= PGSIZE, 
+       offset          += PGSIZE) 
+  {
+    if (spt_add_entry (t_ptr->spt_ptr,
+                       0,               /* No fid yet */
+                       loc,
+                       MMAP, 
+                       file_ptr->inode, 
+                       offset, 
+                       (bytes_remaining > PGSIZE) ? PGSIZE : bytes_remaining, 
+                       true)            /* Writable */
+        == NULL) goto fail_1;
+  }
 
   return 69;
+
+  fail_1:
+
+  for (; loc > mmap_top; 
+       loc              = pg_round_down (loc) - 1, 
+       bytes_remaining += PGSIZE, 
+       offset          -= PGSIZE) 
+    {
+      // TODO: Free the allocated sptes 
+    }
+
+  return -1;
+
 }
 static void 
 syscall_munmap (mapid_t mapping UNUSED)
