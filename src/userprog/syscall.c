@@ -520,8 +520,10 @@ syscall_mmap (int fd, void *addr)
       addr != pg_round_down (addr))
     return -1;
 
+  struct thread *t_ptr = thread_current ();
+
   /* Fail if the file is not mapped to a file descriptor */
-  struct file *file_ptr = get_file (thread_current ()->hash_fd_ptr, fd);
+  struct file *file_ptr = get_file (t_ptr->hash_fd_ptr, fd);
   if (file_ptr == NULL) return -1;
 
   /* Fail if the file has length equal to 0 */
@@ -531,6 +533,16 @@ syscall_mmap (int fd, void *addr)
   /* Fail if the mmapped file will overflow the stack */
   void *mmap_top = addr + filesize;
   if ((uint32_t) mmap_top >= (uint32_t) STACK_LIMIT) return -1;
+
+  /* Fail if mmapped file will overwrite any supplemental pages */
+  for (void *loc = addr; 
+       loc <= mmap_top; 
+       loc = pg_round_up(loc) + 1) 
+  {
+    if (spt_find_entry (t_ptr->spt_ptr, loc) != NULL)
+        return -1;
+  }
+
 
 
   return 69;
