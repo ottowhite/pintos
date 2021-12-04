@@ -263,7 +263,7 @@ thread_create (const char *name, int priority,
 #ifdef VM
   if (!spt_init (&t->spt_ptr)) return TID_ERROR;
   list_init (&t->mmap_list);
-  t->mid = 0;
+  t->mid_cnt = 0;
 #endif
 
   /* Add to run queue. */
