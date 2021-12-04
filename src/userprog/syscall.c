@@ -583,11 +583,12 @@ syscall_munmap (mapid_t mapping)
   /* try and retrieve the mmap entry, and fail skip to the end if not found */
   struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
   if (mmape_ptr == NULL)
-    goto fail;
+    return;
   
   /* Remove all allocated spt entries associated with the mmapped file. */
-  void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
-  while (loc >= mmape_ptr->uaddr) 
-    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
-  fail: ;
+  void *loc = pg_round_up (mmape_ptr->uaddr + mmape_ptr->filesize) + 1;
+  while (loc > mmape_ptr->uaddr) 
+    spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE);
+  // TODO: files still need to be removed from the frame table
+  //       this will either be done here or merged into spt_remove_entry
 }
