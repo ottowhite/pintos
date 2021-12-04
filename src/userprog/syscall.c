@@ -14,6 +14,7 @@
 #include "userprog/fd_table.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
+#include "vm/mmap.h"
 
 static void     syscall_handler (struct intr_frame *f);
 static uint32_t invoke_function (const void *syscall_ptr, 
@@ -575,12 +576,18 @@ fail_1:
 
 }
 static void 
-syscall_munmap (mapid_t mapping UNUSED)
+syscall_munmap (mapid_t mapping)
 {
   struct thread *t_ptr = thread_current ();
-  struct mmap *mmap_ptr = mmap_remove_entry (t_ptr->mmap_list, mapping);
-  if (mmap_ptr == NULL)
-    goto fail;
 
+  /* try and retrieve the mmap entry, and fail skip to the end if not found */
+  struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
+  if (mmape_ptr == NULL)
+    goto fail;
+  
+  /* Remove all allocated spt entries associated with the mmapped file. */
+  void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
+  while (loc >= mmape_ptr->uaddr) 
+    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
   fail: ;
 }
