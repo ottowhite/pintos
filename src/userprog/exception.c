@@ -189,11 +189,16 @@ grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
       // TODO: add the frame then spte after
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
           0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
+
+      if (spte_ptr == NULL) goto fail;
     }
   else
-    {
-      page_fault_cnt++;
-      syscall_exit (-1);
-      kill (f_ptr);
-    }
+      goto fail;
+
+  return;
+
+fail:
+  page_fault_cnt++;
+  syscall_exit (-1);
+  kill (f_ptr);
 }
