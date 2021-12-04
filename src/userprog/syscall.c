@@ -512,18 +512,25 @@ syscall_close (int fd UNUSED)
 static mapid_t 
 syscall_mmap (int fd, void *addr)
 {
-  // TODO: Implement
+  /* Fail if addr is 0, we are attempting to write to reserved fds,
+     or the addr is not page aligned */
   if (addr == 0           ||
       fd == STDIN_FILENO  ||
       fd == STDOUT_FILENO || 
       addr != pg_round_down (addr))
     return -1;
 
+  /* Fail if the file is not mapped to a file descriptor */
   struct file *file_ptr = get_file (thread_current ()->hash_fd_ptr, fd);
   if (file_ptr == NULL) return -1;
 
+  /* Fail if the file has length equal to 0 */
   off_t filesize = file_length (file_ptr);
   if (filesize == 0) return -1;
+
+  /* Fail if the mmapped file will overflow the stack */
+  void *mmap_top = addr + filesize;
+  if ((uint32_t) mmap_top >= (uint32_t) STACK_LIMIT) return -1;
 
 
   return 69;
