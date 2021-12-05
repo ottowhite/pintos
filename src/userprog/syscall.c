@@ -247,7 +247,7 @@ syscall_wait (pid_t pid)
 
 /* SYS_CREATE */
 static bool
-syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
+syscall_create (const char *file, unsigned initial_size)
 {
   /* Sanity check */
   if (file == NULL || !verify_ptr (file)) syscall_exit (-1);
@@ -265,7 +265,7 @@ syscall_create (const char *file UNUSED, unsigned initial_size UNUSED)
 
 /* SYS_REMOVE */
 static bool
-syscall_remove (const char *file UNUSED)
+syscall_remove (const char *file)
 {
   /* Acquires the lock to remove the file, 
      and returns an error if the file is invalid */
@@ -310,7 +310,7 @@ syscall_open (const char *file)
 
 /* SYS_FILESIZE */
 static int
-syscall_filesize (int fd UNUSED)
+syscall_filesize (int fd)
 {
   /* Fetches the corresponding file mapped from the fd value
      Exit if the file is invalid */
@@ -447,7 +447,7 @@ write_to_file (int fd, const char *buffer, unsigned size)
 
 /* SYS_SEEK */
 static void
-syscall_seek (int fd UNUSED, unsigned position UNUSED)
+syscall_seek (int fd, unsigned position)
 {
   /* Fetch the corresponding file mapped with the value of fd
      Exit with -1 if fetch fails */
@@ -464,7 +464,7 @@ syscall_seek (int fd UNUSED, unsigned position UNUSED)
 
 /* SYS_TELL */
 static unsigned
-syscall_tell (int fd UNUSED)
+syscall_tell (int fd)
 {
   /* Fetch the corresponding file mapped with the value of fd
      Exit with -1 if fetch fails */
@@ -483,7 +483,7 @@ syscall_tell (int fd UNUSED)
 
 /* SYS_CLOSE */
 static void
-syscall_close (int fd UNUSED)
+syscall_close (int fd)
 {
   /* Fetch the corresponding file mapped with the value of fd
      Exit with -1 if fetch fails */
