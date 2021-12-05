@@ -608,7 +608,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
-  bool success;
   struct thread *t_ptr = thread_current ();
 
   struct fte *fte_ptr = ft_get_frame_preemptive (t_ptr->tid, ALL_ZERO, NULL, 
