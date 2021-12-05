@@ -29,12 +29,17 @@ static void     fte_deallocate_func (struct hash_elem *e_ptr,
                                      void *aux UNUSED);
 
 /* Frame table entry helpers */
-static void        fte_insert    (struct fte *fte_ptr);
-static void        fte_remove    (struct fte *fte_ptr);
-static struct fte *fte_construct (pid_t owner,
-                                  void *frame_location,
-                                  enum retrieval_method retrieval_method,
-                                  int amount_occupied);
+static void        fte_insert      (struct fte *fte_ptr);
+static void        fte_remove      (struct fte *fte_ptr);
+static struct fte *construct_fte   (pid_t owner,
+                                    void *frame_location,
+                                    enum retrieval_method retrieval_method,
+                                    int amount_occupied);
+struct fte *       construct_frame (pid_t owner, 
+                                    enum frame_type frame_type, 
+                                    struct inode *inode_ptr,
+                                    off_t offset, 
+                                    int amount_occupied);
 
 /* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
@@ -95,6 +100,16 @@ ft_get_frame_preemptive (pid_t owner,
                          off_t offset, 
                          int amount_occupied)
 {
+  return construct_frame (owner, frame_type, inode_ptr, offset, amount_occupied);
+}
+
+struct fte *
+construct_frame (pid_t owner, 
+                 enum frame_type frame_type, 
+                 struct inode *inode_ptr,
+                 off_t offset, 
+                 int amount_occupied)
+{
   /* Gets a page from the user pool, zeroed if stack page */
   void *frame_ptr = palloc_get_page (frame_type == STACK
                                         ? PAL_USER | PAL_ZERO 
@@ -105,7 +120,7 @@ ft_get_frame_preemptive (pid_t owner,
 
   /* Constructs a pinned frame (unpinned when installed in page table) */
   struct fte *fte_ptr 
-      = fte_construct (owner, frame_ptr, retrieval_method, amount_occupied);
+      = construct_fte (owner, frame_ptr, retrieval_method, amount_occupied);
   
   if (fte_ptr == NULL) goto fail_2;
   
@@ -171,7 +186,7 @@ ft_remove_frame (struct fte *fte_ptr)
 /* Constructs a pinned frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
-fte_construct (pid_t owner,
+construct_fte (pid_t owner,
                void *frame_location,
                enum retrieval_method retrieval_method,
                int amount_occupied)
