@@ -2,6 +2,7 @@
 #include <debug.h>
 #include "vm/sft.h"
 #include "threads/synch.h"
+#include "threads/malloc.h"
 
 static struct hash sft;
 static struct lock sft_lock;
@@ -20,23 +21,24 @@ static unsigned
 sfte_hash_func (const struct hash_elem *e_ptr, 
                 void *aux UNUSED)
 {
-  // TODO: Implement
-  return 0;
+  struct sfte *sfte_ptr = hash_entry (e_ptr, struct sfte, hash_elem);
+  return (unsigned) sfte_ptr->inode_ptr + sfte_ptr->offset;
 }
+
 static bool 
 sfte_less_func (const struct hash_elem *a_ptr,
                 const struct hash_elem *b_ptr,
                 void *aux UNUSED)
 {
-  // TODO: Implement
-  return false;
+  return hash_entry (a_ptr, struct sfte, hash_elem)->fid <
+         hash_entry (b_ptr, struct sfte, hash_elem)->fid;
 }
+
 static void 
 sfte_deallocate_func (struct hash_elem *e_ptr, 
                       void *aux UNUSED)
 {
-  // TODO: Implement
-  return;
+  free (hash_entry (e_ptr, struct sfte, hash_elem));
 }
 
 bool
