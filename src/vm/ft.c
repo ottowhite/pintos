@@ -100,7 +100,52 @@ ft_get_frame_preemptive (pid_t owner,
                          off_t offset, 
                          int amount_occupied)
 {
-  return construct_frame (owner, frame_type, inode_ptr, offset, amount_occupied);
+  // TODO: Failure handling
+  struct fte *fte_ptr;
+  if (frame_type == EXECUTABLE_CODE ||
+      frame_type == MMAP)
+    {
+      struct sfte *sfte_ptr = sft_search (inode_ptr, offset);
+      if (sfte_ptr == NULL)
+        {
+          /* Add new shareable frame */
+          fte_ptr = construct_frame (owner, frame_type, inode_ptr, 
+              offset, amount_occupied);
+
+          sft_insert (fte_ptr->fid, inode_ptr, offset);
+        }
+      else
+        {
+          /* Found shared frame */
+          int fid = sfte_ptr->fid;
+          // TODO: Obtain entry corresponding to this fid
+          
+          if (fte_ptr->shared)
+            {
+              /* Frame already is shared with other processes */
+
+              // TODO: Add to the list of shared frames
+            }
+          else
+            {
+              /* Frame not yet shared between processes */
+              fte_ptr->shared = true;
+
+              // TODO: Initialise a singleton list with the
+              //       current fid, store back in same location
+              
+              // TODO: Add the current owner to the list of owners
+            }
+        }
+    }
+  else
+    {
+      /* Not a shareable frame */
+      fte_ptr = construct_frame (owner, frame_type, inode_ptr, offset, 
+          amount_occupied);
+    }
+
+  return fte_ptr;
 }
 
 struct fte *
