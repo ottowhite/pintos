@@ -102,7 +102,7 @@ main (void)
   malloc_init ();
   paging_init ();
 #ifdef VM
-  ft_init ();
+  ASSERT (ft_init ());
 #endif
 
   /* Segmentation. */

@@ -27,7 +27,7 @@ struct fte
   struct hash_elem hash_elem;
 };
 
-void        ft_init                 (void);
+bool        ft_init                 (void);
 void        ft_destroy              (void);
 void        ft_remove_frame         (struct fte *fte_ptr);
 struct fte *ft_get_frame            (struct spte *spte_ptr);
