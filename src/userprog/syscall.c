@@ -12,6 +12,7 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "userprog/fd_table.h"
+#include "userprog/exception.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include "vm/mmap.h"
@@ -128,16 +129,8 @@ verify_ptr_privileged (const void *ptr, bool write)
           if (spte_ptr == NULL || (write && !spte_ptr->writable)) 
               return false;
           else
-            {
               // TODO: Pin this frame until syscall finished
-              // TODO: Get around compiler optimisation to force 
-              //       page fault, or make an artificial page fault
-              /* Compiler will optimise out this de-reference unless it
-                 is stored in a variable marked volatile. Intentionally
-                 triggers a page fault to bring in the page. */
-              volatile int garbage; 
-              garbage = *((int *) ptr);
-            }
+              attempt_frame_load (spte_ptr);
         }
     }
   else 

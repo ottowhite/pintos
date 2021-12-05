@@ -17,7 +17,6 @@ static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
 /* Page fault handler helpers */
-static void attempt_frame_load (struct spte *spte_ptr);
 static void grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr);
 
 /* Registers handlers for interrupts that can be caused by user
@@ -151,7 +150,7 @@ page_fault (struct intr_frame *f)
 }
 
 /* Attempts to load the given frame from an spte entry */
-static void
+void
 attempt_frame_load (struct spte *spte_ptr)
 {
  // TODO: Deal with failures more elegantly
