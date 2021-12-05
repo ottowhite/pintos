@@ -82,21 +82,40 @@ sft_insert (int fid, struct inode *inode_ptr, off_t offset)
 }
 
 bool 
-sft_remove (struct inode *inode_ptr, off_t offset)
+sft_remove (struct sfte *sfte_ptr)
+{
+  lock_acquire (&sft_lock);
+  if (hash_delete (&sft, &sfte_ptr->hash_elem) == NULL)
+    {
+      lock_release (&sft_lock);
+      return false;
+    }
+  else
+    {
+      lock_release (&sft_lock);
+      return true;
+    }
+}
+
+struct sfte *
+sft_search (struct inode *inode_ptr, off_t offset)
 {
   struct sfte sfte;
   sfte.inode_ptr = inode_ptr;
   sfte.offset    = offset;
 
   lock_acquire (&sft_lock);
-  struct hash_elem *e_ptr = hash_delete (&sft, &sfte.hash_elem);
-  
-  if (e_ptr == NULL) {
-    lock_release (&sft_lock);
-    return false;
-  }
+  struct hash_elem *e_ptr = hash_find (&sft, &sfte.hash_elem);
+  if (e_ptr == NULL) 
+    {
+      lock_release (&sft_lock);
+      return NULL;
+    }
+  else
+    {
+      struct sfte *sfte_ptr = hash_entry (e_ptr, struct sfte, hash_elem);
+      lock_release (&sft_lock);
+      return sfte_ptr;
+    }
 
-  sfte_deallocate_func (e_ptr, NULL);
-  lock_release (&sft_lock);
-  return true;
 }
