@@ -63,16 +63,19 @@ sft_insert (int fid, struct inode *inode_ptr, off_t offset)
 {
   lock_acquire (&sft_lock);
   struct sfte *sfte_ptr = malloc (sizeof (struct sfte));
-  if (sfte_ptr == NULL) {
-    lock_release (&sft_lock);
-    return false;
-  }
+  if (sfte_ptr == NULL) 
+    {
+      lock_release (&sft_lock);
+      return false;
+    }
 
   sfte_ptr->fid       = fid;
   sfte_ptr->inode_ptr = inode_ptr;
   sfte_ptr->offset    = offset;
 
-  hash_insert (&sft, &sfte_ptr->hash_elem);
+  /* Element was already present in the table */
+  if (hash_insert (&sft, &sfte_ptr->hash_elem) != NULL) 
+      free (sfte_ptr);
 
   lock_release (&sft_lock);
   return true;
