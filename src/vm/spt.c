@@ -131,7 +131,7 @@ spte_construct (void *uaddr,
 static unsigned
 spte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
 {
-  return hash_entry (e_ptr, struct spte, hash_elem)->uaddr;
+  return (unsigned) hash_entry (e_ptr, struct spte, hash_elem)->uaddr;
 }
 
 static bool 
