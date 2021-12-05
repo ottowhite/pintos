@@ -77,3 +77,23 @@ sft_insert (int fid, struct inode *inode_ptr, off_t offset)
   lock_release (&sft_lock);
   return true;
 }
+
+bool 
+sft_remove (struct inode *inode_ptr, off_t offset)
+{
+  struct sfte sfte;
+  sfte.inode_ptr = inode_ptr;
+  sfte.offset    = offset;
+
+  lock_acquire (&sft_lock);
+  struct hash_elem *e_ptr = hash_delete (&sft, &sfte.hash_elem);
+  
+  if (e_ptr == NULL) {
+    lock_release (&sft_lock);
+    return false;
+  }
+
+  sfte_deallocate_func (e_ptr, NULL);
+  lock_release (&sft_lock);
+  return true;
+}

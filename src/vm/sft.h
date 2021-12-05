@@ -17,5 +17,6 @@ struct sfte
 bool sft_init    (void);
 void sft_destroy (void);
 bool sft_insert  (int fid, struct inode *inode_ptr, off_t offset);
+bool sft_remove  (struct inode *inode_ptr, off_t offset);
 
 #endif
