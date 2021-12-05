@@ -3,6 +3,7 @@
 #include "vm/sft.h"
 #include "threads/synch.h"
 #include "threads/malloc.h"
+#include "threads/vaddr.h"
 
 static struct hash sft;
 static struct lock sft_lock;
@@ -22,7 +23,7 @@ sfte_hash_func (const struct hash_elem *e_ptr,
                 void *aux UNUSED)
 {
   struct sfte *sfte_ptr = hash_entry (e_ptr, struct sfte, hash_elem);
-  return (unsigned) sfte_ptr->inode_ptr + sfte_ptr->offset;
+  return (unsigned) sfte_ptr->inode_ptr + (sfte_ptr->offset / PGSIZE);
 }
 
 static bool 
@@ -47,4 +48,12 @@ sft_init (void)
   if (!hash_init (&sft, &sfte_hash_func, &sfte_less_func, NULL)) return false;
   lock_init (&sft_lock);
   return true;
+}
+
+void 
+sft_destroy (void)
+{
+  lock_acquire (&sft_lock);
+  hash_destroy (&sft, &sfte_deallocate_func);
+  lock_release (&sft_lock);
 }

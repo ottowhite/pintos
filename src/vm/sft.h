@@ -15,5 +15,6 @@ struct sfte
 };
 
 bool sft_init (void);
+void sft_destroy (void);
 
 #endif
