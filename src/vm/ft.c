@@ -11,6 +11,7 @@
 #include "filesys/filesys.h"
 #include "vm/ft.h"
 #include "vm/spt.h"
+#include "vm/sft.h"
 
 /* Frame table globals */
 static struct hash ft;
@@ -193,9 +194,7 @@ fte_construct (pid_t owner,
 static void
 fte_insert (struct fte *fte_ptr)
 {
-  lock_acquire (&ft_lock);
   hash_insert (&ft, &fte_ptr->hash_elem);
-  lock_release (&ft_lock);
 }
 
 /* Removes a frame table entry from the frame table and frees the 
@@ -203,12 +202,8 @@ fte_insert (struct fte *fte_ptr)
 static void
 fte_remove (struct fte *fte_ptr)
 {
-  lock_acquire (&ft_lock);
-
   hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
-
-  lock_release (&ft_lock);
 }
 
 static unsigned
