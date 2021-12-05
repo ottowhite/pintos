@@ -11,7 +11,7 @@ struct sfte
   struct inode *inode_ptr;
   off_t offset;
   int fid;
-  hash_elem hash_elem;
+  struct hash_elem hash_elem;
 };
 
 #endif
