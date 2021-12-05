@@ -154,8 +154,8 @@ verify_buffer (const void *buffer, int size, bool write)
   /* Check that the first memory location in the buffer is valid, and that 
      every memory location on the end of a page + 1 (i.e. the next page over) 
      is also valid */
-  void *buffer_top = buffer + size * sizeof (char);
-  for (void *loc = buffer; 
+  const void *buffer_top = buffer + size * sizeof (char);
+  for (void *loc = (void *) buffer; 
        loc <= buffer_top; 
        loc = pg_round_up(loc) + 1) 
   {
