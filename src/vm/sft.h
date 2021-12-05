@@ -14,7 +14,8 @@ struct sfte
   struct hash_elem hash_elem;
 };
 
-bool sft_init (void);
+bool sft_init    (void);
 void sft_destroy (void);
+bool sft_insert  (int fid, struct inode *inode_ptr, off_t offset);
 
 #endif

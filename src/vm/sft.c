@@ -57,3 +57,16 @@ sft_destroy (void)
   hash_destroy (&sft, &sfte_deallocate_func);
   lock_release (&sft_lock);
 }
+
+bool 
+sft_insert (int fid, struct inode *inode_ptr, off_t offset)
+{
+  struct sfte *sfte_ptr = malloc (sizeof (struct sfte));
+  if (sfte_ptr == NULL) return false;
+
+  sfte_ptr->fid       = fid;
+  sfte_ptr->inode_ptr = inode_ptr;
+  sfte_ptr->offset    = offset;
+
+  return true;
+}
