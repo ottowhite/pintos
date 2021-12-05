@@ -13,6 +13,20 @@ enum retrieval_method
   SWAP
 };
 
+/* used to store a single owner when multiple processes own a frame */
+struct shared_owner 
+{
+  pid_t owner;
+  struct list_elem elem;
+};
+
+/* list element for the owners list */
+union Owner 
+{
+  pid_t owner;
+  struct list shared_owners;
+};
+
 /* Frame / swap table entry */
 struct fte 
 {
