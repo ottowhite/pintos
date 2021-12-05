@@ -119,9 +119,8 @@ ft_get_frame_preemptive (pid_t owner,
       else
         {
           /* Found shared frame */
-          int fid = sfte_ptr->fid;
-          // TODO: Obtain entry corresponding to this fid
-          
+
+          fte_ptr = ft_find_frame (sfte_ptr->fid);
           if (fte_ptr->shared)
             {
               /* Frame already is shared with other processes */
