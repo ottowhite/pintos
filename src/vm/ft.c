@@ -76,11 +76,13 @@ ft_destroy (void)
 struct fte *
 ft_get_frame (struct spte *spte_ptr)
 {
-  return ft_get_frame_preemptive (thread_current ()->tid,
-                                  spte_ptr->frame_type,
-                                  spte_ptr->inode_ptr,
-                                  spte_ptr->offset,
-                                  spte_ptr->amount_occupied);
+  struct fte *fte_ptr = ft_get_frame_preemptive (thread_current ()->tid,
+                                                 spte_ptr->frame_type,
+                                                 spte_ptr->inode_ptr,
+                                                 spte_ptr->offset,
+                                                 spte_ptr->amount_occupied);
+  spte_ptr->fid = fte_ptr->fid;
+  return fte_ptr;
 }
 
 /* Generalised version of ft_get_frame.
