@@ -39,6 +39,7 @@
 #endif
 #ifdef VM
 #include "vm/ft.h"
+#include "vm/sft.h"
 #endif
 
 /* Page directory with kernel mappings only. */
@@ -103,6 +104,7 @@ main (void)
   paging_init ();
 #ifdef VM
   ASSERT (ft_init ());
+  ASSERT (sft_init ());
 #endif
 
   /* Segmentation. */
@@ -142,6 +144,7 @@ main (void)
   shutdown ();
 #ifdef VM
   ft_destroy ();
+  sft_destroy ();
 #endif
   thread_exit ();
 }
