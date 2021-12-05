@@ -5,7 +5,7 @@
 #include "filesys/file.h"
 #include "filesys/inode.h"
 
-struct public_frame
+struct sfte
 {
   struct inode *inode_ptr;
   off_t offset;
