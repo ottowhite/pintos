@@ -41,6 +41,8 @@ struct fte *       construct_frame (pid_t owner,
                                     off_t offset, 
                                     int amount_occupied);
 
+static struct fte *ft_find_frame   (int fid);
+
 /* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
 
@@ -146,6 +148,18 @@ ft_get_frame_preemptive (pid_t owner,
     }
 
   return fte_ptr;
+}
+
+static struct fte *
+ft_find_frame (int fid)
+{
+  struct fte fte;
+  fte.fid = fid;
+
+  struct hash_elem *e_ptr = hash_find (&ft, &fte.hash_elem);
+
+  if (e_ptr == NULL) return NULL;
+  return hash_entry (e_ptr, struct fte, hash_elem);
 }
 
 struct fte *
