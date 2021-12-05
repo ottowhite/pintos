@@ -39,3 +39,10 @@ sfte_deallocate_func (struct hash_elem *e_ptr,
   return;
 }
 
+bool
+sft_init (void)
+{
+  if (!hash_init (&sft, &sfte_hash_func, &sfte_less_func, NULL)) return false;
+  lock_init (&sft_lock);
+  return true;
+}

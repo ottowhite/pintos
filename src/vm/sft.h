@@ -14,4 +14,6 @@ struct sfte
   struct hash_elem hash_elem;
 };
 
+bool sft_init (void);
+
 #endif
