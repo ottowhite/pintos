@@ -42,7 +42,7 @@ test_overflow (int argc, char **argv, void *esp)
 {
   // pointer to argv + argc + null return address + max padding
   static int base_size = sizeof (char **) + sizeof (int) + sizeof (void *) + 3;
-  int total_size = base_size;
+  unsigned total_size = base_size;
 
   /* loop through elements in argv adding their sizes */
   for (int i = argc - 1; i >= 0; i--) {
@@ -608,7 +608,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
-  bool success;
   struct thread *t_ptr = thread_current ();
 
   struct fte *fte_ptr = ft_get_frame_preemptive (t_ptr->tid, ALL_ZERO, NULL, 

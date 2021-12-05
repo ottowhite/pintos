@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <hash.h>
 
 #include "filesys/off_t.h"
 #include "filesys/file.h"

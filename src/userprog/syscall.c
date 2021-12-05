@@ -12,6 +12,7 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "userprog/fd_table.h"
+#include "userprog/exception.h"
 #include "devices/shutdown.h"
 #include "devices/input.h"
 #include "vm/mmap.h"
@@ -128,16 +129,8 @@ verify_ptr_privileged (const void *ptr, bool write)
           if (spte_ptr == NULL || (write && !spte_ptr->writable)) 
               return false;
           else
-            {
               // TODO: Pin this frame until syscall finished
-              // TODO: Get around compiler optimisation to force 
-              //       page fault, or make an artificial page fault
-              /* Compiler will optimise out this de-reference unless it
-                 is stored in a variable marked volatile. Intentionally
-                 triggers a page fault to bring in the page. */
-              volatile int garbage; 
-              garbage = *((int *) ptr);
-            }
+              attempt_frame_load (spte_ptr);
         }
     }
   else 
@@ -161,8 +154,8 @@ verify_buffer (const void *buffer, int size, bool write)
   /* Check that the first memory location in the buffer is valid, and that 
      every memory location on the end of a page + 1 (i.e. the next page over) 
      is also valid */
-  void *buffer_top = buffer + size * sizeof (char);
-  for (void *loc = buffer; 
+  const void *buffer_top = buffer + size * sizeof (char);
+  for (void *loc = (void *) buffer; 
        loc <= buffer_top; 
        loc = pg_round_up(loc) + 1) 
   {

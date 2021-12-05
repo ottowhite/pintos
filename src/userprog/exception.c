@@ -17,7 +17,6 @@ static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
 /* Page fault handler helpers */
-static void attempt_frame_load (struct spte *spte_ptr);
 static void grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr);
 
 /* Registers handlers for interrupts that can be caused by user
@@ -143,14 +142,6 @@ page_fault (struct intr_frame *f)
      be assured of reading CR2 before it changed). */
   intr_enable ();
 
-  /* Determine cause. */
-  /* True: not-present page, false: writing r/o page. */
-  bool not_present = (f->error_code & PF_P) == 0;
-  /* True: access was write, false: access was read. */
-  bool write       = (f->error_code & PF_W) != 0;
-  /* True: access by user, false: access by kernel. */
-  bool user        = (f->error_code & PF_U) != 0;
-
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
 
@@ -159,7 +150,7 @@ page_fault (struct intr_frame *f)
 }
 
 /* Attempts to load the given frame from an spte entry */
-static void
+void
 attempt_frame_load (struct spte *spte_ptr)
 {
  // TODO: Deal with failures more elegantly
@@ -197,11 +188,16 @@ grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
       // TODO: add the frame then spte after
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
           0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
+
+      if (spte_ptr == NULL) goto fail;
     }
   else
-    {
-      page_fault_cnt++;
-      syscall_exit (-1);
-      kill (f_ptr);
-    }
+      goto fail;
+
+  return;
+
+fail:
+  page_fault_cnt++;
+  syscall_exit (-1);
+  kill (f_ptr);
 }
