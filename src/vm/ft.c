@@ -17,6 +17,8 @@
 /* Frame table globals */
 static struct hash ft;
 static struct lock ft_lock;
+static struct fte* frame_index_arr;
+static size_t      frame_index_size;
 
 /* Frame table hashmap helpers */
 static unsigned fte_hash_func       (const struct hash_elem *e_ptr, 
@@ -65,6 +67,10 @@ ft_init (void)
 {
   if (!hash_init (&ft, &fte_hash_func, &fte_less_func, NULL)) return false;
   lock_init (&ft_lock);
+  /* Frame index is used for eviction to store which ftes correspond to
+     which frames */
+  frame_index_size = (get_user_pool_start () - PHYS_BASE) / PGSIZE;
+  frame_index_arr  = malloc (frame_index_size * sizeof (struct fte *));
   return true;
 }
 
@@ -78,6 +84,7 @@ ft_destroy (void)
   lock_acquire (&ft_lock);
   hash_destroy (&ft, &fte_deallocate_func);
   lock_release (&ft_lock);
+  free (frame_index_arr);
 }
 
 bool
