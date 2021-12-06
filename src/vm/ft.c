@@ -86,9 +86,6 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
   bool success = install_page (upage, kpage, writable);
   if (success)
     {
-      /* Associate the supplementary page table entry with the frame table
-         entry */
-      spte_ptr->fte_ptr = fte_ptr;
       /* Get the existing page directory entry */
       uint32_t *pde_ptr 
           = lookup_page (thread_current ()->pagedir, upage, false);
@@ -106,9 +103,10 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
               return false;
           else
               fte_ptr->pdes.pde_ptr = pde_ptr;
-
         }
-      /* Unpin the frame */
+
+      /* Unpin the frame and associate SPTE with FTE */
+      spte_ptr->fte_ptr = fte_ptr;
       fte_ptr->pin_cnt--;
       return true;
     }
