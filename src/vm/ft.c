@@ -157,6 +157,7 @@ fte_add_owner_shared (struct fte *fte_ptr, uint32_t *pd, void *upage)
   if (e_ptr == NULL) return false;
   e_ptr->owner = (struct owner) { pd, upage };
   list_push_front (fte_ptr->owners.owner_list_ptr, &e_ptr->elem);
+	// TODO: save refernce of owner somewhere 
   return true;
 }
 
