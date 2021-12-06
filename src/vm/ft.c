@@ -137,7 +137,8 @@ construct_frame (enum frame_type frame_type,
   void *frame_ptr = palloc_get_page (frame_type == STACK
                                         ? PAL_USER | PAL_ZERO 
                                         : PAL_USER);
-  if (frame_ptr == NULL) goto fail_1;
+  if (frame_ptr == NULL) 
+      goto fail_1;
 
   enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
@@ -145,7 +146,8 @@ construct_frame (enum frame_type frame_type,
   struct fte *fte_ptr = construct_fte (frame_ptr, retrieval_method, inode_ptr, 
       offset, amount_occupied);
   
-  if (fte_ptr == NULL) goto fail_2;
+  if (fte_ptr == NULL) 
+      goto fail_2;
   
   /* Read in the necessary data from the filesystem if frame type requires */
   if (frame_type == EXECUTABLE_CODE  || 
