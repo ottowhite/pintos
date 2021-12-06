@@ -276,7 +276,8 @@ fte_remove (struct fte *fte_ptr)
 static unsigned
 fte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
 {
-  return (unsigned) hash_entry (e_ptr, struct fte, hash_elem)->frame_location;
+  struct fte *fte_ptr = hash_entry (e_ptr, struct fte, hash_elem);
+  return (unsigned) fte_ptr->inode_ptr + (fte_ptr->offset / PGSIZE);
 }
 
 static bool 
