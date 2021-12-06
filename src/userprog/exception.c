@@ -160,16 +160,9 @@ attempt_frame_load (struct spte *spte_ptr)
  if (fte_ptr == NULL) syscall_exit (-1);
 
  /* Returns false if installation failed, frame left pinned */
- bool success = install_page (spte_ptr->uaddr, 
-                              fte_ptr->frame_location, 
-                              spte_ptr->writable);
+ bool success = ft_install_frame (spte_ptr, fte_ptr);
 
- if (success) 
-   {
-     spte_ptr->fte_ptr = fte_ptr;
-     fte_ptr->pin_cnt--;
-   }
- else
+ if (!success) 
    {
      ft_remove_frame (fte_ptr);
      syscall_exit (-1);
