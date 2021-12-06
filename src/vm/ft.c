@@ -75,6 +75,9 @@ ft_init (void)
   if (frame_index_arr == NULL)
       goto fail_2;
 
+  /* Zero initialize the frame index as the user pool is initially empty */
+  memset (frame_index_arr, 0, frame_index_size);
+
   return true;
 
   fail_2: ft_destroy ();
