@@ -101,8 +101,8 @@ ft_get_frame_preemptive (enum frame_type frame_type,
   if (frame_type == EXECUTABLE_CODE ||
       frame_type == MMAP)
     {
-      struct sfte *sfte_ptr = sft_search (inode_ptr, offset);
-      if (sfte_ptr == NULL)
+      fte_ptr = ft_find_frame (inode_ptr, offset);
+      if (fte_ptr == NULL)
         {
           /* Add new shareable frame */
           fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
@@ -111,8 +111,6 @@ ft_get_frame_preemptive (enum frame_type frame_type,
       else
         {
           /* Found shared frame */
-
-          fte_ptr = ft_find_frame (inode_ptr, offset);
           if (fte_ptr->shared)
             {
               /* Frame already is shared with other processes */
