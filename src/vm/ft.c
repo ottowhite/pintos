@@ -83,35 +83,34 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
   void *kpage   = fte_ptr->frame_location;
   bool writable = spte_ptr->writable;
 
-  bool success = install_page (upage, kpage, writable);
-  if (success)
+  if (!install_page (upage, kpage, writable))
+      goto fail_install_page;
+
+  /* Get the existing page directory entry */
+  uint32_t *pde_ptr = lookup_page (thread_current ()->pagedir, upage, false);
+
+  /* If the frame already shared, try and add the new pde to it's
+     pde list, otherwise, either add the new non-list pde,
+     or make a newly shared pde list with the new and old pde. */
+  if (fte_ptr->shared && 
+      !fte_add_pde_shared (fte_ptr, pde_ptr))
+      goto fail_add_pde;
+  else
     {
-      /* Get the existing page directory entry */
-      uint32_t *pde_ptr 
-          = lookup_page (thread_current ()->pagedir, upage, false);
-
-      /* If the frame already shared, try and add the new pde to it's
-         pde list, otherwise, either add the new non-list pde,
-         or make a newly shared pde list with the new and old pde. */
-      if (fte_ptr->shared && 
-          !fte_add_pde_shared (fte_ptr, pde_ptr))
-          return false;
+      if (fte_ptr->pdes.pde_ptr != NULL && 
+          !fte_add_pde_newly_shared (fte_ptr, pde_ptr))
+          goto fail_add_pde;
       else
-        {
-          if (fte_ptr->pdes.pde_ptr != NULL && 
-              !fte_add_pde_newly_shared (fte_ptr, pde_ptr))
-              return false;
-          else
-              fte_ptr->pdes.pde_ptr = pde_ptr;
-        }
-
-      /* Unpin the frame and associate SPTE with FTE */
-      spte_ptr->fte_ptr = fte_ptr;
-      fte_ptr->pin_cnt--;
-      return true;
+          fte_ptr->pdes.pde_ptr = pde_ptr;
     }
-  
-  return false;
+
+  /* Unpin the frame and associate SPTE with FTE */
+  spte_ptr->fte_ptr = fte_ptr;
+  fte_ptr->pin_cnt--;
+  return true;
+
+  fail_add_pde:      pagedir_clear_page (thread_current ()->pagedir, upage);
+  fail_install_page: return false;
 }
 
 /* Add a PDE to a frame table entry that was previously being shared 
