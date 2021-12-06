@@ -614,23 +614,25 @@ setup_stack (void **esp)
 
   if (fte_ptr == NULL) 
       goto fail_1;
-  
-  /* try and add the new frame to the page table */
+
   uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
-  if (!install_page (uaddr, fte_ptr->frame_location, true))
-      goto fail_2;
   
   /* attempt to add the new page to the supplemental page table */
-  if (spt_add_entry (t_ptr->spt_ptr, fte_ptr, uaddr, STACK, NULL, 0, 
-      PGSIZE, true) == NULL)
+  if (spt_add_entry (t_ptr->spt_ptr, fte_ptr, uaddr, STACK, NULL, 0, PGSIZE, 
+      true) == NULL)
+      goto fail_2;
+  
+  /* try and add the new frame to the page table */
+  if (!install_page (uaddr, fte_ptr->frame_location, true))
       goto fail_3;
+  
 
   *esp = PHYS_BASE;
   fte_ptr->pin_cnt--;
 
   return true;
   
-  fail_3: pagedir_clear_page (t_ptr->pagedir, uaddr);
+  fail_3: spt_remove_entry (t_ptr->spt_ptr, uaddr);
   fail_2: ft_remove_frame (fte_ptr); 
   fail_1: return false;
 }
