@@ -49,7 +49,7 @@ struct fte
   struct inode *inode_ptr;
   off_t offset;
   union Owner owners;
-  union Frame_location frame_location;
+  union Frame_location loc;
   enum retrieval_method retrieval_method;
   int amount_occupied;
   struct hash_elem hash_elem;

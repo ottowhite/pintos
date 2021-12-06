@@ -32,7 +32,7 @@ static void     fte_deallocate_func (struct hash_elem *e_ptr,
 /* Frame table entry helpers */
 static void        fte_insert      (struct fte *fte_ptr);
 static void        fte_remove      (struct fte *fte_ptr);
-static struct fte *construct_fte   (union Frame_location frame_location,
+static struct fte *construct_fte   (union Frame_location loc,
                                     enum retrieval_method retrieval_method,
                                     struct inode *inode_ptr,
                                     off_t offset,
@@ -102,7 +102,7 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 {
   void *upage   = spte_ptr->uaddr;
   /* TODO: handle case in which the frame is swapped*/
-  void *kpage   = fte_ptr->frame_location.frame_ptr;
+  void *kpage   = fte_ptr->loc.frame_ptr;
   bool writable = spte_ptr->writable;
 
   if (!install_page (upage, kpage, writable))
@@ -243,7 +243,7 @@ ft_get_frame_preemptive (enum frame_type frame_type,
     }
 
   /* Associate the new frame location in the user pool with the fte */
-  int frame_index = (fte_ptr->frame_location.frame_ptr - PHYS_BASE) / PGSIZE;
+  int frame_index = (fte_ptr->loc.frame_ptr - PHYS_BASE) / PGSIZE;
   frame_index_arr[frame_index] = fte_ptr;
 
   return fte_ptr;
@@ -277,9 +277,9 @@ construct_frame (enum frame_type frame_type,
 
   enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
-  union Frame_location frame_location = { .frame_ptr = frame_ptr };
   /* Constructs a pinned frame (unpinned when installed in page table) */
-  struct fte *fte_ptr = construct_fte (frame_location, retrieval_method, 
+  struct fte *fte_ptr = construct_fte (
+      (union Frame_location) { .frame_ptr = frame_ptr }, retrieval_method, 
       inode_ptr, offset, amount_occupied);
   
   if (fte_ptr == NULL) 
@@ -340,14 +340,14 @@ get_retrieval_method (enum frame_type frame_type)
 void 
 ft_remove_frame (struct fte *fte_ptr)
 {
-  palloc_free_page (fte_ptr->frame_location.frame_ptr);
+  palloc_free_page (fte_ptr->loc.frame_ptr);
   fte_remove (fte_ptr);
 }
 
 /* Constructs a pinned frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
-construct_fte (union Frame_location frame_location,
+construct_fte (union Frame_location loc,
                enum retrieval_method retrieval_method,
                struct inode *inode_ptr,
                off_t offset,
@@ -360,7 +360,7 @@ construct_fte (union Frame_location frame_location,
   fte_ptr->shared              = false;
   fte_ptr->pin_cnt             = 1;
   fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
-  fte_ptr->frame_location      = frame_location;
+  fte_ptr->loc      = loc;
   fte_ptr->inode_ptr           = inode_ptr;
   fte_ptr->offset              = offset;
   fte_ptr->retrieval_method    = retrieval_method;
@@ -396,8 +396,9 @@ fte_less_func (const struct hash_elem *a_ptr,
                const struct hash_elem *b_ptr,
                void *aux UNUSED) 
 {
-  return hash_entry (a_ptr, struct fte, hash_elem)->frame_location.swap_index <
-         hash_entry (b_ptr, struct fte, hash_elem)->frame_location.swap_index;
+  // TODO: Is this comparison operation safe with the union type?
+  return hash_entry (a_ptr, struct fte, hash_elem)->loc.swap_index <
+         hash_entry (b_ptr, struct fte, hash_elem)->loc.swap_index;
 }
 
 static void
