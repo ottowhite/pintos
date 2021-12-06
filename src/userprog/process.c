@@ -576,7 +576,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       if (spte_ptr == NULL) 
         {
           spt_add_entry (t->spt_ptr,
-                         0,           // 0 fid infers no frame exists yet
+                         NULL,
                          upage,
                          frame_type,
                          (frame_type == ALL_ZERO) ? NULL : file->inode,
@@ -610,9 +610,8 @@ setup_stack (void **esp)
 {
   struct thread *t_ptr = thread_current ();
 
-  struct fte *fte_ptr = ft_get_frame_preemptive (t_ptr->tid, ALL_ZERO, NULL, 
-      0, PGSIZE);
-  
+  struct fte *fte_ptr = ft_get_frame_preemptive (ALL_ZERO, NULL, 0, 0);
+
   if (fte_ptr == NULL) 
       goto fail_1;
   
@@ -622,7 +621,7 @@ setup_stack (void **esp)
       goto fail_2;
   
   /* attempt to add the new page to the supplemental page table */
-  if (spt_add_entry (t_ptr->spt_ptr, fte_ptr->fid, uaddr, STACK, NULL, 0, 
+  if (spt_add_entry (t_ptr->spt_ptr, fte_ptr, uaddr, STACK, NULL, 0, 
       PGSIZE, true) == NULL)
       goto fail_3;
 

@@ -15,9 +15,7 @@
 
 /* Frame table globals */
 static struct hash ft;
-static int         fid_cnt;
 static struct lock ft_lock;
-static struct lock fid_lock;
 
 /* Frame table hashmap helpers */
 static unsigned fte_hash_func       (const struct hash_elem *e_ptr, 
@@ -31,17 +29,17 @@ static void     fte_deallocate_func (struct hash_elem *e_ptr,
 /* Frame table entry helpers */
 static void        fte_insert      (struct fte *fte_ptr);
 static void        fte_remove      (struct fte *fte_ptr);
-static struct fte *construct_fte   (pid_t owner,
-                                    void *frame_location,
+static struct fte *construct_fte   (void *frame_location,
                                     enum retrieval_method retrieval_method,
+                                    struct inode *inode_ptr,
+                                    off_t offset,
                                     int amount_occupied);
-struct fte *       construct_frame (pid_t owner, 
-                                    enum frame_type frame_type, 
+static struct fte *construct_frame (enum frame_type frame_type, 
                                     struct inode *inode_ptr,
                                     off_t offset, 
                                     int amount_occupied);
 
-static struct fte *ft_find_frame   (int fid);
+static struct fte *ft_find_frame   (struct inode *inode_ptr, off_t offset);
 
 /* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
@@ -59,8 +57,6 @@ ft_init (void)
 {
   if (!hash_init (&ft, &fte_hash_func, &fte_less_func, NULL)) return false;
   lock_init (&ft_lock);
-  lock_init (&fid_lock);
-  fid_cnt = 1; // 0 is reserved for no owner
   return true;
 }
 
@@ -83,12 +79,11 @@ ft_destroy (void)
 struct fte *
 ft_get_frame (struct spte *spte_ptr)
 {
-  struct fte *fte_ptr = ft_get_frame_preemptive (thread_current ()->tid,
-                                                 spte_ptr->frame_type,
+  struct fte *fte_ptr = ft_get_frame_preemptive (spte_ptr->frame_type,
                                                  spte_ptr->inode_ptr,
                                                  spte_ptr->offset,
                                                  spte_ptr->amount_occupied);
-  spte_ptr->fid = fte_ptr->fid;
+  spte_ptr->fte_ptr = fte_ptr;
   return fte_ptr;
 }
 
@@ -96,8 +91,7 @@ ft_get_frame (struct spte *spte_ptr)
    Useful for getting frames before their spt entry exists.
    These frames should be registered in an spt table after acquired. */
 struct fte *
-ft_get_frame_preemptive (pid_t owner, 
-                         enum frame_type frame_type, 
+ft_get_frame_preemptive (enum frame_type frame_type, 
                          struct inode *inode_ptr,
                          off_t offset, 
                          int amount_occupied)
@@ -111,16 +105,14 @@ ft_get_frame_preemptive (pid_t owner,
       if (sfte_ptr == NULL)
         {
           /* Add new shareable frame */
-          fte_ptr = construct_frame (owner, frame_type, inode_ptr, 
-              offset, amount_occupied);
-
-          sft_insert (fte_ptr->fid, inode_ptr, offset);
+          fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
+              amount_occupied);
         }
       else
         {
           /* Found shared frame */
 
-          fte_ptr = ft_find_frame (sfte_ptr->fid);
+          fte_ptr = ft_find_frame (inode_ptr, offset);
           if (fte_ptr->shared)
             {
               /* Frame already is shared with other processes */
@@ -142,7 +134,7 @@ ft_get_frame_preemptive (pid_t owner,
   else
     {
       /* Not a shareable frame */
-      fte_ptr = construct_frame (owner, frame_type, inode_ptr, offset, 
+      fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
           amount_occupied);
     }
 
@@ -150,10 +142,11 @@ ft_get_frame_preemptive (pid_t owner,
 }
 
 static struct fte *
-ft_find_frame (int fid)
+ft_find_frame (struct inode *inode_ptr, off_t offset)
 {
   struct fte fte;
-  fte.fid = fid;
+  fte.inode_ptr = inode_ptr;
+  fte.offset = offset;
 
   struct hash_elem *e_ptr = hash_find (&ft, &fte.hash_elem);
 
@@ -162,8 +155,7 @@ ft_find_frame (int fid)
 }
 
 struct fte *
-construct_frame (pid_t owner, 
-                 enum frame_type frame_type, 
+construct_frame (enum frame_type frame_type, 
                  struct inode *inode_ptr,
                  off_t offset, 
                  int amount_occupied)
@@ -177,8 +169,8 @@ construct_frame (pid_t owner,
   enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
   /* Constructs a pinned frame (unpinned when installed in page table) */
-  struct fte *fte_ptr 
-      = construct_fte (owner, frame_ptr, retrieval_method, amount_occupied);
+  struct fte *fte_ptr = construct_fte (frame_ptr, retrieval_method, inode_ptr, 
+      offset, amount_occupied);
   
   if (fte_ptr == NULL) goto fail_2;
   
@@ -244,22 +236,22 @@ ft_remove_frame (struct fte *fte_ptr)
 /* Constructs a pinned frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
-construct_fte (pid_t owner,
-               void *frame_location,
+construct_fte (void *frame_location,
                enum retrieval_method retrieval_method,
+               struct inode *inode_ptr,
+               off_t offset,
                int amount_occupied)
 {
   struct fte *fte_ptr = malloc (sizeof (struct fte));
   if (fte_ptr == NULL) return NULL;
 
-  lock_acquire (&fid_lock);
-  fte_ptr->fid              = fid_cnt++;
-  lock_release (&fid_lock);
   fte_ptr->swapped          = false;
   fte_ptr->shared           = false;
   fte_ptr->pinned           = true;
-  fte_ptr->owner            = owner;
+  fte_ptr->pde_ptrs         = NULL;
   fte_ptr->frame_location   = frame_location;
+  fte_ptr->inode_ptr        = inode_ptr;
+  fte_ptr->offset           = offset;
   fte_ptr->retrieval_method = retrieval_method;
   fte_ptr->amount_occupied  = amount_occupied;
     
@@ -284,7 +276,7 @@ fte_remove (struct fte *fte_ptr)
 static unsigned
 fte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
 {
-  return hash_entry (e_ptr, struct fte, hash_elem)->fid;
+  return (unsigned) hash_entry (e_ptr, struct fte, hash_elem)->frame_location;
 }
 
 static bool 
@@ -292,8 +284,8 @@ fte_less_func (const struct hash_elem *a_ptr,
                const struct hash_elem *b_ptr,
                void *aux UNUSED) 
 {
-  return hash_entry (a_ptr, struct fte, hash_elem)->fid <
-         hash_entry (b_ptr, struct fte, hash_elem)->fid;
+  return hash_entry (a_ptr, struct fte, hash_elem)->frame_location <
+         hash_entry (b_ptr, struct fte, hash_elem)->frame_location;
 }
 
 static void

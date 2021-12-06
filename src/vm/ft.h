@@ -30,23 +30,24 @@ union Owner
 /* Frame / swap table entry */
 struct fte 
 {
-  int fid;
   bool swapped;
   bool shared;
   bool pinned;
-  pid_t owner;
+  struct inode *inode_ptr;
+  off_t offset;
+  uint32_t *pde_ptrs;
   void *frame_location;
   enum retrieval_method retrieval_method;
   int amount_occupied;
   struct hash_elem hash_elem;
 };
 
+
 bool        ft_init                 (void);
 void        ft_destroy              (void);
 void        ft_remove_frame         (struct fte *fte_ptr);
 struct fte *ft_get_frame            (struct spte *spte_ptr);
-struct fte *ft_get_frame_preemptive (pid_t owner, 
-                                     enum frame_type frame_type, 
+struct fte *ft_get_frame_preemptive (enum frame_type frame_type, 
                                      struct inode *inode_ptr,
                                      off_t offset,
                                      int amount_occupied);
