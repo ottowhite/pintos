@@ -7,6 +7,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "userprog/syscall.h" 
+#include "userprog/process.h" 
 #include "filesys/inode.h"
 #include "filesys/filesys.h"
 #include "vm/ft.h"
@@ -74,6 +75,38 @@ ft_destroy (void)
 bool
 ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 {
+  void *upage   = spte_ptr->uaddr;
+  void *kpage   = fte_ptr->frame_location;
+  bool writable = spte_ptr->writable;
+
+  bool success = install_page (upage, kpage, writable);
+  if (success)
+    {
+      spte_ptr->fte_ptr = fte_ptr;
+      if (fte_ptr->shared)
+        {
+          // TODO: The frame is already shared, add to the existing list
+        }
+      else
+        {
+          // TODO: The frame is not shared yet
+          if (fte_ptr->pde_ptrs == NULL)
+            {
+              // TODO: Add the new page directory entry to pde_ptrs
+            }
+          else
+            {
+              // TODO: Initialize a new list containing both the old
+              //       pde_ptr and the new pde_ptr
+
+            }
+
+        }
+      /* Unpin the frame */
+      fte_ptr->pin_cnt--;
+      return true;
+    }
+  
   return false;
 }
 
