@@ -97,16 +97,13 @@ ft_get_frame_preemptive (enum frame_type frame_type,
 {
   // TODO: Failure handling
   struct fte *fte_ptr;
-  if (frame_type == EXECUTABLE_CODE ||
-      frame_type == MMAP)
+  if ((frame_type == EXECUTABLE_CODE ||
+       frame_type == MMAP)           &&
+      (fte_ptr = ft_find_frame (inode_ptr, offset)) != NULL)
     {
-      fte_ptr = ft_find_frame (inode_ptr, offset);
-      if (fte_ptr != NULL)
-        {
-          /* Found shared frame, pin it until installation. */
-          fte_ptr->pin_cnt++;
-          return fte_ptr;
-        }
+      /* Found shared frame, pin it until installation. */
+      fte_ptr->pin_cnt++;
+      return fte_ptr;
     }
 
   /* Add a new frame */
