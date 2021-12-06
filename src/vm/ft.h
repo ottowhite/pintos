@@ -23,8 +23,8 @@ struct pde_list_elem
 /* list element for the owners list */
 union Pde
 {
-  uint32_t *pde_single;
-  struct list *pde_list;
+  uint32_t *pde_ptr;
+  struct list *pde_list_ptr;
 };
 
 /* Frame / swap table entry */

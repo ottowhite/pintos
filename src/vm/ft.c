@@ -8,6 +8,7 @@
 #include "threads/thread.h"
 #include "userprog/syscall.h" 
 #include "userprog/process.h" 
+#include "userprog/pagedir.h" 
 #include "filesys/inode.h"
 #include "filesys/filesys.h"
 #include "vm/ft.h"
@@ -82,15 +83,24 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
   bool success = install_page (upage, kpage, writable);
   if (success)
     {
+      /* Associate the supplementary page table entry with the frame table
+         entry */
       spte_ptr->fte_ptr = fte_ptr;
+      /* Get the existing page directory entry */
+      uint32_t *pde_ptr 
+          = lookup_page (thread_current ()->pagedir, upage, false);
+
       if (fte_ptr->shared)
         {
-          // TODO: The frame is already shared, add to the existing list
+          /* Add the pde to the existing list of pdes on the fte */
+          struct pde_list_elem *e_ptr = malloc (sizeof (struct pde_list_elem));
+          e_ptr->pde_ptr = pde_ptr;
+          list_push_front (fte_ptr->pdes.pde_list_ptr, &e_ptr->elem);
         }
       else
         {
           // TODO: The frame is not shared yet
-          if (fte_ptr->pde_ptrs == NULL)
+          if (fte_ptr->pdes.pde_ptr == NULL)
             {
               // TODO: Add the new page directory entry to pde_ptrs
             }
@@ -262,7 +272,7 @@ construct_fte (void *frame_location,
   fte_ptr->swapped          = false;
   fte_ptr->shared           = false;
   fte_ptr->pin_cnt          = 1;
-  fte_ptr->pde_ptrs         = NULL;
+  fte_ptr->pdes.pde_ptr     = NULL;
   fte_ptr->frame_location   = frame_location;
   fte_ptr->inode_ptr        = inode_ptr;
   fte_ptr->offset           = offset;
