@@ -626,7 +626,7 @@ setup_stack (void **esp)
       goto fail_3;
 
   *esp = PHYS_BASE;
-  fte_ptr->pinned = false;
+  fte_ptr->pin_cnt--;
 
   return true;
   

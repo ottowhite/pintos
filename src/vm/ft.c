@@ -109,23 +109,8 @@ ft_get_frame_preemptive (enum frame_type frame_type,
         }
       else
         {
-          /* Found shared frame */
-          if (fte_ptr->shared)
-            {
-              /* Frame already is shared with other processes */
-
-              // TODO: Add to the list of shared frames
-            }
-          else
-            {
-              /* Frame not yet shared between processes */
-              fte_ptr->shared = true;
-
-              // TODO: Initialise a singleton list with the
-              //       current fid, store back in same location
-              
-              // TODO: Add the current owner to the list of owners
-            }
+          /* Found shared frame, pin it until installation. */
+          fte_ptr->pin_cnt++;
         }
     }
   else
@@ -244,7 +229,7 @@ construct_fte (void *frame_location,
 
   fte_ptr->swapped          = false;
   fte_ptr->shared           = false;
-  fte_ptr->pinned           = true;
+  fte_ptr->pin_cnt          = 1;
   fte_ptr->pde_ptrs         = NULL;
   fte_ptr->frame_location   = frame_location;
   fte_ptr->inode_ptr        = inode_ptr;

@@ -167,7 +167,7 @@ attempt_frame_load (struct spte *spte_ptr)
  if (success) 
    {
      spte_ptr->fte_ptr = fte_ptr;
-     fte_ptr->pinned = false;
+     fte_ptr->pin_cnt--;
    }
  else
    {
