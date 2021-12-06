@@ -11,7 +11,6 @@
 #include "filesys/filesys.h"
 #include "vm/ft.h"
 #include "vm/spt.h"
-#include "vm/sft.h"
 
 /* Frame table globals */
 static struct hash ft;
