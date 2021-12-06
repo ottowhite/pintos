@@ -103,12 +103,29 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
           if (fte_ptr->pdes.pde_ptr == NULL)
             {
               // TODO: Add the new page directory entry to pde_ptrs
+              fte_ptr->pdes.pde_ptr = pde_ptr;
             }
           else
             {
               // TODO: Initialize a new list containing both the old
               //       pde_ptr and the new pde_ptr
+              struct list *pde_list_ptr 
+                  = malloc (sizeof (struct list));
+              fte_ptr->pdes.pde_list_ptr = pde_list_ptr;
+              list_init (pde_list_ptr);
 
+              struct pde_list_elem *pde_initial_elem_ptr 
+                  = malloc (sizeof (struct pde_list_elem));
+              struct pde_list_elem *pde_new_elem_ptr 
+                  = malloc (sizeof (struct pde_list_elem));
+
+              pde_initial_elem_ptr->pde_ptr = fte_ptr->pdes.pde_ptr;
+              pde_new_elem_ptr->pde_ptr     = pde_ptr;
+
+              list_push_front (fte_ptr->pdes.pde_list_ptr, 
+                               &pde_initial_elem_ptr->elem);
+              list_push_front (fte_ptr->pdes.pde_list_ptr, 
+                               &pde_new_elem_ptr->elem);
             }
 
         }
