@@ -45,10 +45,10 @@ static struct fte *construct_frame (enum frame_type frame_type,
 static struct fte *ft_find_frame   (struct inode *inode_ptr, off_t offset);
 
 static bool fte_add_owner_shared       (struct fte *fte_ptr, 
-                                        uint32_t *pd, 
+                                        struct thread *t_ptr, 
                                         void *upage);
 static bool fte_add_owner_newly_shared (struct fte *fte_ptr, 
-                                        uint32_t *pd, 
+                                        struct thread *t_ptr, 
                                         void *upage);
 
 /* Helper to obtain retrieval methods by frame type */
@@ -109,7 +109,7 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
       goto fail_install_page;
 
   /* Get the existing page directory entry */
-  uint32_t *pagedir = thread_current ()->pagedir;
+  struct thread *t_ptr = thread_current ();
 
   /* If the frame already shared, try and add the new pde to it's
      pde list, otherwise, either add the new non-list pde,
@@ -118,24 +118,24 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
   if (fte_ptr->shared)
     {
       /* If the frame is already shared, attempt to add another owner */
-      if (!fte_add_owner_shared (fte_ptr, pagedir, upage))
+      if (!fte_add_owner_shared (fte_ptr, t_ptr, upage))
           goto fail_add_pde;
     }
   else
     {
       /* Not shared case */
-      if (fte_ptr->owners.owner_single.pd_ptr != NULL)
+      if (fte_ptr->owners.owner_single.owner_ptr != NULL)
         {
           /* If the frame has a single current owner, attempt to add the
              new owner and make the frame shared */
-          if (fte_add_owner_newly_shared (fte_ptr, pagedir, upage))
+          if (fte_add_owner_newly_shared (fte_ptr, t_ptr, upage))
               fte_ptr->shared = true;
           else
               goto fail_add_pde;
         }
       else
           /* If the frame has no current owner, add the owner */
-          fte_ptr->owners.owner_single = (struct owner) { pagedir, upage };
+          fte_ptr->owners.owner_single = (struct owner) { t_ptr, upage };
     }
 
   /* Unpin the frame and associate SPTE with FTE */
@@ -150,12 +150,12 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 /* Add a PDE to a frame table entry that was previously being shared 
    Return false on any allocation failure */
 static bool
-fte_add_owner_shared (struct fte *fte_ptr, uint32_t *pd, void *upage)
+fte_add_owner_shared (struct fte *fte_ptr, struct thread *t_ptr, void *upage)
 {
   /* Add the pde to the existing list of pdes on the fte */
   struct owner_list_elem *e_ptr = malloc (sizeof (struct owner_list_elem));
   if (e_ptr == NULL) return false;
-  e_ptr->owner = (struct owner) { pd, upage };
+  e_ptr->owner = (struct owner) { t_ptr, upage };
   list_push_front (fte_ptr->owners.owner_list_ptr, &e_ptr->elem);
   return true;
 }
@@ -163,7 +163,9 @@ fte_add_owner_shared (struct fte *fte_ptr, uint32_t *pd, void *upage)
 /* Add a PDE to a frame table entry that was not previously being shared 
    Return false on any allocation failure*/
 static bool
-fte_add_owner_newly_shared (struct fte *fte_ptr, uint32_t *pd, void *upage)
+fte_add_owner_newly_shared (struct fte *fte_ptr, 
+                            struct thread *t_ptr, 
+                            void *upage)
 {
   /* Allocate a new list for storage of multiple owners that 
      reference the frame */
@@ -185,7 +187,7 @@ fte_add_owner_newly_shared (struct fte *fte_ptr, uint32_t *pd, void *upage)
       goto fail_3;
 
   owner_initial_elem_ptr->owner = fte_ptr->owners.owner_single;
-  owner_new_elem_ptr->owner     = (struct owner) { pd, upage };
+  owner_new_elem_ptr->owner     = (struct owner) { t_ptr, upage };
 
   list_push_front (fte_ptr->owners.owner_list_ptr, 
                    &owner_initial_elem_ptr->elem);

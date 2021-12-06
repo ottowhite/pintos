@@ -16,7 +16,7 @@ enum retrieval_method
 /* Uniquely references the page table and upage that reference a frame */
 struct owner
 {
-  uint32_t *pd_ptr;
+  struct thread *owner_ptr;
   void *upage_ptr;
 };
 
