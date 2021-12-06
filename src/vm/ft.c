@@ -15,10 +15,10 @@
 #include "vm/spt.h"
 
 /* Frame table globals */
-static struct hash ft;
-static struct lock ft_lock;
-static struct fte* frame_index_arr;
-static size_t      frame_index_size;
+static struct hash  ft;
+static struct lock  ft_lock;
+static struct fte** frame_index_arr;
+static size_t       frame_index_size;
 
 /* Frame table hashmap helpers */
 static unsigned fte_hash_func       (const struct hash_elem *e_ptr, 
@@ -241,6 +241,10 @@ ft_get_frame_preemptive (enum frame_type frame_type,
           amount_occupied);
       if (fte_ptr == NULL) return NULL;
     }
+
+  /* Associate the new frame location in the user pool with the fte */
+  int frame_index = (fte_ptr->frame_location.frame_ptr - PHYS_BASE) / PGSIZE;
+  frame_index_arr[frame_index] = fte_ptr;
 
   return fte_ptr;
 }
