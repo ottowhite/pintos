@@ -42,8 +42,12 @@ static struct fte *construct_frame (enum frame_type frame_type,
 
 static struct fte *ft_find_frame   (struct inode *inode_ptr, off_t offset);
 
-static bool fte_add_pde_shared (struct fte *fte_ptr, uint32_t *pde_ptr);
-static bool fte_add_pde_newly_shared (struct fte *fte_ptr, uint32_t *pde_ptr);
+static bool fte_add_owner_shared       (struct fte *fte_ptr, 
+                                        uint32_t *pd, 
+                                        void *upage);
+static bool fte_add_owner_newly_shared (struct fte *fte_ptr, 
+                                        uint32_t *pd, 
+                                        void *upage);
 
 /* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
@@ -87,21 +91,33 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
       goto fail_install_page;
 
   /* Get the existing page directory entry */
-  uint32_t *pde_ptr = lookup_page (thread_current ()->pagedir, upage, false);
+  uint32_t *pagedir = thread_current ()->pagedir;
 
   /* If the frame already shared, try and add the new pde to it's
      pde list, otherwise, either add the new non-list pde,
      or make a newly shared pde list with the new and old pde. */
-  if (fte_ptr->shared && 
-      !fte_add_pde_shared (fte_ptr, pde_ptr))
-      goto fail_add_pde;
+
+  if (fte_ptr->shared)
+    {
+      /* If the frame is already shared, attempt to add another owner */
+      if (!fte_add_owner_shared (fte_ptr, pagedir, upage))
+          goto fail_add_pde;
+    }
   else
     {
-      if (fte_ptr->pdes.pde_ptr != NULL && 
-          !fte_add_pde_newly_shared (fte_ptr, pde_ptr))
-          goto fail_add_pde;
+      /* Not shared case */
+      if (fte_ptr->owners.owner_single.pd != NULL)
+        {
+          /* If the frame has a single current owner, attempt to add the
+             new owner and make the frame shared */
+          if (fte_add_owner_newly_shared (fte_ptr, pagedir, upage))
+              fte_ptr->shared = true;
+          else
+              goto fail_add_pde;
+        }
       else
-          fte_ptr->pdes.pde_ptr = pde_ptr;
+          /* If the frame has no current owner, add the owner */
+          fte_ptr->owners.owner_single = (struct owner) { pagedir, upage };
     }
 
   /* Unpin the frame and associate SPTE with FTE */
@@ -116,55 +132,55 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 /* Add a PDE to a frame table entry that was previously being shared 
    Return false on any allocation failure */
 static bool
-fte_add_pde_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
+fte_add_owner_shared (struct fte *fte_ptr, uint32_t *pd, void *upage)
 {
   /* Add the pde to the existing list of pdes on the fte */
-  struct pde_list_elem *e_ptr = malloc (sizeof (struct pde_list_elem));
+  struct owner_list_elem *e_ptr = malloc (sizeof (struct owner_list_elem));
   if (e_ptr == NULL) return false;
-  e_ptr->pde_ptr = pde_ptr;
-  list_push_front (fte_ptr->pdes.pde_list_ptr, &e_ptr->elem);
+  e_ptr->owner = (struct owner) { pd, upage };
+  list_push_front (fte_ptr->owners.owner_list_ptr, &e_ptr->elem);
   return true;
 }
 
 /* Add a PDE to a frame table entry that was not previously being shared 
    Return false on any allocation failure*/
 static bool
-fte_add_pde_newly_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
+fte_add_owner_newly_shared (struct fte *fte_ptr, uint32_t *pd, void *upage)
 {
-  /* Allocate a new list for storage of multiple pdes that 
+  /* Allocate a new list for storage of multiple owners that 
      reference the frame */
-  struct list *pde_list_ptr = malloc (sizeof (struct list));
-  if (pde_list_ptr == NULL) 
+  struct list *owner_list_ptr = malloc (sizeof (struct list));
+  if (owner_list_ptr == NULL) 
       goto fail_1;
-  list_init (pde_list_ptr);
+  list_init (owner_list_ptr);
 
-  /* Set up two new pde_list_elems, one for the old pde and one
+  /* Set up two new owner_list_elems, one for the old owner and one
      for the one we are adding to the referencers of the frame*/
-  struct pde_list_elem *pde_initial_elem_ptr 
-      = malloc (sizeof (struct pde_list_elem));
-  if (pde_initial_elem_ptr == NULL)
+  struct owner_list_elem *owner_initial_elem_ptr 
+      = malloc (sizeof (struct owner_list_elem));
+  if (owner_initial_elem_ptr == NULL)
       goto fail_2;
 
-  struct pde_list_elem *pde_new_elem_ptr 
-      = malloc (sizeof (struct pde_list_elem));
-  if (pde_new_elem_ptr == NULL)
+  struct owner_list_elem *owner_new_elem_ptr 
+      = malloc (sizeof (struct owner_list_elem));
+  if (owner_new_elem_ptr == NULL)
       goto fail_3;
 
-  pde_initial_elem_ptr->pde_ptr = fte_ptr->pdes.pde_ptr;
-  pde_new_elem_ptr->pde_ptr     = pde_ptr;
+  owner_initial_elem_ptr->owner = fte_ptr->owners.owner_single;
+  owner_new_elem_ptr->owner     = (struct owner) { pd, upage };
 
-  list_push_front (fte_ptr->pdes.pde_list_ptr, 
-                   &pde_initial_elem_ptr->elem);
-  list_push_front (fte_ptr->pdes.pde_list_ptr, 
-                   &pde_new_elem_ptr->elem);
+  list_push_front (fte_ptr->owners.owner_list_ptr, 
+                   &owner_initial_elem_ptr->elem);
+  list_push_front (fte_ptr->owners.owner_list_ptr, 
+                   &owner_new_elem_ptr->elem);
 
   /* If all was successful, associate the frame with the newly created
-     list of pdes */
-  fte_ptr->pdes.pde_list_ptr = pde_list_ptr;
+     list of owners */
+  fte_ptr->owners.owner_list_ptr = owner_list_ptr;
   return true;
 
-  fail_3: free (pde_initial_elem_ptr);
-  fail_2: free (pde_list_ptr);
+  fail_3: free (owner_initial_elem_ptr);
+  fail_2: free (owner_list_ptr);
   fail_1: return false;
 }
 
@@ -317,15 +333,15 @@ construct_fte (void *frame_location,
   struct fte *fte_ptr = malloc (sizeof (struct fte));
   if (fte_ptr == NULL) return NULL;
 
-  fte_ptr->swapped          = false;
-  fte_ptr->shared           = false;
-  fte_ptr->pin_cnt          = 1;
-  fte_ptr->pdes.pde_ptr     = NULL;
-  fte_ptr->frame_location   = frame_location;
-  fte_ptr->inode_ptr        = inode_ptr;
-  fte_ptr->offset           = offset;
-  fte_ptr->retrieval_method = retrieval_method;
-  fte_ptr->amount_occupied  = amount_occupied;
+  fte_ptr->swapped             = false;
+  fte_ptr->shared              = false;
+  fte_ptr->pin_cnt             = 1;
+  fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
+  fte_ptr->frame_location      = frame_location;
+  fte_ptr->inode_ptr           = inode_ptr;
+  fte_ptr->offset              = offset;
+  fte_ptr->retrieval_method    = retrieval_method;
+  fte_ptr->amount_occupied     = amount_occupied;
     
   return fte_ptr;
 }
