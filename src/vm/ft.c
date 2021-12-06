@@ -278,6 +278,19 @@ evict (void)
          i = (int) (random_ulong () % frame_index_size));
 
   struct fte *fte_ptr = frame_index_arr[i];
+
+  bool dirty;
+  if (fte_ptr->shared)
+    {
+      // TODO: Iterate over obervers to see if any of them are dirty
+    }
+  else
+    {
+      struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
+      void *upage              = fte_ptr->owners.owner_single.upage_ptr;
+      dirty                    = pagedir_is_dirty (owner_ptr->pagedir, upage);
+    }
+
 }
 
 struct fte *
