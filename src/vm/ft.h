@@ -35,7 +35,7 @@ struct fte
   int pin_cnt;
   struct inode *inode_ptr;
   off_t offset;
-  uint32_t *pde_ptrs;
+  union Pde pdes;
   void *frame_location;
   enum retrieval_method retrieval_method;
   int amount_occupied;
