@@ -34,7 +34,6 @@ union Frame_location
   int swap_index;
 };
 
-/* list element for the owners list */
 /* When shared is false, use owner_single, otherwise use owner_list_ptr */
 union Owner
 {

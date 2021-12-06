@@ -1,6 +1,7 @@
 #include <hash.h>
 #include <debug.h>
 #include <string.h>
+#include <random.h>
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -53,6 +54,8 @@ static bool fte_add_owner_newly_shared (struct fte *fte_ptr,
 
 /* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
+
+static void evict (void);
 
 /* Helper for reading from inode when creating frame */
 static off_t read_from_inode (void *frame_ptr, 
@@ -234,6 +237,7 @@ ft_get_frame_preemptive (enum frame_type frame_type,
       (fte_ptr = ft_find_frame (inode_ptr, offset)) != NULL)
     {
       /* Found shared frame, pin it until installation. */
+      // TODO: Swap in if necessary
       fte_ptr->pin_cnt++;
     }
   else
@@ -264,6 +268,12 @@ ft_find_frame (struct inode *inode_ptr, off_t offset)
   return hash_entry (e_ptr, struct fte, hash_elem);
 }
 
+static void
+evict (void)
+{
+  
+}
+
 struct fte *
 construct_frame (enum frame_type frame_type, 
                  struct inode *inode_ptr,
@@ -275,7 +285,7 @@ construct_frame (enum frame_type frame_type,
                                         ? PAL_USER | PAL_ZERO 
                                         : PAL_USER);
   if (frame_ptr == NULL) 
-      goto fail_1;
+      evict ();
 
   enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
