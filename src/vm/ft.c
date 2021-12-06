@@ -65,13 +65,20 @@ static off_t read_from_inode (void *frame_ptr,
 bool 
 ft_init (void)
 {
-  if (!hash_init (&ft, &fte_hash_func, &fte_less_func, NULL)) return false;
+  if (!hash_init (&ft, &fte_hash_func, &fte_less_func, NULL)) 
+      goto fail_1;
   lock_init (&ft_lock);
   /* Frame index is used for eviction to store which ftes correspond to
      which frames */
   frame_index_size = (get_user_pool_start () - PHYS_BASE) / PGSIZE;
   frame_index_arr  = malloc (frame_index_size * sizeof (struct fte *));
+  if (frame_index_arr == NULL)
+      goto fail_2;
+
   return true;
+
+  fail_2: ft_destroy ();
+  fail_1: return false;
 }
 
 /* Deallocate the frame / swap table and all entries. 
