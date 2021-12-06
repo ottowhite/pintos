@@ -271,7 +271,13 @@ ft_find_frame (struct inode *inode_ptr, off_t offset)
 static void
 evict (void)
 {
-  
+  /* Obtain a random int from 0 to frame_index_size (exclusive) */
+  int i = (int) (random_ulong () % frame_index_size);
+  /* Keep trying until we find a frame that is not pinned to evict */
+  for (; frame_index_arr[i]->pin_cnt != 0; 
+         i = (int) (random_ulong () % frame_index_size));
+
+  struct fte *fte_ptr = frame_index_arr[i];
 }
 
 struct fte *
