@@ -99,16 +99,12 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
         }
       else
         {
-          // TODO: The frame is not shared yet
           if (fte_ptr->pdes.pde_ptr == NULL)
             {
-              // TODO: Add the new page directory entry to pde_ptrs
               fte_ptr->pdes.pde_ptr = pde_ptr;
             }
           else
             {
-              // TODO: Initialize a new list containing both the old
-              //       pde_ptr and the new pde_ptr
               fte_add_pde_newly_shared (fte_ptr, pde_ptr);
             }
 
@@ -135,15 +131,24 @@ fte_add_pde_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
 static bool
 fte_add_pde_newly_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
 {
-  struct list *pde_list_ptr 
-      = malloc (sizeof (struct list));
-  fte_ptr->pdes.pde_list_ptr = pde_list_ptr;
+  /* Allocate a new list for storage of multiple pdes that 
+     reference the frame */
+  struct list *pde_list_ptr = malloc (sizeof (struct list));
+  if (pde_list_ptr == NULL) 
+      goto fail_1;
   list_init (pde_list_ptr);
 
+  /* Set up two new pde_list_elems, one for the old pde and one
+     for the one we are adding to the referencers of the frame*/
   struct pde_list_elem *pde_initial_elem_ptr 
       = malloc (sizeof (struct pde_list_elem));
+  if (pde_initial_elem_ptr == NULL)
+      goto fail_2;
+
   struct pde_list_elem *pde_new_elem_ptr 
       = malloc (sizeof (struct pde_list_elem));
+  if (pde_new_elem_ptr == NULL)
+      goto fail_3;
 
   pde_initial_elem_ptr->pde_ptr = fte_ptr->pdes.pde_ptr;
   pde_new_elem_ptr->pde_ptr     = pde_ptr;
@@ -152,7 +157,15 @@ fte_add_pde_newly_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
                    &pde_initial_elem_ptr->elem);
   list_push_front (fte_ptr->pdes.pde_list_ptr, 
                    &pde_new_elem_ptr->elem);
+
+  /* If all was successful, associate the frame with the newly created
+     list of pdes */
+  fte_ptr->pdes.pde_list_ptr = pde_list_ptr;
   return true;
+
+  fail_3: free (pde_initial_elem_ptr);
+  fail_2: free (pde_list_ptr);
+  fail_1: return false;
 }
 
 /* Obtains a user pool page and constructs a pinned frame table entry
