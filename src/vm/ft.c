@@ -103,11 +103,14 @@ ft_get_frame_preemptive (enum frame_type frame_type,
     {
       /* Found shared frame, pin it until installation. */
       fte_ptr->pin_cnt++;
-      return fte_ptr;
+    }
+  else
+    {
+      /* Construct a new pinned frame */
+      fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
+          amount_occupied);
     }
 
-  /* Add a new frame */
-  fte_ptr = construct_frame (frame_type, inode_ptr, offset, amount_occupied);
   return fte_ptr;
 }
 
