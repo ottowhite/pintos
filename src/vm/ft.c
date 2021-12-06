@@ -42,6 +42,9 @@ static struct fte *construct_frame (enum frame_type frame_type,
 
 static struct fte *ft_find_frame   (struct inode *inode_ptr, off_t offset);
 
+static bool fte_add_pde_shared (struct fte *fte_ptr, uint32_t *pde_ptr);
+static bool fte_add_pde_newly_shared (struct fte *fte_ptr, uint32_t *pde_ptr);
+
 /* Helper to obtain retrieval methods by frame type */
 static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
 
@@ -92,10 +95,7 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 
       if (fte_ptr->shared)
         {
-          /* Add the pde to the existing list of pdes on the fte */
-          struct pde_list_elem *e_ptr = malloc (sizeof (struct pde_list_elem));
-          e_ptr->pde_ptr = pde_ptr;
-          list_push_front (fte_ptr->pdes.pde_list_ptr, &e_ptr->elem);
+          fte_add_pde_shared (fte_ptr, pde_ptr);
         }
       else
         {
@@ -109,23 +109,7 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
             {
               // TODO: Initialize a new list containing both the old
               //       pde_ptr and the new pde_ptr
-              struct list *pde_list_ptr 
-                  = malloc (sizeof (struct list));
-              fte_ptr->pdes.pde_list_ptr = pde_list_ptr;
-              list_init (pde_list_ptr);
-
-              struct pde_list_elem *pde_initial_elem_ptr 
-                  = malloc (sizeof (struct pde_list_elem));
-              struct pde_list_elem *pde_new_elem_ptr 
-                  = malloc (sizeof (struct pde_list_elem));
-
-              pde_initial_elem_ptr->pde_ptr = fte_ptr->pdes.pde_ptr;
-              pde_new_elem_ptr->pde_ptr     = pde_ptr;
-
-              list_push_front (fte_ptr->pdes.pde_list_ptr, 
-                               &pde_initial_elem_ptr->elem);
-              list_push_front (fte_ptr->pdes.pde_list_ptr, 
-                               &pde_new_elem_ptr->elem);
+              fte_add_pde_newly_shared (fte_ptr, pde_ptr);
             }
 
         }
@@ -135,6 +119,40 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
     }
   
   return false;
+}
+
+static bool
+fte_add_pde_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
+{
+  /* Add the pde to the existing list of pdes on the fte */
+  struct pde_list_elem *e_ptr = malloc (sizeof (struct pde_list_elem));
+  if (e_ptr == NULL) return false;
+  e_ptr->pde_ptr = pde_ptr;
+  list_push_front (fte_ptr->pdes.pde_list_ptr, &e_ptr->elem);
+  return true;
+}
+
+static bool
+fte_add_pde_newly_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
+{
+  struct list *pde_list_ptr 
+      = malloc (sizeof (struct list));
+  fte_ptr->pdes.pde_list_ptr = pde_list_ptr;
+  list_init (pde_list_ptr);
+
+  struct pde_list_elem *pde_initial_elem_ptr 
+      = malloc (sizeof (struct pde_list_elem));
+  struct pde_list_elem *pde_new_elem_ptr 
+      = malloc (sizeof (struct pde_list_elem));
+
+  pde_initial_elem_ptr->pde_ptr = fte_ptr->pdes.pde_ptr;
+  pde_new_elem_ptr->pde_ptr     = pde_ptr;
+
+  list_push_front (fte_ptr->pdes.pde_list_ptr, 
+                   &pde_initial_elem_ptr->elem);
+  list_push_front (fte_ptr->pdes.pde_list_ptr, 
+                   &pde_new_elem_ptr->elem);
+  return true;
 }
 
 /* Obtains a user pool page and constructs a pinned frame table entry
