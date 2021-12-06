@@ -13,7 +13,7 @@ enum retrieval_method
   SWAP
 };
 
-/* Uniquely references the page table and upage that reference a frame */
+/* Uniquely references the thread and upage that reference a frame */
 struct owner
 {
   struct thread *owner_ptr;
@@ -27,6 +27,7 @@ struct owner_list_elem
   struct list_elem elem;
 };
 
+/* When swapped is false, use frame_ptr, otherwise use swap_index */
 union Frame_location
 {
   void *frame_ptr;
@@ -34,6 +35,7 @@ union Frame_location
 };
 
 /* list element for the owners list */
+/* When shared is false, use owner_single, otherwise use owner_list_ptr */
 union Owner
 {
   struct owner owner_single;
