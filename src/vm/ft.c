@@ -101,25 +101,16 @@ ft_get_frame_preemptive (enum frame_type frame_type,
       frame_type == MMAP)
     {
       fte_ptr = ft_find_frame (inode_ptr, offset);
-      if (fte_ptr == NULL)
-        {
-          /* Add new shareable frame */
-          fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
-              amount_occupied);
-        }
-      else
+      if (fte_ptr != NULL)
         {
           /* Found shared frame, pin it until installation. */
           fte_ptr->pin_cnt++;
+          return fte_ptr;
         }
     }
-  else
-    {
-      /* Not a shareable frame */
-      fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
-          amount_occupied);
-    }
 
+  /* Add a new frame */
+  fte_ptr = construct_frame (frame_type, inode_ptr, offset, amount_occupied);
   return fte_ptr;
 }
 
