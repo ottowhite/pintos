@@ -14,17 +14,17 @@ enum retrieval_method
 };
 
 /* used to store a single owner when multiple processes own a frame */
-struct shared_owner 
+struct pde_list_elem
 {
-  pid_t owner;
+  uint32_t *pde_ptr;
   struct list_elem elem;
 };
 
 /* list element for the owners list */
-union Owner 
+union Pde
 {
-  pid_t owner;
-  struct list shared_owners;
+  uint32_t *pde_single;
+  struct list *pde_list;
 };
 
 /* Frame / swap table entry */
