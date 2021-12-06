@@ -95,7 +95,6 @@ ft_get_frame_preemptive (enum frame_type frame_type,
                          off_t offset, 
                          int amount_occupied)
 {
-  // TODO: Failure handling
   struct fte *fte_ptr;
   if ((frame_type == EXECUTABLE_CODE ||
        frame_type == MMAP)           &&
@@ -109,6 +108,7 @@ ft_get_frame_preemptive (enum frame_type frame_type,
       /* Construct a new pinned frame */
       fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
           amount_occupied);
+      if (fte_ptr == NULL) return NULL;
     }
 
   return fte_ptr;
