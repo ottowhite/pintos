@@ -93,20 +93,19 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
       uint32_t *pde_ptr 
           = lookup_page (thread_current ()->pagedir, upage, false);
 
-      if (fte_ptr->shared)
-        {
-          fte_add_pde_shared (fte_ptr, pde_ptr);
-        }
+      /* If the frame already shared, try and add the new pde to it's
+         pde list, otherwise, either add the new non-list pde,
+         or make a newly shared pde list with the new and old pde. */
+      if (fte_ptr->shared && 
+          !fte_add_pde_shared (fte_ptr, pde_ptr))
+          return false;
       else
         {
-          if (fte_ptr->pdes.pde_ptr == NULL)
-            {
-              fte_ptr->pdes.pde_ptr = pde_ptr;
-            }
+          if (fte_ptr->pdes.pde_ptr != NULL && 
+              !fte_add_pde_newly_shared (fte_ptr, pde_ptr))
+              return false;
           else
-            {
-              fte_add_pde_newly_shared (fte_ptr, pde_ptr);
-            }
+              fte_ptr->pdes.pde_ptr = pde_ptr;
 
         }
       /* Unpin the frame */
@@ -117,6 +116,8 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
   return false;
 }
 
+/* Add a PDE to a frame table entry that was previously being shared 
+   Return false on any allocation failure */
 static bool
 fte_add_pde_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
 {
@@ -128,6 +129,8 @@ fte_add_pde_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
   return true;
 }
 
+/* Add a PDE to a frame table entry that was not previously being shared 
+   Return false on any allocation failure*/
 static bool
 fte_add_pde_newly_shared (struct fte *fte_ptr, uint32_t *pde_ptr)
 {
