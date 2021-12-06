@@ -27,6 +27,11 @@ struct owner_list_elem
   struct list_elem elem;
 };
 
+union Frame_location
+{
+  void *frame_ptr;
+  int swap_index;
+};
 
 /* list element for the owners list */
 union Owner
@@ -44,7 +49,7 @@ struct fte
   struct inode *inode_ptr;
   off_t offset;
   union Owner owners;
-  void *frame_location;
+  union Frame_location frame_location;
   enum retrieval_method retrieval_method;
   int amount_occupied;
   struct hash_elem hash_elem;

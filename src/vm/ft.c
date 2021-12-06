@@ -30,7 +30,7 @@ static void     fte_deallocate_func (struct hash_elem *e_ptr,
 /* Frame table entry helpers */
 static void        fte_insert      (struct fte *fte_ptr);
 static void        fte_remove      (struct fte *fte_ptr);
-static struct fte *construct_fte   (void *frame_location,
+static struct fte *construct_fte   (union Frame_location frame_location,
                                     enum retrieval_method retrieval_method,
                                     struct inode *inode_ptr,
                                     off_t offset,
@@ -84,7 +84,8 @@ bool
 ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 {
   void *upage   = spte_ptr->uaddr;
-  void *kpage   = fte_ptr->frame_location;
+  /* TODO: handle case in which the frame is swapped*/
+  void *kpage   = fte_ptr->frame_location.frame_ptr;
   bool writable = spte_ptr->writable;
 
   if (!install_page (upage, kpage, writable))
@@ -255,9 +256,10 @@ construct_frame (enum frame_type frame_type,
 
   enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
 
+  union Frame_location frame_location = { .frame_ptr = frame_ptr };
   /* Constructs a pinned frame (unpinned when installed in page table) */
-  struct fte *fte_ptr = construct_fte (frame_ptr, retrieval_method, inode_ptr, 
-      offset, amount_occupied);
+  struct fte *fte_ptr = construct_fte (frame_location, retrieval_method, 
+      inode_ptr, offset, amount_occupied);
   
   if (fte_ptr == NULL) 
       goto fail_2;
@@ -317,14 +319,14 @@ get_retrieval_method (enum frame_type frame_type)
 void 
 ft_remove_frame (struct fte *fte_ptr)
 {
-  palloc_free_page (fte_ptr->frame_location);
+  palloc_free_page (fte_ptr->frame_location.frame_ptr);
   fte_remove (fte_ptr);
 }
 
 /* Constructs a pinned frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
-construct_fte (void *frame_location,
+construct_fte (union Frame_location frame_location,
                enum retrieval_method retrieval_method,
                struct inode *inode_ptr,
                off_t offset,
@@ -373,8 +375,8 @@ fte_less_func (const struct hash_elem *a_ptr,
                const struct hash_elem *b_ptr,
                void *aux UNUSED) 
 {
-  return hash_entry (a_ptr, struct fte, hash_elem)->frame_location <
-         hash_entry (b_ptr, struct fte, hash_elem)->frame_location;
+  return hash_entry (a_ptr, struct fte, hash_elem)->frame_location.swap_index <
+         hash_entry (b_ptr, struct fte, hash_elem)->frame_location.swap_index;
 }
 
 static void
