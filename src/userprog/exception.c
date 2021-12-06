@@ -153,20 +153,19 @@ page_fault (struct intr_frame *f)
 void
 attempt_frame_load (struct spte *spte_ptr)
 {
- // TODO: Deal with failures more elegantly
- 
- /* Returns null if read failed, obtaining frame, or allocating fte failed */
- struct fte *fte_ptr = ft_get_frame (spte_ptr);
- if (fte_ptr == NULL) syscall_exit (-1);
+  /* Returns null if read failed, obtaining frame, or allocating fte failed */
+  struct fte *fte_ptr = ft_get_frame (spte_ptr);
+  if (fte_ptr == NULL) 
+      goto fail_1;
 
- /* Returns false if installation failed, frame left pinned */
- bool success = ft_install_frame (spte_ptr, fte_ptr);
+  /* Returns false if installation failed, frame left pinned */
+  if (!ft_install_frame (spte_ptr, fte_ptr)) 
+      goto fail_2;
 
- if (!success) 
-   {
-     ft_remove_frame (fte_ptr);
-     syscall_exit (-1);
-   }
+  return;
+
+  fail_2: //TODO: Remove spte, will implicitly remove frame if not shared
+  fail_1: syscall_exit (-1);
 }
 
 /* Grows stack if fault_addr was a valid stack access, fails otherwise */
