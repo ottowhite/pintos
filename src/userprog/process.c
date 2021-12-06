@@ -618,12 +618,13 @@ setup_stack (void **esp)
   uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
   
   /* attempt to add the new page to the supplemental page table */
-  if (spt_add_entry (t_ptr->spt_ptr, fte_ptr, uaddr, STACK, NULL, 0, PGSIZE, 
-      true) == NULL)
+  struct spte *spte_ptr = spt_add_entry (t_ptr->spt_ptr, fte_ptr, uaddr, 
+      STACK, NULL, 0, PGSIZE, true);
+  if (spte_ptr == NULL)
       goto fail_2;
   
   /* try and add the new frame to the page table */
-  if (!install_page (uaddr, fte_ptr->frame_location, true))
+  if (!ft_install_frame (spte_ptr, fte_ptr))
       goto fail_3;
   
 
