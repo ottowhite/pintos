@@ -106,7 +106,7 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
   else
     {
       /* Not shared case */
-      if (fte_ptr->owners.owner_single.pd != NULL)
+      if (fte_ptr->owners.owner_single.pd_ptr != NULL)
         {
           /* If the frame has a single current owner, attempt to add the
              new owner and make the frame shared */

@@ -16,8 +16,8 @@ enum retrieval_method
 /* Uniquely references the page table and upage that reference a frame */
 struct owner
 {
-  uint32_t *pd;
-  void *upage;
+  uint32_t *pd_ptr;
+  void *upage_ptr;
 };
 
 /* used to store a single owner when multiple processes own a frame */
