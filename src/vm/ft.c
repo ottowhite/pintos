@@ -71,6 +71,12 @@ ft_destroy (void)
   lock_release (&ft_lock);
 }
 
+bool
+ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
+{
+  return false;
+}
+
 /* Obtains a user pool page and constructs a pinned frame table entry
    to go with it. Returns NULL if either failed.
    Returned frames must be unpinned after they have been installed to a page
