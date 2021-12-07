@@ -294,22 +294,39 @@ evict (void)
 
   struct fte *fte_ptr = frame_index_arr[i];
 
-  // switch (fte_ptr->eviction_method)
-  //   {
-  //     case SWAP:   frame_swap   (fte_ptr); break;
-  //     case DELETE: frame_delete (fte_ptr); break;
-  //     // NOTE: In this case we only want to delete if not dirty,
-  //     //       so we need to know if any PTEs are dirty before
-  //     //       by performing an extra pass
-  //     case SWAP_IF_DIRTY:  // DELETE OTHERWISE
-  //         frame_invoke_dirty_delete_clean (&frame_swap, fte_ptr); 
-  //         break;
-  //     // NOTE: In this case we know for sure that swapping is false
-  //     case WRITE_IF_DIRTY:  // DELETE OTHERWISE  
-  //         frame_invoke_dirty_delete_clean (&frame_write, fte_ptr); 
-  //         break;
-  //     default: NOT_REACHED ();
-  //   }
+  switch (fte_ptr->eviction_method)
+    {
+      case SWAP:
+        {
+          frame_swap (fte_ptr); 
+          break;
+        }
+      case DELETE: 
+        {
+          frame_remove_owners (fte_ptr, true);
+          frame_delete (fte_ptr); 
+          break;
+        }
+      case SWAP_IF_DIRTY:
+        {
+          bool dirty = frame_dirty (fte_ptr);
+          frame_remove_owners (fte_ptr, !dirty);
+          if (dirty) frame_swap   (fte_ptr);
+          else       frame_delete (fte_ptr);
+
+          break;
+        }
+      case WRITE_IF_DIRTY:
+        {
+          bool dirty = frame_dirty (fte_ptr);
+          frame_remove_owners (fte_ptr, true);
+          if (dirty) frame_write  (fte_ptr);
+          else       frame_delete (fte_ptr);
+
+          break;
+        }
+      default: NOT_REACHED ();
+    }
 
 }
 
