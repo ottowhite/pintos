@@ -34,7 +34,7 @@ static void     fte_deallocate_func (struct hash_elem *e_ptr,
 static void        fte_insert      (struct fte *fte_ptr);
 static void        fte_remove      (struct fte *fte_ptr);
 static struct fte *construct_fte   (union Frame_location loc,
-                                    enum retrieval_method retrieval_method,
+                                    enum eviction_method eviction_method,
                                     struct inode *inode_ptr,
                                     off_t offset,
                                     int amount_occupied);
@@ -52,8 +52,8 @@ static bool fte_add_owner_newly_shared (struct fte *fte_ptr,
                                         struct thread *t_ptr, 
                                         void *upage);
 
-/* Helper to obtain retrieval methods by frame type */
-static enum retrieval_method get_retrieval_method (enum frame_type frame_type);
+/* Helper to obtain eviction methods by frame type */
+static enum eviction_method get_eviction_method (enum frame_type frame_type);
 
 static void evict (void);
 
@@ -306,11 +306,11 @@ construct_frame (enum frame_type frame_type,
   if (frame_ptr == NULL) 
       evict ();
 
-  enum retrieval_method retrieval_method = get_retrieval_method (frame_type);
+  enum eviction_method eviction_method = get_eviction_method (frame_type);
 
   /* Constructs a pinned frame (unpinned when installed in page table) */
   struct fte *fte_ptr = construct_fte (
-      (union Frame_location) { .frame_ptr = frame_ptr }, retrieval_method, 
+      (union Frame_location) { .frame_ptr = frame_ptr }, eviction_method, 
       inode_ptr, offset, amount_occupied);
   
   if (fte_ptr == NULL) 
@@ -352,17 +352,17 @@ read_from_inode (void *frame_ptr,
   return bytes_read;
 }
 
-/* Helper to obtain retrieval methods by frame type */
-static enum retrieval_method
-get_retrieval_method (enum frame_type frame_type)
+/* Helper to obtain eviction methods by frame type */
+static enum eviction_method
+get_eviction_method (enum frame_type frame_type)
 {
   switch (frame_type) 
     {
       case     STACK:           return SWAP;
+      case     EXECUTABLE_DATA: return SWAP_IF_DIRTY;
+      case     MMAP:            return WRITE_IF_DIRTY;
       case     EXECUTABLE_CODE: return DELETE;
-      case     EXECUTABLE_DATA: return DELETE;
       case     ALL_ZERO:        return DELETE;
-      case     MMAP:            return WRITE_READ;
       default: NOT_REACHED ();
     }
 }
@@ -379,7 +379,7 @@ ft_remove_frame (struct fte *fte_ptr)
    returns NULL if memory allocation failed */
 static struct fte * 
 construct_fte (union Frame_location loc,
-               enum retrieval_method retrieval_method,
+               enum eviction_method eviction_method,
                struct inode *inode_ptr,
                off_t offset,
                int amount_occupied)
@@ -391,10 +391,10 @@ construct_fte (union Frame_location loc,
   fte_ptr->shared              = false;
   fte_ptr->pin_cnt             = 1;
   fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
-  fte_ptr->loc      = loc;
+  fte_ptr->loc                 = loc;
   fte_ptr->inode_ptr           = inode_ptr;
   fte_ptr->offset              = offset;
-  fte_ptr->retrieval_method    = retrieval_method;
+  fte_ptr->eviction_method     = eviction_method;
   fte_ptr->amount_occupied     = amount_occupied;
     
   return fte_ptr;

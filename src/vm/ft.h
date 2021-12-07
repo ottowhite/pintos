@@ -6,11 +6,12 @@
 #include "vm/spt.h"
 
 /* Retrieval methods for frame table entries being evicted */
-enum retrieval_method
+enum eviction_method
 {
   DELETE,
-  WRITE_READ,
-  SWAP
+  SWAP,
+  SWAP_IF_DIRTY,
+  WRITE_IF_DIRTY
 };
 
 /* Uniquely references the thread and upage that reference a frame */
@@ -51,7 +52,7 @@ struct fte
   off_t offset;
   union Owner owners;
   union Frame_location loc;
-  enum retrieval_method retrieval_method;
+  enum eviction_method eviction_method;
   int amount_occupied;
   struct hash_elem hash_elem;
 };
