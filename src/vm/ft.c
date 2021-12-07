@@ -314,7 +314,7 @@ construct_frame (enum frame_type frame_type,
       inode_ptr, offset, amount_occupied);
   
   if (fte_ptr == NULL) 
-      goto fail_2;
+      goto fail;
   
   /* Read in the necessary data from the filesystem if frame type requires */
   if (frame_type == EXECUTABLE_CODE  || 
@@ -323,7 +323,7 @@ construct_frame (enum frame_type frame_type,
     {
       if (read_from_inode (frame_ptr, inode_ptr, offset, amount_occupied) 
               != amount_occupied)
-          goto fail_2;
+          goto fail;
     }
 
   /* Zero pad the remaining bits */
@@ -333,8 +333,8 @@ construct_frame (enum frame_type frame_type,
   fte_insert (fte_ptr);
   return fte_ptr;
 
-  fail_2: palloc_free_page (frame_ptr);
-  fail_1: return NULL;
+  fail: palloc_free_page (frame_ptr);
+        return NULL;
 }
 
 /* Locks the filesystem whilst reading bytes_to_read bytes from the inode 
