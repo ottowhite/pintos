@@ -16,7 +16,11 @@ static struct lock swap_lock;
 void
 swap_init()
 {
-  
+  swap_device = block_get_role (BLOCK_SWAP);
+  swap_bitmap = bitmap_create (block_size (swap_device) / SECTORS_PER_PAGE);
+  if (swap_bitmap == NULL)
+    PANIC ("Memory allocation for swap bitmap failed--Swap device is too large");
+  lock_init (&swap_lock);
 }
 
 /* Swaps in the page from the swap table into the memory */
