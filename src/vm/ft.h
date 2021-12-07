@@ -6,8 +6,7 @@
 #include "vm/spt.h"
 
 /* Retrieval methods for frame table entries being evicted */
-enum eviction_method
-{
+enum eviction_method {
   DELETE,
   SWAP,
   SWAP_IF_DIRTY,

@@ -428,7 +428,9 @@ evict (void)
     {
       case SWAP:
         {
+          void *frame_ptr = fte_ptr->loc.frame_ptr;
           swap_out (fte_ptr); 
+          palloc_free_page (frame_ptr);
           break;
         }
       case DELETE: 
@@ -441,8 +443,14 @@ evict (void)
         {
           bool dirty = frame_dirty (fte_ptr);
           frame_remove_owners (fte_ptr, !dirty);
-          if (dirty) swap_out     (fte_ptr);
-          else       frame_delete (fte_ptr);
+          if (dirty) 
+            {
+              void *frame_ptr = fte_ptr->loc.frame_ptr;
+              swap_out (fte_ptr);
+              palloc_free_page (frame_ptr);
+            }
+          else
+              frame_delete (fte_ptr);
 
           break;
         }
@@ -451,14 +459,13 @@ evict (void)
           bool dirty = frame_dirty (fte_ptr);
           frame_remove_owners (fte_ptr, true);
           if (dirty) frame_write  (fte_ptr);
-          else       frame_delete (fte_ptr);
 
+          frame_delete (fte_ptr);
           break;
         }
       default: NOT_REACHED ();
     }
 
-  frame_delete (fte_ptr);
   frame_index_arr[i] = NULL;
 }
 
