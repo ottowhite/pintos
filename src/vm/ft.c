@@ -379,6 +379,18 @@ get_eviction_method (enum frame_type frame_type)
     }
 }
 
+void 
+ft_remove_owner (struct fte *fte_ptr)
+{
+
+}
+
+void 
+ft_remove_frame_if_necessary (struct fte *fte_ptr)
+{
+  
+}
+
 /* Frees a frame, deallocates and removes the assocated ft entry. */
 void 
 ft_remove_frame (struct fte *fte_ptr)

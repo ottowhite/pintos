@@ -58,14 +58,16 @@ struct fte
 };
 
 
-bool        ft_init                 (void);
-void        ft_destroy              (void);
-void        ft_remove_frame         (struct fte *fte_ptr);
-struct fte *ft_get_frame            (struct spte *spte_ptr);
-struct fte *ft_get_frame_preemptive (enum frame_type frame_type, 
-                                     struct inode *inode_ptr,
-                                     off_t offset,
-                                     int amount_occupied);
-bool        ft_install_frame        (struct spte *spte_ptr, 
-                                     struct fte *fte_ptr);
+bool        ft_init                      (void);
+void        ft_destroy                   (void);
+void        ft_remove_frame              (struct fte *fte_ptr);
+void        ft_remove_owner              (struct fte *fte_ptr);
+void        ft_remove_frame_if_necessary (struct fte *fte_ptr);
+struct fte *ft_get_frame                 (struct spte *spte_ptr);
+struct fte *ft_get_frame_preemptive      (enum frame_type frame_type, 
+                                          struct inode *inode_ptr,
+                                          off_t offset,
+                                          int amount_occupied);
+bool        ft_install_frame             (struct spte *spte_ptr, 
+                                          struct fte *fte_ptr);
 #endif

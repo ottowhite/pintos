@@ -153,8 +153,12 @@ spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
 
   /* if the page is in the frame table
      the frame is removed from memory/swap space inside of ft_remove_frame */
-  if (spte_ptr->fte_ptr != NULL)
-    ft_remove_frame (spte_ptr->fte_ptr);
+  if (spte_ptr->fte_ptr != NULL) 
+    {
+      ft_remove_owner (spte_ptr->fte_ptr);
+      ft_remove_frame_if_necessary (spte_ptr->fte_ptr);
+    } 
+
 
   free (spte_ptr);
 }
