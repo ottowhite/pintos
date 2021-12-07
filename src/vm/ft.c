@@ -220,7 +220,7 @@ ft_get_frame_preemptive (enum frame_type frame_type,
     }
 
   /* Associate the new frame location in the user pool with the fte */
-  int frame_index = (fte_ptr->loc.frame_ptr - PHYS_BASE) / PGSIZE;
+  int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
   frame_index_arr[frame_index] = fte_ptr;
 
   return fte_ptr;
