@@ -13,18 +13,31 @@ enum retrieval_method
   SWAP
 };
 
-/* used to store a single owner when multiple processes own a frame */
-struct pde_list_elem
+/* Uniquely references the page table and upage that reference a frame */
+struct owner
 {
-  uint32_t *pde_ptr;
+  uint32_t *pd_ptr;
+  void *upage_ptr;
+};
+
+/* used to store a single owner when multiple processes own a frame */
+struct owner_list_elem
+{
+  struct owner owner;
   struct list_elem elem;
 };
 
-/* list element for the owners list */
-union Pde
+union Frame_location
 {
-  uint32_t *pde_ptr;
-  struct list *pde_list_ptr;
+  void *frame_ptr;
+  int swap_index;
+};
+
+/* list element for the owners list */
+union Owner
+{
+  struct owner owner_single;
+  struct list *owner_list_ptr;
 };
 
 /* Frame / swap table entry */
@@ -35,8 +48,8 @@ struct fte
   int pin_cnt;
   struct inode *inode_ptr;
   off_t offset;
-  union Pde pdes;
-  void *frame_location;
+  union Owner owners;
+  union Frame_location loc;
   enum retrieval_method retrieval_method;
   int amount_occupied;
   struct hash_elem hash_elem;

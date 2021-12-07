@@ -40,6 +40,9 @@ static void init_pool (struct pool *, void *base, size_t page_cnt,
                        const char *name);
 static bool page_from_pool (const struct pool *, void *page);
 
+/* Initialized in palloc_init */
+static void *user_pool_start;
+
 /* Initializes the page allocator.  At most USER_PAGE_LIMIT
    pages are put into the user pool. */
 void
@@ -55,10 +58,18 @@ palloc_init (size_t user_page_limit)
     user_pages = user_page_limit;
   kernel_pages = free_pages - user_pages;
 
+  user_pool_start = free_start + kernel_pages * PGSIZE;
+
   /* Give half of memory to kernel, half to user. */
   init_pool (&kernel_pool, free_start, kernel_pages, "kernel pool");
-  init_pool (&user_pool, free_start + kernel_pages * PGSIZE,
-             user_pages, "user pool");
+  init_pool (&user_pool, user_pool_start, user_pages, "user pool");
+}
+
+/* Used to determine the frame table poitner array size */
+void *
+get_user_pool_start (void)
+{
+  return user_pool_start;
 }
 
 /* Updates the bitmap of a pool and returns the value of
