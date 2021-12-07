@@ -385,8 +385,22 @@ ft_remove_owner (struct fte *fte_ptr)
   struct owner owner;
   if (fte_ptr->shared) 
     {
-      // TODO: implement removing owner
-      // TODO: save owner to owner
+      /* loop through the list of owners in the fte until the 
+         list entry correspoding to the current thread is found
+         and then call list_remove on this element and save the 
+         owner to owner */
+      struct thread *t_ptr = thread_current ();
+      for (struct list_elem *e = list_begin (fte_ptr->owners.owner_list_ptr); 
+            e != list_end (fte_ptr->owners.owner_list_ptr);
+            e  = list_next (e))
+        {
+          owner = list_entry (e, struct owner_list_elem, elem)->owner;
+          if (owner.owner_ptr == t_ptr)
+            {
+              list_remove (e);
+              break;
+            }
+        }
     } 
   else 
     {
