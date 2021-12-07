@@ -63,9 +63,11 @@ static void frame_delete (struct fte *fte_ptr);
 static void frame_write  (struct fte *fte_ptr);
 static void frame_swap   (struct fte *fte_ptr);
 
+static bool frame_remove_owners (struct fte *fte_ptr);
 static void frame_remove_owner (struct thread *owner_ptr, void *upage);
 static void frame_invoke_dirty_delete_clean 
                          (void (*func)(struct fte *), struct fte *fte_ptr);
+
 
 /* Helper for reading from inode when creating frame */
 static off_t read_from_inode (void *frame_ptr, 
@@ -337,8 +339,8 @@ frame_write (struct fte *fte_ptr)
   return;
 }
 
-static void
-frame_delete (struct fte *fte_ptr)
+static bool
+frame_remove_owners (struct fte *fte_ptr)
 {
   if (fte_ptr->shared)
     {
@@ -346,9 +348,10 @@ frame_delete (struct fte *fte_ptr)
 
       /* Remove all references to frame and frame table entry held
          by all owners */
-      for (struct list_elem *e  = list_begin (owner_list_ptr); 
-                             e != list_end (owner_list_ptr);
-                             e  = list_next (e))
+      struct list_elem *e;
+      for (e  = list_begin (owner_list_ptr); 
+           e != list_end   (owner_list_ptr);
+           e  = list_next  (e))
         {
           struct owner owner 
               = list_entry (e, struct owner_list_elem, elem)->owner;
@@ -363,6 +366,13 @@ frame_delete (struct fte *fte_ptr)
                           fte_ptr->owners.owner_single.upage_ptr);
     }
 
+  frame_delete (fte_ptr);
+}
+
+/* Deletes a frame and frees the associated frame table entry */
+static void
+frame_delete (struct fte *fte_ptr)
+{
   /* Free the page in memory and the frame table entry */
   ASSERT (!fte_ptr->swapped);
   palloc_free_page (fte_ptr->loc.frame_ptr);
