@@ -65,8 +65,6 @@ static void frame_swap   (struct fte *fte_ptr);
 
 static bool frame_remove_owners (struct fte *fte_ptr);
 static void frame_remove_owner (struct thread *owner_ptr, void *upage);
-static void frame_invoke_dirty_delete_clean 
-                         (void (*func)(struct fte *), struct fte *fte_ptr);
 
 
 /* Helper for reading from inode when creating frame */
@@ -291,45 +289,26 @@ evict (void)
 
   struct fte *fte_ptr = frame_index_arr[i];
 
-  switch (fte_ptr->eviction_method)
-    {
-      case SWAP:   frame_swap   (fte_ptr); break;
-      case DELETE: frame_delete (fte_ptr); break;
-      case SWAP_IF_DIRTY:  
-          frame_invoke_dirty_delete_clean (&frame_swap, fte_ptr); 
-          break;
-      case WRITE_IF_DIRTY: 
-          frame_invoke_dirty_delete_clean (&frame_write, fte_ptr); 
-          break;
-      default: NOT_REACHED ();
-    }
+  // switch (fte_ptr->eviction_method)
+  //   {
+  //     case SWAP:   frame_swap   (fte_ptr); break;
+  //     case DELETE: frame_delete (fte_ptr); break;
+  //     case SWAP_IF_DIRTY:  
+  //         frame_invoke_dirty_delete_clean (&frame_swap, fte_ptr); 
+  //         break;
+  //     case WRITE_IF_DIRTY: 
+  //         frame_invoke_dirty_delete_clean (&frame_write, fte_ptr); 
+  //         break;
+  //     default: NOT_REACHED ();
+  //   }
 
 }
 
 static bool
 frame_dirty (struct fte *fte_ptr)
 {
-  bool dirty;
-  if (fte_ptr->shared)
-    {
-      // TODO: Implement
-      
-    }
-  else
-    {
-      struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
-      void *upage              = fte_ptr->owners.owner_single.upage_ptr;
-      dirty                    = pagedir_is_dirty (owner_ptr->pagedir, upage);
-    }
-  return dirty;
-}
-
-static void
-frame_invoke_dirty_delete_clean (void (*func)(struct fte *), 
-                                 struct fte *fte_ptr)
-{
-  if (frame_dirty (fte_ptr)) (*func)      (fte_ptr);
-  else                       frame_delete (fte_ptr);
+  // TODO: Implement 
+  return false;
 }
 
 static void
@@ -339,23 +318,29 @@ frame_write (struct fte *fte_ptr)
   return;
 }
 
+/* Remove all page table references and SPT references to a frame
+   Return true if any of the page table references were dirty, else false */
 static bool
 frame_remove_owners (struct fte *fte_ptr)
 {
+  bool dirty;
   if (fte_ptr->shared)
     {
       struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
 
       /* Remove all references to frame and frame table entry held
          by all owners */
+      struct owner owner;
       struct list_elem *e;
       for (e  = list_begin (owner_list_ptr); 
            e != list_end   (owner_list_ptr);
            e  = list_next  (e))
         {
-          struct owner owner 
-              = list_entry (e, struct owner_list_elem, elem)->owner;
+          owner = list_entry (e, struct owner_list_elem, elem)->owner;
           frame_remove_owner (owner.owner_ptr, owner.upage_ptr);
+
+          dirty |= pagedir_is_dirty (owner.owner_ptr->pagedir, 
+                                     owner.upage_ptr);
         }
     }
   else
@@ -364,9 +349,11 @@ frame_remove_owners (struct fte *fte_ptr)
          held by the owner */
       frame_remove_owner (fte_ptr->owners.owner_single.owner_ptr, 
                           fte_ptr->owners.owner_single.upage_ptr);
+      struct owner owner = fte_ptr->owners.owner_single;
+      dirty = pagedir_is_dirty (owner.owner_ptr->pagedir, owner.upage_ptr);
     }
 
-  frame_delete (fte_ptr);
+  return dirty;
 }
 
 /* Deletes a frame and frees the associated frame table entry */
