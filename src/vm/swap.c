@@ -1,6 +1,6 @@
 #include "vm/swap.h"
-#include "vm/ft.h"
 #include "vm/spt.h"
+#include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "lib/kernel/bitmap.h"
 
@@ -59,7 +59,7 @@ find_free_slot (block_sector_t *sector_ptr)
     block_sector_t sector = bitmap_scan_and_flip (swap_bitmap, 0, 1, false);
     lock_release (&swap_lock);
 
-    sector_ptr = sector * SECTORS_PER_PAGE;
+    *sector_ptr = sector * SECTORS_PER_PAGE;
 
     return (sector == BITMAP_ERROR);
 }
