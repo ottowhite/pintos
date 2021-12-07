@@ -22,7 +22,7 @@ swap_init()
 void
 swap_in (block_sector_t sector, void *kpage)
 {
-  for (i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
+  for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
     block_read (swap_device, sector, kpage);
   
   // reset the bitmap for resuse
@@ -38,7 +38,7 @@ swap_out (void *kpage)
   if (!find_free_slot (&sector))
    PANIC ("No swap space available");
 
-  for (i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
+  for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
     block_write (swap_device, sector, kpage);
 }
 
@@ -46,7 +46,7 @@ static bool
 find_free_slot (block_sector_t *sector_ptr)
 {
     lock_acquire (&swap_lock);
-    block_sector_t sector = bitmap_scan_and_flip (swap_map, 0, 1, false);
+    block_sector_t sector = bitmap_scan_and_flip (swap_bitmap, 0, 1, false);
     lock_release (&swap_lock);
 
     bool result = (slot == BITMAP_ERROR);
