@@ -346,9 +346,9 @@ frame_delete (struct fte *fte_ptr)
 
       /* Remove all references to frame and frame table entry held
          by all owners */
-      for (struct list_elem *e = list_begin (owner_list_ptr); 
-           e != list_end (owner_list_ptr);
-           e = list_next (e))
+      for (struct list_elem *e  = list_begin (owner_list_ptr); 
+                             e != list_end (owner_list_ptr);
+                             e  = list_next (e))
         {
           struct owner owner 
               = list_entry (e, struct owner_list_elem, elem)->owner;
@@ -362,6 +362,8 @@ frame_delete (struct fte *fte_ptr)
       frame_remove_owner (fte_ptr->owners.owner_single.owner_ptr, 
                           fte_ptr->owners.owner_single.upage_ptr);
     }
+
+  /* Free the page in memory and the frame table entry */
   ASSERT (!fte_ptr->swapped);
   palloc_free_page (fte_ptr->loc.frame_ptr);
   free (fte_ptr);
