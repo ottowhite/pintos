@@ -634,6 +634,7 @@ setup_stack (void **esp)
   return true;
   
   fail_3: spt_remove_entry (t_ptr->spt_ptr, uaddr);
+          return false;
   fail_2: ft_remove_frame (fte_ptr); 
   fail_1: return false;
 }

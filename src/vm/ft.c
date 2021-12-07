@@ -384,9 +384,20 @@ get_eviction_method (enum frame_type frame_type)
 void 
 ft_remove_frame (struct fte *fte_ptr)
 {
-  ASSERT (fte_ptr != NULL);
-  palloc_free_page (fte_ptr->loc.frame_ptr);
-  fte_remove (fte_ptr);
+  if (fte_ptr->shared) // we will assume this means there is more than 1 owner
+    {
+      // TODO: remove the current owner from the list of owners
+      //       and if only 1 owner left then handle that case
+    }
+  else
+    {
+      // TODO: remove from swap if in swap
+      // TODO: call frame_write if dirty
+      fte_ptr->swapped = false;
+      hash_delete (&ft, &fte_ptr->hash_elem);
+      free (fte_ptr);
+      //frame_delete (fte_ptr);
+    }
 }
 
 /* Constructs a pinned frame table entry stored in the kernel pool
@@ -573,7 +584,6 @@ fte_insert (struct fte *fte_ptr)
 static void
 fte_remove (struct fte *fte_ptr)
 {
-  // TODO: remove from swap if in swap
   hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
 }

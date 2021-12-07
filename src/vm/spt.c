@@ -1,6 +1,7 @@
 #include <debug.h>
 #include <hash.h>
 #include "threads/malloc.h"
+#include "threads/synch.h"
 #include "vm/spt.h"
 #include "vm/ft.h"
 
