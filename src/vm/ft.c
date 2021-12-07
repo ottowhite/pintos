@@ -279,17 +279,24 @@ evict (void)
 
   struct fte *fte_ptr = frame_index_arr[i];
 
-  bool dirty;
-  if (fte_ptr->shared)
+  switch (fte_ptr->eviction_method)
     {
-      // TODO: Iterate over obervers to see if any of them are dirty
+      case SWAP:   break;
+      case DELETE: break;
+      case SWAP_IF_DIRTY:
+        {
+          break;
+        }
+      case WRITE_IF_DIRTY:
+        {
+          break;
+        }
+      default: NOT_REACHED ();
     }
-  else
-    {
-      struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
-      void *upage              = fte_ptr->owners.owner_single.upage_ptr;
-      dirty                    = pagedir_is_dirty (owner_ptr->pagedir, upage);
-    }
+
+    // struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
+    // void *upage              = fte_ptr->owners.owner_single.upage_ptr;
+    // bool dirty               = pagedir_is_dirty (owner_ptr->pagedir, upage);
 
 }
 
