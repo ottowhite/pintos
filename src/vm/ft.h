@@ -6,17 +6,18 @@
 #include "vm/spt.h"
 
 /* Retrieval methods for frame table entries being evicted */
-enum retrieval_method
+enum eviction_method
 {
   DELETE,
-  WRITE_READ,
-  SWAP
+  SWAP,
+  SWAP_IF_DIRTY,
+  WRITE_IF_DIRTY
 };
 
-/* Uniquely references the page table and upage that reference a frame */
+/* Uniquely references the thread and upage that reference a frame */
 struct owner
 {
-  uint32_t *pd_ptr;
+  struct thread *owner_ptr;
   void *upage_ptr;
 };
 
@@ -27,13 +28,14 @@ struct owner_list_elem
   struct list_elem elem;
 };
 
+/* When swapped is false, use frame_ptr, otherwise use swap_index */
 union Frame_location
 {
   void *frame_ptr;
   int swap_index;
 };
 
-/* list element for the owners list */
+/* When shared is false, use owner_single, otherwise use owner_list_ptr */
 union Owner
 {
   struct owner owner_single;
@@ -50,7 +52,7 @@ struct fte
   off_t offset;
   union Owner owners;
   union Frame_location loc;
-  enum retrieval_method retrieval_method;
+  enum eviction_method eviction_method;
   int amount_occupied;
   struct hash_elem hash_elem;
 };
