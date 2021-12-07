@@ -2,6 +2,7 @@
 #include <debug.h>
 #include <string.h>
 #include <random.h>
+#include <list.h>
 #include "threads/malloc.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -339,11 +340,20 @@ frame_write (struct fte *fte_ptr)
 static void
 frame_delete (struct fte *fte_ptr)
 {
-  // TODO: Implement
-
   if (fte_ptr->shared)
     {
-      
+      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
+
+      /* Remove all references to frame and frame table entry held
+         by all owners */
+      for (struct list_elem *e = list_begin (owner_list_ptr); 
+           e != list_end (owner_list_ptr);
+           e = list_next (e))
+        {
+          struct owner owner 
+              = list_entry (e, struct owner_list_elem, elem)->owner;
+          frame_remove_owner (owner.owner_ptr, owner.upage_ptr);
+        }
     }
   else
     {
@@ -352,7 +362,6 @@ frame_delete (struct fte *fte_ptr)
       frame_remove_owner (fte_ptr->owners.owner_single.owner_ptr, 
                           fte_ptr->owners.owner_single.upage_ptr);
     }
-  /* */
   ASSERT (!fte_ptr->swapped);
   palloc_free_page (fte_ptr->loc.frame_ptr);
   free (fte_ptr);
