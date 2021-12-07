@@ -2,6 +2,7 @@
 #include "vm/ft.h"
 #include "vm/spt.h"
 #include "threads/vaddr.h"
+#include "lib/kernel/bitmap.h"
 
 
 #define SECTORS_PER_PAGE (PGSIZE / BLOCK_SECTOR_SIZE)
@@ -15,7 +16,11 @@ static struct lock swap_lock;
 void
 swap_init()
 {
-  
+  swap_device = block_get_role (BLOCK_SWAP);
+  swap_bitmap = bitmap_create (block_size (swap_device) / SECTORS_PER_PAGE);
+  if (swap_bitmap == NULL)
+    PANIC ("Memory allocation for swap bitmap failed--Swap device is too large");
+  lock_init (&swap_lock);
 }
 
 /* Swaps in the page from the swap table into the memory */
@@ -25,7 +30,7 @@ swap_in (block_sector_t sector, void *kpage)
   for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
     block_read (swap_device, sector, kpage);
   
-  // reset the bitmap for resuse
+  // reset the bitmap for reuse
   bitmap_reset (swap_bitmap, //number of bits);
 }
 
@@ -37,7 +42,7 @@ swap_out (void *kpage)
   
   if (!find_free_slot (&sector))
    PANIC ("No swap space available");
-
+ 
   for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
     block_write (swap_device, sector, kpage);
 }
@@ -49,13 +54,7 @@ find_free_slot (block_sector_t *sector_ptr)
     block_sector_t sector = bitmap_scan_and_flip (swap_bitmap, 0, 1, false);
     lock_release (&swap_lock);
 
-    bool result = (slot == BITMAP_ERROR);
+    sector_ptr = sector * SECTORS_PER_PAGE;
 
-    // TODO : return error;
-    if (!result)
-      return error;
-
-    *sector_ptr = sector * SECTORS_PER_PAGE;
-
-    return result;
+    return (sector == BITMAP_ERROR);
 }
