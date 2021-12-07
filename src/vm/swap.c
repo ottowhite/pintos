@@ -55,7 +55,7 @@ find_free_slot (block_sector_t *sector_ptr)
     if (!result)
       return error;
 
-    sector_ptr = sector * SECTORS_PER_PAGE;
+    *sector_ptr = sector * SECTORS_PER_PAGE;
 
     return result;
 }
