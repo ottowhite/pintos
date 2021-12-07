@@ -334,15 +334,14 @@ frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
     {
       struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
 
-      struct owner owner;
-      struct list_elem *e;
-      for (e  = list_begin (owner_list_ptr); 
-           e != list_end   (owner_list_ptr);
-           e  = list_next  (e))
-
+      for (struct list_elem *e = list_begin (owner_list_ptr); 
+           e != list_end (owner_list_ptr);
+           e  = list_next (e))
+        {
           frame_remove_owner (
-              list_entry (e, struct owner_list_elem, elem)->owner, 
-              remove_spte_reference);
+                list_entry (e, struct owner_list_elem, elem)->owner, 
+                remove_spte_reference);
+        }
     }
   else
       frame_remove_owner (fte_ptr->owners.owner_single, 
