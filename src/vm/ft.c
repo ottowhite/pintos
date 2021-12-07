@@ -295,10 +295,14 @@ evict (void)
   //   {
   //     case SWAP:   frame_swap   (fte_ptr); break;
   //     case DELETE: frame_delete (fte_ptr); break;
-  //     case SWAP_IF_DIRTY:  
+  //     // NOTE: In this case we only want to delete if not dirty,
+  //     //       so we need to know if any PTEs are dirty before
+  //     //       by performing an extra pass
+  //     case SWAP_IF_DIRTY:  // DELETE OTHERWISE
   //         frame_invoke_dirty_delete_clean (&frame_swap, fte_ptr); 
   //         break;
-  //     case WRITE_IF_DIRTY: 
+  //     // NOTE: In this case we know for sure that swapping is false
+  //     case WRITE_IF_DIRTY:  // DELETE OTHERWISE  
   //         frame_invoke_dirty_delete_clean (&frame_write, fte_ptr); 
   //         break;
   //     default: NOT_REACHED ();
@@ -319,6 +323,11 @@ frame_write (struct fte *fte_ptr)
   // TODO: Implement
   return;
 }
+
+// NOTE:
+// If we are removing the owners from an executable code segment
+// we don't know whether or not we need to delete the frame or 
+// swap it until we know if and of the PTEs are dirty.
 
 /* Removes PTEs referenceing the given frame from all owners.
    If swapping is true, we leave the fte_ptr reference in the owners
