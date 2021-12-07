@@ -25,23 +25,25 @@ swap_init (void)
 
 /* Swaps in the page from the swap table into the memory */
 void
-swap_in (struct fte *fte_ptr)
+swap_in (struct fte *fte_ptr, void *kpage)
 {
   ASSERT (fte_ptr != NULL);
+  ASSERT (fte_ptr->swapped);
 
-  void *kpage = fte_ptr->loc.frame_ptr;
-  block_sector_t sector = fte_ptr->loc.swap_index * SECTORS_PER_PAGE;
+  block_sector_t sector  = fte_ptr->loc.swap_index * SECTORS_PER_PAGE;
+  void *kpage_write_head = kpage;
 
   if (sector < 0)
     PANIC ("Data is not stored in the swap table");
 
-  for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
-    block_read (swap_device, sector, kpage);
+  for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, 
+                                        kpage_write_head += BLOCK_SECTOR_SIZE)
+    block_read (swap_device, sector, kpage_write_head);
 
   bitmap_reset (swap_bitmap, fte_ptr->loc.swap_index);
   
   fte_ptr->swapped = false;
-  fte_ptr->loc.swap_index = -1;
+  fte_ptr->loc.frame_ptr = kpage;
 }
 
 /* Swaps out the evicted page from the frame and copy into the swap disk */

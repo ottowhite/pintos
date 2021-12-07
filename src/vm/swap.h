@@ -7,7 +7,7 @@
 #define SECTORS_PER_PAGE (PGSIZE / BLOCK_SECTOR_SIZE)
 
 void swap_init  (void);
-void swap_in    (struct fte *fte_ptr);
+void swap_in    (struct fte *fte_ptr, void *kpage);
 void swap_out   (struct fte *fte_ptr);
 
 #endif
