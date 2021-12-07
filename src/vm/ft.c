@@ -15,6 +15,7 @@
 #include "filesys/filesys.h"
 #include "vm/ft.h"
 #include "vm/spt.h"
+#include "vm/swap.h"
 
 /* Frame table globals */
 static struct hash  ft;
@@ -61,7 +62,6 @@ static void evict        (void);
 static bool frame_dirty  (struct fte *fte_ptr);
 static void frame_delete (struct fte *fte_ptr);
 static void frame_write  (struct fte *fte_ptr);
-static void frame_swap   (struct fte *fte_ptr);
 
 static void frame_remove_spte_reference (struct owner owner);
 static void frame_remove_pte            (struct owner owner);
@@ -424,7 +424,7 @@ evict (void)
     {
       case SWAP:
         {
-          frame_swap (fte_ptr); 
+          swap_out (fte_ptr); 
           break;
         }
       case DELETE: 
@@ -437,7 +437,7 @@ evict (void)
         {
           bool dirty = frame_dirty (fte_ptr);
           frame_remove_owners (fte_ptr, !dirty);
-          if (dirty) frame_swap   (fte_ptr);
+          if (dirty) swap_out     (fte_ptr);
           else       frame_delete (fte_ptr);
 
           break;
@@ -465,16 +465,9 @@ static void
 frame_write (struct fte *fte_ptr)
 {
   ASSERT (!fte_ptr->swapped);
-  if (!write_to_inode (fte_ptr->loc.frame_ptr, fte_ptr->inode_ptr,
+  if (write_to_inode (fte_ptr->loc.frame_ptr, fte_ptr->inode_ptr,
       fte_ptr->offset, PGSIZE) != PGSIZE)
       syscall_exit (-1);
-}
-
-static void
-frame_swap (struct fte *fte_ptr)
-{
-  // TODO: Implement
-  return;
 }
 
 /* Deletes a frame and frees the associated frame table entry */
