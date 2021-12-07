@@ -316,7 +316,28 @@ evict (void)
 static bool
 frame_dirty (struct fte *fte_ptr)
 {
-  // TODO: Implement 
+  if (fte_ptr->shared)
+    {
+      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
+
+      for (struct list_elem *e = list_begin (owner_list_ptr); 
+           e != list_end (owner_list_ptr);
+           e  = list_next (e))
+        {
+          struct owner owner 
+              = list_entry (e, struct owner_list_elem, elem)->owner;
+          if (pagedir_is_dirty (owner.owner_ptr->pagedir, 
+                                owner.upage_ptr))
+              return true;
+        }
+    }
+  else
+    {
+      struct owner owner = fte_ptr->owners.owner_single;
+      return pagedir_is_dirty (owner.owner_ptr->pagedir,
+                               owner.upage_ptr);
+    }
+
   return false;
 }
 
