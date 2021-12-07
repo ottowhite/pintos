@@ -328,6 +328,8 @@ evict (void)
       default: NOT_REACHED ();
     }
 
+  frame_delete (fte_ptr);
+  frame_index_arr[i] = NULL;
 }
 
 static bool
