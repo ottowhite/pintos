@@ -8,11 +8,15 @@
 
 
 struct block *swap_device;
-static struct bitmap *swap_map;  
+static struct bitmap *swap_bitmap;  
 static struct lock swap_lock;
 
-
+/* Initializes the swap disk */
+void
 swap_init()
+{
+  
+}
 
 /* Swaps in the page from the swap table into the memory */
 void
