@@ -3,8 +3,9 @@
 
 #include "src/devices/block.h"
 
-void swap_in (block_sector_t sector, void *kpage);
-void swap_out (void *kpage);
-static bool find_free_slot (block_sector_t *sector_ptr);
+#define SECTORS_PER_PAGE (PGSIZE / BLOCK_SECTOR_SIZE)
+
+void swap_in (block_sector_t sector, struct fte *fte_ptr);
+void swap_out (struct fte *fte_ptr);
 
 #endif
