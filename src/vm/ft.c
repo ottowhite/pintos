@@ -58,7 +58,7 @@ static bool fte_add_owner_newly_shared (struct fte *fte_ptr,
 static enum eviction_method get_eviction_method (enum frame_type frame_type);
 
 /* Eviction and eviction helpers */
-static void evict        (void);
+static int  evict        (void);
 static bool frame_dirty  (struct fte *fte_ptr);
 static void frame_delete (struct fte *fte_ptr);
 static void frame_swap   (struct fte *fte_ptr);
@@ -414,7 +414,7 @@ construct_fte (union Frame_location loc,
   return fte_ptr;
 }
 
-static void
+static int
 evict (void)
 {
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
@@ -458,6 +458,7 @@ evict (void)
     }
 
   frame_index_arr[i] = NULL;
+  return i;
 }
 
 /* Attempt to write a frames contents to the filesystem, exit the process
