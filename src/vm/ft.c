@@ -523,9 +523,12 @@ frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
            e != list_end (owner_list_ptr);
            e  = list_next (e))
         {
+          struct owner_list_elem *owner_e_ptr
+              = list_entry (e, struct owner_list_elem, elem);
           frame_remove_owner (
-                list_entry (e, struct owner_list_elem, elem)->owner, 
+                owner_e_ptr->owner, 
                 remove_spte_reference);
+          list_remove (&owner_e_ptr->elem);
         }
     }
   else
