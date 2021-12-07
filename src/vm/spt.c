@@ -84,6 +84,15 @@ spt_remove_entry (struct hash *spt_ptr, void *uaddr)
       hash_delete (spt_ptr, &spte_ptr->hash_elem) == NULL) return false;
 
   free (spte_ptr);
+
+  // TODO: check if entry is in pt, and if so retrieve it
+  //       if entry in swap space check status and remove it
+  //       remove swap space entry
+  //       if entry not in swap space (i.e. in memory)
+  //       then remove it from memory and save/delete it
+  //       free ft entry
+  //       free pt entry
+
   return true;
 }
 
