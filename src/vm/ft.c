@@ -539,8 +539,11 @@ frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
         }
     }
   else
+    {
       frame_remove_owner (fte_ptr->owners.owner_single, 
                           remove_spte_reference);
+      fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
+    }
 }
 
 static void
