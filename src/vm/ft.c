@@ -64,9 +64,7 @@ static void frame_write  (struct fte *fte_ptr);
 static void frame_swap   (struct fte *fte_ptr);
 
 static bool frame_remove_owners (struct fte *fte_ptr, bool swapping);
-static void frame_remove_owner (struct thread *owner_ptr, 
-                                void *upage, 
-                                bool swapping);
+static void frame_remove_owner (struct owner owner, bool swapping);
 
 
 /* Helper for reading from inode when creating frame */
@@ -353,7 +351,7 @@ frame_remove_owners (struct fte *fte_ptr, bool swapping)
            e  = list_next  (e))
         {
           owner = list_entry (e, struct owner_list_elem, elem)->owner;
-          frame_remove_owner (owner.owner_ptr, owner.upage_ptr, swapping);
+          frame_remove_owner (owner, swapping);
 
           dirty |= pagedir_is_dirty (owner.owner_ptr->pagedir, 
                                      owner.upage_ptr);
@@ -364,10 +362,8 @@ frame_remove_owners (struct fte *fte_ptr, bool swapping)
       /* Remove all PTE from the owners.
          Remove SPT fte_ptr if we are not swapping.
          Set the dirty bool if the owner's PTE is dirty */
-      frame_remove_owner (fte_ptr->owners.owner_single.owner_ptr, 
-                          fte_ptr->owners.owner_single.upage_ptr,
-                          swapping);
       struct owner owner = fte_ptr->owners.owner_single;
+      frame_remove_owner (owner, swapping);
       dirty = pagedir_is_dirty (owner.owner_ptr->pagedir, owner.upage_ptr);
     }
 
@@ -387,17 +383,18 @@ frame_delete (struct fte *fte_ptr)
 /* Removes the references to a frame in a processes page table
  * If we are not swapping the frame, then we also remove the SPT entry */
 static void
-frame_remove_owner (struct thread *owner_ptr, void *upage, bool swapping)
+frame_remove_owner (struct owner owner, bool swapping)
 {
   if (!swapping)
     {
       /* Remove reference to the frame from the owners spte */
-      struct spte *spte_ptr = spt_find_entry (owner_ptr->spt_ptr, upage);
+      struct spte *spte_ptr = spt_find_entry (owner.owner_ptr->spt_ptr, 
+                                              owner.upage_ptr);
       ASSERT (spte_ptr != NULL);
       spte_ptr->fte_ptr = NULL;
     }
   /* Clear the page in the owners page directory */
-  pagedir_clear_page (owner_ptr->pagedir, upage);
+  pagedir_clear_page (owner.owner_ptr->pagedir, owner.upage_ptr);
 }
 
 static void
