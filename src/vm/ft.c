@@ -420,8 +420,7 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr)
 
   if (fte_ptr->swapped) 
     {
-      // TODO: implement SWAP_DELETE
-      // TODO: use frame delete
+			swap_remove (fte_ptr);
     }
   else 
     {
