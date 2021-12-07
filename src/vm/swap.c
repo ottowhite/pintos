@@ -65,6 +65,16 @@ swap_out (struct fte *fte_ptr)
     block_write (swap_device, sector, kpage);
 }
 
+/* Resets the bit corresponding to the fte in the swap bitmap. */
+void
+swap_remove (struct fte *fte_ptr)
+{
+	ASSERT (fte_ptr != NULL);
+	lock_acquire (&swap_lock);
+	bitmap_reset (swap_bitmap, fte_ptr->loc.swap_index);
+	lock_release (&swap_lock);
+}
+
 static bool
 find_free_slot (block_sector_t *sector_ptr)
 {
