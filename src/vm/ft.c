@@ -391,7 +391,7 @@ ft_remove_owner (struct fte *fte_ptr)
   else 
     {
       owner = fte_ptr->owners.owner_single;
-      fte_ptr->owners.owner_single = NULL;
+      fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
     }
   frame_remove_owner (owner, false);
 }
