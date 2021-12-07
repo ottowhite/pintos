@@ -61,6 +61,7 @@ static enum eviction_method get_eviction_method (enum frame_type frame_type);
 static void evict        (void);
 static bool frame_dirty  (struct fte *fte_ptr);
 static void frame_delete (struct fte *fte_ptr);
+static void frame_swap   (struct fte *fte_ptr);
 static void frame_write  (struct fte *fte_ptr);
 
 static void frame_remove_spte_reference (struct owner owner);
@@ -428,9 +429,7 @@ evict (void)
     {
       case SWAP:
         {
-          void *frame_ptr = fte_ptr->loc.frame_ptr;
-          swap_out (fte_ptr); 
-          palloc_free_page (frame_ptr);
+          frame_swap (fte_ptr);
           break;
         }
       case DELETE: 
@@ -443,24 +442,16 @@ evict (void)
         {
           bool dirty = frame_dirty (fte_ptr);
           frame_remove_owners (fte_ptr, !dirty);
-          if (dirty) 
-            {
-              void *frame_ptr = fte_ptr->loc.frame_ptr;
-              swap_out (fte_ptr);
-              palloc_free_page (frame_ptr);
-            }
-          else
-              frame_delete (fte_ptr);
+          if (dirty) frame_swap   (fte_ptr);
+          else       frame_delete (fte_ptr);
 
           break;
         }
       case WRITE_IF_DIRTY:
         {
-          bool dirty = frame_dirty (fte_ptr);
+          if (frame_dirty (fte_ptr)) frame_write (fte_ptr);
           frame_remove_owners (fte_ptr, true);
-          if (dirty) frame_write  (fte_ptr);
-
-          frame_delete (fte_ptr);
+          frame_delete        (fte_ptr);
           break;
         }
       default: NOT_REACHED ();
@@ -489,6 +480,15 @@ frame_delete (struct fte *fte_ptr)
   ASSERT (!fte_ptr->swapped);
   palloc_free_page (fte_ptr->loc.frame_ptr);
   free (fte_ptr);
+}
+
+/* Swaps a into the swap partition and frees the page in memory */
+static void
+frame_swap (struct fte *fte_ptr)
+{
+  void *frame_ptr = fte_ptr->loc.frame_ptr;
+  swap_out (fte_ptr);
+  palloc_free_page (frame_ptr);
 }
 
 static bool
