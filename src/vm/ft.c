@@ -77,6 +77,11 @@ static off_t read_from_inode (void *frame_ptr,
                               off_t offset,
                               off_t bytes_to_read);
 
+static off_t write_to_inode  (void *frame_ptr, 
+                              struct inode *inode_ptr, 
+                              off_t offset,
+                              off_t bytes_to_write);
+
 
 /* Initilizes the frame table as a hash map of struct ftes */
 bool 
@@ -339,6 +344,21 @@ read_from_inode (void *frame_ptr,
       = inode_read_at (inode_ptr, frame_ptr, bytes_to_read, offset);
   release_filesys ();
   return bytes_read;
+}
+
+/* Locks the filesystem whilst writing bytes_to_write bytes to the inode 
+   at the given offset from the frame_ptr, returns bytes written */
+static off_t
+write_to_inode (void *frame_ptr, 
+                struct inode *inode_ptr, 
+                off_t offset,
+                off_t bytes_to_write)
+{
+  acquire_filesys ();
+  off_t bytes_written 
+      = inode_write_at (inode_ptr, frame_ptr, bytes_to_write, offset);
+  release_filesys ();
+  return bytes_written;
 }
 
 /* Helper to obtain eviction methods by frame type */
