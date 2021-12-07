@@ -61,6 +61,8 @@ static bool frame_dirty  (struct fte *fte_ptr);
 static void frame_delete (struct fte *fte_ptr);
 static void frame_write  (struct fte *fte_ptr);
 static void frame_swap   (struct fte *fte_ptr);
+
+static void frame_remove_owner (struct thread *owner_ptr, void *upage);
 static void frame_invoke_dirty_delete_clean 
                          (void (*func)(struct fte *), struct fte *fte_ptr);
 
@@ -339,32 +341,32 @@ frame_delete (struct fte *fte_ptr)
 {
   // TODO: Implement
 
-  // Iterate over the observers, setting present bit to 0 in their page table
-  // and setting fte_ptr to NULL in their SPT
-  // palloc_free_page (fte_ptr->loc.frame_ptr);
-  // deallocate fte_ptr
-  // frame_index_arr[k] = NULL
-
   if (fte_ptr->shared)
     {
-
+      
     }
   else
     {
-      /* Obtain the owning thread, upage and SPT entry */
-      struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
-      void *upage              = fte_ptr->owners.owner_single.upage_ptr;
-      struct spte *spte_ptr    = spt_find_entry (owner_ptr->spt_ptr, upage);
-
-      ASSERT (spte_ptr != NULL);
-
-      /* Clear the page in the owners page directory */
-      pagedir_clear_page (owner_ptr->pagedir, upage);
-      /* Remove reference to the frame from the owners spte */
-      spte_ptr->fte_ptr = NULL;
-      /* Deallocate the fte */
-      free (fte_ptr);
+      /* Remove all references to the frame and frame table entry 
+         held by the owner */
+      frame_remove_owner (fte_ptr->owners.owner_single.owner_ptr, 
+                          fte_ptr->owners.owner_single.upage_ptr);
     }
+  /* */
+  ASSERT (!fte_ptr->swapped);
+  palloc_free_page (fte_ptr->loc.frame_ptr);
+  free (fte_ptr);
+}
+
+static void
+frame_remove_owner (struct thread *owner_ptr, void *upage)
+{
+  struct spte *spte_ptr = spt_find_entry (owner_ptr->spt_ptr, upage);
+  ASSERT (spte_ptr != NULL);
+  /* Clear the page in the owners page directory */
+  pagedir_clear_page (owner_ptr->pagedir, upage);
+  /* Remove reference to the frame from the owners spte */
+  spte_ptr->fte_ptr = NULL;
 }
 
 static void
