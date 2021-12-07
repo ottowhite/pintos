@@ -206,8 +206,8 @@ ft_get_frame_preemptive (enum frame_type frame_type,
       /* Found shared frame, pin it until installation. */
       if (fte_ptr->swapped)
         {
-          // TODO: If there is no memory left, evict and swap in
-          //       Otherwise get the free slot and swap in
+          int free_index = evict ();
+          swap_in (fte_ptr, frame_ptr_from_index (free_index));
         }
       fte_ptr->pin_cnt++;
     }
