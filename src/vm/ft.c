@@ -382,7 +382,18 @@ get_eviction_method (enum frame_type frame_type)
 void 
 ft_remove_owner (struct fte *fte_ptr)
 {
-
+  struct owner owner;
+  if (fte_ptr->shared) 
+    {
+      // TODO: implement removing owner
+      // TODO: save owner to owner
+    } 
+  else 
+    {
+      owner = fte_ptr->owners.owner_single;
+      fte_ptr->owners.owner_single = NULL;
+    }
+  frame_remove_owner (owner, false);
 }
 
 void 
