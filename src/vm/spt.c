@@ -83,10 +83,7 @@ spt_remove_entry (struct hash *spt_ptr, void *uaddr)
   if (spte_ptr == NULL || 
       hash_delete (spt_ptr, &spte_ptr->hash_elem) == NULL) return false;
 
-  /* the frame is removed from memory/swap space inside of ft_remove_frame */
-  ft_remove_frame (spte_ptr->fte_ptr);
-
-  free (spte_ptr);
+  spte_deallocate_func (&spte_ptr->hash_elem, NULL);
 
   return true;
 }
@@ -151,5 +148,12 @@ spte_less_func (const struct hash_elem *a_ptr,
 static void
 spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
 {
-  free (hash_entry (e_ptr, struct spte, hash_elem));
+  struct spte *spte_ptr = hash_entry (e_ptr, struct spte, hash_elem);
+
+  /* if the page is in the frame table
+     the frame is removed from memory/swap space inside of ft_remove_frame */
+  if (spte_ptr->fte_ptr != NULL)
+    ft_remove_frame (spte_ptr->fte_ptr);
+
+  free (spte_ptr);
 }
