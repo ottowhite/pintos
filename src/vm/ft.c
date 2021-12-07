@@ -320,21 +320,23 @@ frame_write (struct fte *fte_ptr)
   return;
 }
 
-// NOTE:
-// If we are deleting or writing back, we want to delete the SPT references
-// If we are swapping then we don't want to delete the SPT references,
-//    but we do want to remove the PTEs
+/* Removes PTEs referenceing the given frame from all owners.
+   If swapping is true, we leave the fte_ptr reference in the owners
+   SPTs, otherise we remove these references as the caller will delete
+   and deallocate the FTE.
 
+   The return value is whether or not any of the owners PTEs were dirty. */
 static bool
 frame_remove_owners (struct fte *fte_ptr, bool swapping)
 {
   bool dirty;
   if (fte_ptr->shared)
     {
+      /* Remove all PTEs from all of the owners.
+         Remove SPT fte_ptrs if we are not swapping.
+         Set the dirty bool if any PTEs are dirty */
       struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
 
-      /* Remove all references to frame and frame table entry held
-         by all owners */
       struct owner owner;
       struct list_elem *e;
       for (e  = list_begin (owner_list_ptr); 
@@ -350,8 +352,9 @@ frame_remove_owners (struct fte *fte_ptr, bool swapping)
     }
   else
     {
-      /* Remove all references to the frame and frame table entry 
-         held by the owner */
+      /* Remove all PTE from the owners.
+         Remove SPT fte_ptr if we are not swapping.
+         Set the dirty bool if the owner's PTE is dirty */
       frame_remove_owner (fte_ptr->owners.owner_single.owner_ptr, 
                           fte_ptr->owners.owner_single.upage_ptr,
                           swapping);
