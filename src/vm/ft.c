@@ -34,7 +34,6 @@ static void     fte_deallocate_func (struct hash_elem *e_ptr,
 
 /* Frame table entry helpers */
 static void        fte_insert      (struct fte *fte_ptr);
-static void        fte_remove      (struct fte *fte_ptr);
 static struct fte *construct_fte   (union Frame_location loc,
                                     enum eviction_method eviction_method,
                                     struct inode *inode_ptr,
@@ -385,7 +384,8 @@ void
 ft_remove_frame (struct fte *fte_ptr)
 {
   palloc_free_page (fte_ptr->loc.frame_ptr);
-  fte_remove (fte_ptr);
+  hash_delete (&ft, &fte_ptr->hash_elem);
+  free (fte_ptr);
 }
 
 /* Constructs a pinned frame table entry stored in the kernel pool
@@ -565,15 +565,6 @@ static void
 fte_insert (struct fte *fte_ptr)
 {
   hash_insert (&ft, &fte_ptr->hash_elem);
-}
-
-/* Removes a frame table entry from the frame table and frees the 
-   space used to store it. Doesn't free the user page. */
-static void
-fte_remove (struct fte *fte_ptr)
-{
-  hash_delete (&ft, &fte_ptr->hash_elem);
-  free (fte_ptr);
 }
 
 static unsigned
