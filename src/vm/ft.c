@@ -55,7 +55,14 @@ static bool fte_add_owner_newly_shared (struct fte *fte_ptr,
 /* Helper to obtain eviction methods by frame type */
 static enum eviction_method get_eviction_method (enum frame_type frame_type);
 
-static void evict (void);
+/* Eviction and eviction helpers */
+static void evict        (void);
+static bool frame_dirty  (struct fte *fte_ptr);
+static void frame_delete (struct fte *fte_ptr);
+static void frame_write  (struct fte *fte_ptr);
+static void frame_swap   (struct fte *fte_ptr);
+static void frame_invoke_dirty_delete_clean 
+                         (void (*func)(struct fte *), struct fte *fte_ptr);
 
 /* Helper for reading from inode when creating frame */
 static off_t read_from_inode (void *frame_ptr, 
@@ -281,23 +288,56 @@ evict (void)
 
   switch (fte_ptr->eviction_method)
     {
-      case SWAP:   break;
-      case DELETE: break;
-      case SWAP_IF_DIRTY:
-        {
+      case SWAP:   frame_swap   (fte_ptr); break;
+      case DELETE: frame_delete (fte_ptr); break;
+      case SWAP_IF_DIRTY:  
+          frame_invoke_dirty_delete_clean (&frame_swap, fte_ptr); 
           break;
-        }
-      case WRITE_IF_DIRTY:
-        {
+      case WRITE_IF_DIRTY: 
+          frame_invoke_dirty_delete_clean (&frame_write, fte_ptr); 
           break;
-        }
       default: NOT_REACHED ();
     }
 
     // struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
     // void *upage              = fte_ptr->owners.owner_single.upage_ptr;
     // bool dirty               = pagedir_is_dirty (owner_ptr->pagedir, upage);
+}
 
+static bool
+frame_dirty (struct fte *fte_ptr)
+{
+  // TODO: Implement
+  return false;
+}
+
+static void
+frame_invoke_dirty_delete_clean (void (*func)(struct fte *), 
+                                 struct fte *fte_ptr)
+{
+  if (frame_dirty (fte_ptr)) (*func)      (fte_ptr);
+  else                       frame_delete (fte_ptr);
+}
+
+static void
+frame_write (struct fte *fte_ptr)
+{
+  // TODO: Implement
+  return;
+}
+
+static void
+frame_delete (struct fte *fte_ptr)
+{
+  // TODO: Implement
+  return;
+}
+
+static void
+frame_swap (struct fte *fte_ptr)
+{
+  // TODO: Implement
+  return;
 }
 
 struct fte *
