@@ -63,10 +63,13 @@ static void frame_delete (struct fte *fte_ptr);
 static void frame_write  (struct fte *fte_ptr);
 static void frame_swap   (struct fte *fte_ptr);
 
-static bool frame_remove_owners (struct fte *fte_ptr, bool swapping);
+static void frame_remove_owners (struct fte *fte_ptr, 
+                                 bool remove_spte_reference);
 
 static void frame_remove_spte_reference (struct owner owner);
 static void frame_remove_pte            (struct owner owner);
+static void frame_remove_owner          (struct owner owner, 
+                                         bool remove_spte_reference);
 
 
 /* Helper for reading from inode when creating frame */
@@ -324,26 +327,11 @@ frame_write (struct fte *fte_ptr)
   return;
 }
 
-// NOTE:
-// If we are removing the owners from an executable code segment
-// we don't know whether or not we need to delete the frame or 
-// swap it until we know if and of the PTEs are dirty.
-
-/* Removes PTEs referenceing the given frame from all owners.
-   If swapping is true, we leave the fte_ptr reference in the owners
-   SPTs, otherise we remove these references as the caller will delete
-   and deallocate the FTE.
-
-   The return value is whether or not any of the owners PTEs were dirty. */
-static bool
-frame_remove_owners (struct fte *fte_ptr, bool swapping)
+static void
+frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
 {
-  bool dirty;
   if (fte_ptr->shared)
     {
-      /* Remove all PTEs from all of the owners.
-         Remove SPT fte_ptrs if we are not swapping.
-         Set the dirty bool if any PTEs are dirty */
       struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
 
       struct owner owner;
@@ -351,32 +339,14 @@ frame_remove_owners (struct fte *fte_ptr, bool swapping)
       for (e  = list_begin (owner_list_ptr); 
            e != list_end   (owner_list_ptr);
            e  = list_next  (e))
-        {
-          owner = list_entry (e, struct owner_list_elem, elem)->owner;
-          if (!swapping)
-              frame_remove_spte_reference (owner);
 
-          frame_remove_pte (owner);
-
-          dirty |= pagedir_is_dirty (owner.owner_ptr->pagedir, 
-                                     owner.upage_ptr);
-        }
+          frame_remove_owner (
+              list_entry (e, struct owner_list_elem, elem)->owner, 
+              remove_spte_reference);
     }
   else
-    {
-      /* Remove all PTE from the owners.
-         Remove SPT fte_ptr if we are not swapping.
-         Set the dirty bool if the owner's PTE is dirty */
-      struct owner owner = fte_ptr->owners.owner_single;
-      if (!swapping)
-          frame_remove_spte_reference (owner);
-
-      frame_remove_pte (owner);
-
-      dirty = pagedir_is_dirty (owner.owner_ptr->pagedir, owner.upage_ptr);
-    }
-
-  return dirty;
+      frame_remove_owner (fte_ptr->owners.owner_single, 
+                          remove_spte_reference);
 }
 
 /* Deletes a frame and frees the associated frame table entry */
@@ -397,6 +367,14 @@ frame_remove_spte_reference (struct owner owner)
                                           owner.upage_ptr);
   ASSERT (spte_ptr != NULL);
   spte_ptr->fte_ptr = NULL;
+}
+static void
+frame_remove_owner (struct owner owner, bool remove_spte_reference)
+{
+  if (remove_spte_reference)
+      frame_remove_spte_reference (owner);
+
+  frame_remove_pte (owner);
 }
 
 static void
