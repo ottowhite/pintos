@@ -59,6 +59,19 @@ mmap_locate_entry (struct list *list_ptr, mapid_t mid)
   return (found) ? mmape_ptr : NULL;
 }
 
+void
+mmap_delete_all (struct list *list_ptr)
+{
+  /* loops through each mmap entry removing it from the list and freeing it */
+  for (struct list_elem *e = list_begin (list_ptr); 
+       e != list_end (list_end (list_ptr));
+       e  = list_next (e))
+    {
+      list_remove (e);
+      free (list_entry (e, struct mmape, list_elem));
+    }
+}
+
 static void
 mmap_delete_entry (struct mmape *mmape_ptr)
 {
