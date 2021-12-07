@@ -63,12 +63,11 @@ static void frame_delete (struct fte *fte_ptr);
 static void frame_write  (struct fte *fte_ptr);
 static void frame_swap   (struct fte *fte_ptr);
 
-static void frame_remove_owners (struct fte *fte_ptr, 
-                                 bool remove_spte_reference);
-
 static void frame_remove_spte_reference (struct owner owner);
 static void frame_remove_pte            (struct owner owner);
 static void frame_remove_owner          (struct owner owner, 
+                                         bool remove_spte_reference);
+static void frame_remove_owners         (struct fte *fte_ptr, 
                                          bool remove_spte_reference);
 
 
@@ -165,6 +164,111 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
   fail_install_page: return false;
 }
 
+/* Obtains a user pool page and constructs a pinned frame table entry
+   to go with it. Returns NULL if either failed.
+   Returned frames must be unpinned after they have been installed to a page
+   table */
+struct fte *
+ft_get_frame (struct spte *spte_ptr)
+{
+  struct fte *fte_ptr = ft_get_frame_preemptive (spte_ptr->frame_type,
+                                                 spte_ptr->inode_ptr,
+                                                 spte_ptr->offset,
+                                                 spte_ptr->amount_occupied);
+  spte_ptr->fte_ptr = fte_ptr;
+  return fte_ptr;
+}
+
+/* Generalised version of ft_get_frame.
+   Useful for getting frames before their spt entry exists.
+   These frames should be registered in an spt table after acquired. */
+struct fte *
+ft_get_frame_preemptive (enum frame_type frame_type, 
+                         struct inode *inode_ptr,
+                         off_t offset, 
+                         int amount_occupied)
+{
+  struct fte *fte_ptr;
+  if ((frame_type == EXECUTABLE_CODE ||
+       frame_type == MMAP)           &&
+      (fte_ptr = ft_find_frame (inode_ptr, offset)) != NULL)
+    {
+      /* Found shared frame, pin it until installation. */
+      // TODO: Swap in if necessary
+      fte_ptr->pin_cnt++;
+    }
+  else
+    {
+      /* Construct a new pinned frame */
+      fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
+          amount_occupied);
+      if (fte_ptr == NULL) return NULL;
+    }
+
+  /* Associate the new frame location in the user pool with the fte */
+  int frame_index = (fte_ptr->loc.frame_ptr - PHYS_BASE) / PGSIZE;
+  frame_index_arr[frame_index] = fte_ptr;
+
+  return fte_ptr;
+}
+
+struct fte *
+construct_frame (enum frame_type frame_type, 
+                 struct inode *inode_ptr,
+                 off_t offset, 
+                 int amount_occupied)
+{
+  /* Gets a page from the user pool, zeroed if stack page */
+  void *frame_ptr = palloc_get_page (frame_type == STACK
+                                        ? PAL_USER | PAL_ZERO 
+                                        : PAL_USER);
+  if (frame_ptr == NULL) 
+      evict ();
+
+  enum eviction_method eviction_method = get_eviction_method (frame_type);
+
+  /* Constructs a pinned frame (unpinned when installed in page table) */
+  struct fte *fte_ptr = construct_fte (
+      (union Frame_location) { .frame_ptr = frame_ptr }, eviction_method, 
+      inode_ptr, offset, amount_occupied);
+  
+  if (fte_ptr == NULL) 
+      goto fail;
+  
+  /* Read in the necessary data from the filesystem if frame type requires */
+  if (frame_type == EXECUTABLE_CODE  || 
+      frame_type == EXECUTABLE_DATA  ||
+      frame_type == MMAP)
+    {
+      if (read_from_inode (frame_ptr, inode_ptr, offset, amount_occupied) 
+              != amount_occupied)
+          goto fail;
+    }
+
+  /* Zero pad the remaining bits */
+  memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
+
+  /* Coarse grained insertion to the frame / swap table */
+  fte_insert (fte_ptr);
+  return fte_ptr;
+
+  fail: palloc_free_page (frame_ptr);
+        return NULL;
+}
+
+static struct fte *
+ft_find_frame (struct inode *inode_ptr, off_t offset)
+{
+  struct fte fte;
+  fte.inode_ptr = inode_ptr;
+  fte.offset = offset;
+
+  struct hash_elem *e_ptr = hash_find (&ft, &fte.hash_elem);
+
+  if (e_ptr == NULL) return NULL;
+  return hash_entry (e_ptr, struct fte, hash_elem);
+}
+
 /* Add a PDE to a frame table entry that was previously being shared 
    Return false on any allocation failure */
 static bool
@@ -220,258 +324,6 @@ fte_add_owner_newly_shared (struct fte *fte_ptr,
   fail_3: free (owner_initial_elem_ptr);
   fail_2: free (owner_list_ptr);
   fail_1: return false;
-}
-
-/* Obtains a user pool page and constructs a pinned frame table entry
-   to go with it. Returns NULL if either failed.
-   Returned frames must be unpinned after they have been installed to a page
-   table */
-struct fte *
-ft_get_frame (struct spte *spte_ptr)
-{
-  struct fte *fte_ptr = ft_get_frame_preemptive (spte_ptr->frame_type,
-                                                 spte_ptr->inode_ptr,
-                                                 spte_ptr->offset,
-                                                 spte_ptr->amount_occupied);
-  spte_ptr->fte_ptr = fte_ptr;
-  return fte_ptr;
-}
-
-/* Generalised version of ft_get_frame.
-   Useful for getting frames before their spt entry exists.
-   These frames should be registered in an spt table after acquired. */
-struct fte *
-ft_get_frame_preemptive (enum frame_type frame_type, 
-                         struct inode *inode_ptr,
-                         off_t offset, 
-                         int amount_occupied)
-{
-  struct fte *fte_ptr;
-  if ((frame_type == EXECUTABLE_CODE ||
-       frame_type == MMAP)           &&
-      (fte_ptr = ft_find_frame (inode_ptr, offset)) != NULL)
-    {
-      /* Found shared frame, pin it until installation. */
-      // TODO: Swap in if necessary
-      fte_ptr->pin_cnt++;
-    }
-  else
-    {
-      /* Construct a new pinned frame */
-      fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
-          amount_occupied);
-      if (fte_ptr == NULL) return NULL;
-    }
-
-  /* Associate the new frame location in the user pool with the fte */
-  int frame_index = (fte_ptr->loc.frame_ptr - PHYS_BASE) / PGSIZE;
-  frame_index_arr[frame_index] = fte_ptr;
-
-  return fte_ptr;
-}
-
-static struct fte *
-ft_find_frame (struct inode *inode_ptr, off_t offset)
-{
-  struct fte fte;
-  fte.inode_ptr = inode_ptr;
-  fte.offset = offset;
-
-  struct hash_elem *e_ptr = hash_find (&ft, &fte.hash_elem);
-
-  if (e_ptr == NULL) return NULL;
-  return hash_entry (e_ptr, struct fte, hash_elem);
-}
-
-static void
-evict (void)
-{
-  /* Obtain a random int from 0 to frame_index_size (exclusive) */
-  int i = (int) (random_ulong () % frame_index_size);
-  /* Keep trying until we find a frame that is not pinned to evict */
-  for (; frame_index_arr[i]->pin_cnt != 0; 
-         i = (int) (random_ulong () % frame_index_size));
-
-  struct fte *fte_ptr = frame_index_arr[i];
-
-  switch (fte_ptr->eviction_method)
-    {
-      case SWAP:
-        {
-          frame_swap (fte_ptr); 
-          break;
-        }
-      case DELETE: 
-        {
-          frame_remove_owners (fte_ptr, true);
-          frame_delete (fte_ptr); 
-          break;
-        }
-      case SWAP_IF_DIRTY:
-        {
-          bool dirty = frame_dirty (fte_ptr);
-          frame_remove_owners (fte_ptr, !dirty);
-          if (dirty) frame_swap   (fte_ptr);
-          else       frame_delete (fte_ptr);
-
-          break;
-        }
-      case WRITE_IF_DIRTY:
-        {
-          bool dirty = frame_dirty (fte_ptr);
-          frame_remove_owners (fte_ptr, true);
-          if (dirty) frame_write  (fte_ptr);
-          else       frame_delete (fte_ptr);
-
-          break;
-        }
-      default: NOT_REACHED ();
-    }
-
-  frame_delete (fte_ptr);
-  frame_index_arr[i] = NULL;
-}
-
-static bool
-frame_dirty (struct fte *fte_ptr)
-{
-  if (fte_ptr->shared)
-    {
-      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
-
-      for (struct list_elem *e = list_begin (owner_list_ptr); 
-           e != list_end (owner_list_ptr);
-           e  = list_next (e))
-        {
-          struct owner owner 
-              = list_entry (e, struct owner_list_elem, elem)->owner;
-          if (pagedir_is_dirty (owner.owner_ptr->pagedir, 
-                                owner.upage_ptr))
-              return true;
-        }
-    }
-  else
-    {
-      struct owner owner = fte_ptr->owners.owner_single;
-      return pagedir_is_dirty (owner.owner_ptr->pagedir,
-                               owner.upage_ptr);
-    }
-
-  return false;
-}
-
-static void
-frame_write (struct fte *fte_ptr)
-{
-  // TODO: Implement
-  return;
-}
-
-static void
-frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
-{
-  if (fte_ptr->shared)
-    {
-      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
-
-      for (struct list_elem *e = list_begin (owner_list_ptr); 
-           e != list_end (owner_list_ptr);
-           e  = list_next (e))
-        {
-          frame_remove_owner (
-                list_entry (e, struct owner_list_elem, elem)->owner, 
-                remove_spte_reference);
-        }
-    }
-  else
-      frame_remove_owner (fte_ptr->owners.owner_single, 
-                          remove_spte_reference);
-}
-
-/* Deletes a frame and frees the associated frame table entry */
-static void
-frame_delete (struct fte *fte_ptr)
-{
-  /* Free the page in memory and the frame table entry */
-  ASSERT (!fte_ptr->swapped);
-  palloc_free_page (fte_ptr->loc.frame_ptr);
-  free (fte_ptr);
-}
-
-static void
-frame_remove_spte_reference (struct owner owner)
-{
-  /* Remove reference to the frame from the owners spte */
-  struct spte *spte_ptr = spt_find_entry (owner.owner_ptr->spt_ptr, 
-                                          owner.upage_ptr);
-  ASSERT (spte_ptr != NULL);
-  spte_ptr->fte_ptr = NULL;
-}
-static void
-frame_remove_owner (struct owner owner, bool remove_spte_reference)
-{
-  if (remove_spte_reference)
-      frame_remove_spte_reference (owner);
-
-  frame_remove_pte (owner);
-}
-
-static void
-frame_remove_pte (struct owner owner)
-{
-  /* Clear the page in the owners page directory */
-  pagedir_clear_page (owner.owner_ptr->pagedir, owner.upage_ptr);
-}
-
-static void
-frame_swap (struct fte *fte_ptr)
-{
-  // TODO: Implement
-  return;
-}
-
-struct fte *
-construct_frame (enum frame_type frame_type, 
-                 struct inode *inode_ptr,
-                 off_t offset, 
-                 int amount_occupied)
-{
-  /* Gets a page from the user pool, zeroed if stack page */
-  void *frame_ptr = palloc_get_page (frame_type == STACK
-                                        ? PAL_USER | PAL_ZERO 
-                                        : PAL_USER);
-  if (frame_ptr == NULL) 
-      evict ();
-
-  enum eviction_method eviction_method = get_eviction_method (frame_type);
-
-  /* Constructs a pinned frame (unpinned when installed in page table) */
-  struct fte *fte_ptr = construct_fte (
-      (union Frame_location) { .frame_ptr = frame_ptr }, eviction_method, 
-      inode_ptr, offset, amount_occupied);
-  
-  if (fte_ptr == NULL) 
-      goto fail;
-  
-  /* Read in the necessary data from the filesystem if frame type requires */
-  if (frame_type == EXECUTABLE_CODE  || 
-      frame_type == EXECUTABLE_DATA  ||
-      frame_type == MMAP)
-    {
-      if (read_from_inode (frame_ptr, inode_ptr, offset, amount_occupied) 
-              != amount_occupied)
-          goto fail;
-    }
-
-  /* Zero pad the remaining bits */
-  memset (frame_ptr + amount_occupied, 0, PGSIZE - amount_occupied);
-
-  /* Coarse grained insertion to the frame / swap table */
-  fte_insert (fte_ptr);
-  return fte_ptr;
-
-  fail: palloc_free_page (frame_ptr);
-        return NULL;
 }
 
 /* Locks the filesystem whilst reading bytes_to_read bytes from the inode 
@@ -536,6 +388,156 @@ construct_fte (union Frame_location loc,
     
   return fte_ptr;
 }
+
+static void
+evict (void)
+{
+  /* Obtain a random int from 0 to frame_index_size (exclusive) */
+  int i = (int) (random_ulong () % frame_index_size);
+  /* Keep trying until we find a frame that is not pinned to evict */
+  for (; frame_index_arr[i]->pin_cnt != 0; 
+         i = (int) (random_ulong () % frame_index_size));
+
+  struct fte *fte_ptr = frame_index_arr[i];
+
+  switch (fte_ptr->eviction_method)
+    {
+      case SWAP:
+        {
+          frame_swap (fte_ptr); 
+          break;
+        }
+      case DELETE: 
+        {
+          frame_remove_owners (fte_ptr, true);
+          frame_delete (fte_ptr); 
+          break;
+        }
+      case SWAP_IF_DIRTY:
+        {
+          bool dirty = frame_dirty (fte_ptr);
+          frame_remove_owners (fte_ptr, !dirty);
+          if (dirty) frame_swap   (fte_ptr);
+          else       frame_delete (fte_ptr);
+
+          break;
+        }
+      case WRITE_IF_DIRTY:
+        {
+          bool dirty = frame_dirty (fte_ptr);
+          frame_remove_owners (fte_ptr, true);
+          if (dirty) frame_write  (fte_ptr);
+          else       frame_delete (fte_ptr);
+
+          break;
+        }
+      default: NOT_REACHED ();
+    }
+
+  frame_delete (fte_ptr);
+  frame_index_arr[i] = NULL;
+}
+
+static void
+frame_write (struct fte *fte_ptr)
+{
+  // TODO: Implement
+  return;
+}
+
+static void
+frame_swap (struct fte *fte_ptr)
+{
+  // TODO: Implement
+  return;
+}
+
+/* Deletes a frame and frees the associated frame table entry */
+static void
+frame_delete (struct fte *fte_ptr)
+{
+  /* Free the page in memory and the frame table entry */
+  ASSERT (!fte_ptr->swapped);
+  palloc_free_page (fte_ptr->loc.frame_ptr);
+  free (fte_ptr);
+}
+
+static bool
+frame_dirty (struct fte *fte_ptr)
+{
+  if (fte_ptr->shared)
+    {
+      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
+
+      for (struct list_elem *e = list_begin (owner_list_ptr); 
+           e != list_end (owner_list_ptr);
+           e  = list_next (e))
+        {
+          struct owner owner 
+              = list_entry (e, struct owner_list_elem, elem)->owner;
+          if (pagedir_is_dirty (owner.owner_ptr->pagedir, 
+                                owner.upage_ptr))
+              return true;
+        }
+    }
+  else
+    {
+      struct owner owner = fte_ptr->owners.owner_single;
+      return pagedir_is_dirty (owner.owner_ptr->pagedir,
+                               owner.upage_ptr);
+    }
+
+  return false;
+}
+
+static void
+frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
+{
+  if (fte_ptr->shared)
+    {
+      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
+
+      for (struct list_elem *e = list_begin (owner_list_ptr); 
+           e != list_end (owner_list_ptr);
+           e  = list_next (e))
+        {
+          frame_remove_owner (
+                list_entry (e, struct owner_list_elem, elem)->owner, 
+                remove_spte_reference);
+        }
+    }
+  else
+      frame_remove_owner (fte_ptr->owners.owner_single, 
+                          remove_spte_reference);
+}
+
+static void
+frame_remove_owner (struct owner owner, bool remove_spte_reference)
+{
+  if (remove_spte_reference)
+      frame_remove_spte_reference (owner);
+
+  frame_remove_pte (owner);
+}
+
+static void
+frame_remove_spte_reference (struct owner owner)
+{
+  /* Remove reference to the frame from the owners spte */
+  struct spte *spte_ptr = spt_find_entry (owner.owner_ptr->spt_ptr, 
+                                          owner.upage_ptr);
+  ASSERT (spte_ptr != NULL);
+  spte_ptr->fte_ptr = NULL;
+}
+
+static void
+frame_remove_pte (struct owner owner)
+{
+  /* Clear the page in the owners page directory */
+  pagedir_clear_page (owner.owner_ptr->pagedir, owner.upage_ptr);
+}
+
+
 
 static void
 fte_insert (struct fte *fte_ptr)
