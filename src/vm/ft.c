@@ -458,11 +458,16 @@ evict (void)
   frame_index_arr[i] = NULL;
 }
 
+/* Attempt to write a frames contents to the filesystem, exit the process
+   on failure to avoid undefined behaviour in the program whose memory 
+   has been lost. */
 static void
 frame_write (struct fte *fte_ptr)
 {
-  // TODO: Implement
-  return;
+  ASSERT (!fte_ptr->swapped);
+  if (!write_to_inode (fte_ptr->loc.frame_ptr, fte_ptr->inode_ptr,
+      fte_ptr->offset, PGSIZE) != PGSIZE)
+      syscall_exit (-1);
 }
 
 static void
