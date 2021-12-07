@@ -83,6 +83,10 @@ static off_t write_to_inode  (void *frame_ptr,
                               off_t offset,
                               off_t bytes_to_write);
 
+/* Helpers for converting between frame indices and frame_ptrs */
+static int   index_from_frame_ptr (void *frame_ptr);
+static void *frame_ptr_from_index (int frame_index);
+
 
 /* Initilizes the frame table as a hash map of struct ftes */
 bool 
@@ -220,6 +224,20 @@ ft_get_frame_preemptive (enum frame_type frame_type,
   frame_index_arr[frame_index] = fte_ptr;
 
   return fte_ptr;
+}
+
+/* Obtains the index in the frame_index_arr from a frame_ptr */
+static int
+index_from_frame_ptr (void *frame_ptr)
+{
+  return (frame_ptr - PHYS_BASE) / PGSIZE;
+}
+
+/* Obtains the frame_ptr from an index used by the frame_index_arr */
+static void *
+frame_ptr_from_index (int frame_index)
+{
+  return (frame_index * PGSIZE) + PHYS_BASE;
 }
 
 struct fte *
