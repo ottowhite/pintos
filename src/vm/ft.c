@@ -308,7 +308,7 @@ frame_dirty (struct fte *fte_ptr)
   if (fte_ptr->shared)
     {
       // TODO: Implement
-
+      
     }
   else
     {
@@ -338,7 +338,33 @@ static void
 frame_delete (struct fte *fte_ptr)
 {
   // TODO: Implement
-  return;
+
+  // Iterate over the observers, setting present bit to 0 in their page table
+  // and setting fte_ptr to NULL in their SPT
+  // palloc_free_page (fte_ptr->loc.frame_ptr);
+  // deallocate fte_ptr
+  // frame_index_arr[k] = NULL
+
+  if (fte_ptr->shared)
+    {
+
+    }
+  else
+    {
+      /* Obtain the owning thread, upage and SPT entry */
+      struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
+      void *upage              = fte_ptr->owners.owner_single.upage_ptr;
+      struct spte *spte_ptr    = spt_find_entry (owner_ptr->spt_ptr, upage);
+
+      ASSERT (spte_ptr != NULL);
+
+      /* Clear the page in the owners page directory */
+      pagedir_clear_page (owner_ptr->pagedir, upage);
+      /* Remove reference to the frame from the owners spte */
+      spte_ptr->fte_ptr = NULL;
+      /* Deallocate the fte */
+      free (fte_ptr);
+    }
 }
 
 static void
