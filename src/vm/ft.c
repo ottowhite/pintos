@@ -299,16 +299,24 @@ evict (void)
       default: NOT_REACHED ();
     }
 
-    // struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
-    // void *upage              = fte_ptr->owners.owner_single.upage_ptr;
-    // bool dirty               = pagedir_is_dirty (owner_ptr->pagedir, upage);
 }
 
 static bool
 frame_dirty (struct fte *fte_ptr)
 {
-  // TODO: Implement
-  return false;
+  bool dirty;
+  if (fte_ptr->shared)
+    {
+      // TODO: Implement
+
+    }
+  else
+    {
+      struct thread *owner_ptr = fte_ptr->owners.owner_single.owner_ptr;
+      void *upage              = fte_ptr->owners.owner_single.upage_ptr;
+      dirty                    = pagedir_is_dirty (owner_ptr->pagedir, upage);
+    }
+  return dirty;
 }
 
 static void
