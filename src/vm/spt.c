@@ -106,7 +106,10 @@ spt_propagated_removal (struct hash *spt_ptr,
   if (spte_ptr == NULL || 
       hash_delete (spt_ptr, &spte_ptr->hash_elem) == NULL) return false;
 
-  // TODO: if frame is dirty and is MMAP
+  /* the frame is removed from memory/swap space inside of ft_remove_frame */
+  ft_remove_frame (spte_ptr->fte_ptr);
+
+  free (spte_ptr);
   
   return true;
 }
