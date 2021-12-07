@@ -340,6 +340,7 @@ get_retrieval_method (enum frame_type frame_type)
 void 
 ft_remove_frame (struct fte *fte_ptr)
 {
+  ASSERT (fte_ptr != NULL);
   palloc_free_page (fte_ptr->loc.frame_ptr);
   fte_remove (fte_ptr);
 }
@@ -380,6 +381,7 @@ fte_insert (struct fte *fte_ptr)
 static void
 fte_remove (struct fte *fte_ptr)
 {
+  // TODO: remove from swap if in swap
   hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
 }
