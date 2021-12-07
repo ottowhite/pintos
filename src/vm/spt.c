@@ -83,34 +83,11 @@ spt_remove_entry (struct hash *spt_ptr, void *uaddr)
   if (spte_ptr == NULL || 
       hash_delete (spt_ptr, &spte_ptr->hash_elem) == NULL) return false;
 
-  // TODO: check if entry is in ft, and if so retrieve it
-  //       if entry in swap space check status and remove it
-  //       remove swap space entry
-  //       if entry not in swap space (i.e. in memory)
-  //       then remove it from memory and save/delete it
-  //       free ft entry
-
-  return true;
-}
-
-/* removes the page at uaddr from the spt, removes
-   its associated entry in the frame table,
-   and removes it from memory/swap space */
-bool 
-spt_propagated_removal (struct hash *spt_ptr, 
-                        struct hash *pt_ptr,
-                        void *uaddr)
-{
-  struct spte *spte_ptr = spt_find_entry (spt_ptr, uaddr);
-
-  if (spte_ptr == NULL || 
-      hash_delete (spt_ptr, &spte_ptr->hash_elem) == NULL) return false;
-
   /* the frame is removed from memory/swap space inside of ft_remove_frame */
   ft_remove_frame (spte_ptr->fte_ptr);
 
   free (spte_ptr);
-  
+
   return true;
 }
 
