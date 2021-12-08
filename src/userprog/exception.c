@@ -145,8 +145,10 @@ page_fault (struct intr_frame *f)
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
 
-  if (spte_ptr != NULL) attempt_frame_load (spte_ptr, false);
-  else                  grow_stack_or_fail (f, fault_addr);
+  if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) || 
+       grow_stack_or_fail (f, fault_addr)) return;
+
+  syscall_exit (-1);
 
   // printf ("Page fault at %p: %s error %s page in %s context.\n",
   //   fault_addr,
@@ -182,7 +184,6 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 
   fail_2: spt_remove_entry (thread_current ()->spt_ptr, spte_ptr->uaddr);
           release_ft ();
-  syscall_exit (-1);
   fail_1: return false;
 }
 
@@ -202,6 +203,5 @@ grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
           return true;
     }
 
-  syscall_exit (-1);
   return false;
 }
