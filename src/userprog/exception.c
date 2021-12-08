@@ -197,7 +197,7 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 
   return true;
 
-  fail_2: spt_remove_entry (thread_current ()->spt_ptr, spte_ptr->uaddr);
+  fail_2: spt_propagate_removal (thread_current ()->spt_ptr, spte_ptr->uaddr);
           release_ft ();
   fail_1: return false;
 }

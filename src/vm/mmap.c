@@ -79,7 +79,7 @@ mmap_remove_all (struct list *list_ptr)
       void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
       acquire_ft ();
       while (loc >= mmape_ptr->uaddr) 
-          spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE); 
+          spt_propagate_removal (t_ptr->spt_ptr, loc -= PGSIZE); 
       release_ft ();
 
 			/* Deallocate the list entry. */

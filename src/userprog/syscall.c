@@ -599,7 +599,7 @@ syscall_mmap (int fd, void *addr)
 fail_2: /* Remove all allocated spt entries associated with the mmapped file */
         acquire_ft ();
         while (loc > mmap_top) 
-            spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE);
+            spt_propagate_removal (t_ptr->spt_ptr, loc -= PGSIZE);
         release_ft ();
 fail_1: return -1;
 }
@@ -620,7 +620,7 @@ syscall_munmap (mapid_t mapping)
   void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
   acquire_ft ();
   while (loc >= mmape_ptr->uaddr) 
-    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
+    spt_propagate_removal (t_ptr->spt_ptr, loc = pg_round_down (--loc));
   release_ft ();
   free (mmape_ptr);
 }

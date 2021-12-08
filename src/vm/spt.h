@@ -32,16 +32,16 @@ struct spte
 
 #include "vm/ft.h"
 
-bool         spt_init         (struct hash **spt_ptr_ptr);
-void         spt_destroy      (struct hash *spt_ptr);
-bool         spt_remove_entry (struct hash *spt_ptr, void *uaddr);
-struct spte *spt_find_entry   (struct hash *spt_ptr, void *uaddr);
-struct spte *spt_add_entry    (struct hash *spt_ptr,
-                               void *uaddr,
-                               enum frame_type frame_type,
-                               struct inode *inode_ptr,
-                               off_t offset,
-                               int amount_occupied,
-                               bool writable);
+bool         spt_init              (struct hash **spt_ptr_ptr);
+void         spt_destroy           (struct hash *spt_ptr);
+bool         spt_propagate_removal (struct hash *spt_ptr, void *uaddr);
+struct spte *spt_find_entry        (struct hash *spt_ptr, void *uaddr);
+struct spte *spt_add_entry         (struct hash *spt_ptr,
+                                    void *uaddr,
+                                    enum frame_type frame_type,
+                                    struct inode *inode_ptr,
+                                    off_t offset,
+                                    int amount_occupied,
+                                    bool writable);
 
 #endif
