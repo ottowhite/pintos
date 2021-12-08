@@ -28,6 +28,9 @@ static bool verify_ptr_privileged (const void *ptr, bool write);
 static bool verify_buffer         (const void *buffer, int size, bool write);
 static bool verify_args           (int argc, const uint32_t *esp);
 
+static void unpin_ptr    (const void *ptr);
+static void unpin_buffer (const void *buffer, int size);
+
 /* System calls */
 static void     syscall_halt     (void);
        void     syscall_exit     (int status);
@@ -138,6 +141,26 @@ verify_ptr_privileged (const void *ptr, bool write)
       return false;
 
   return true;
+}
+
+/* Unpins the frame associated with a particular user address for the process, 
+ * for usage at the end of a syscall. */
+static void
+unpin_ptr (const void *ptr)
+{
+  spt_find_entry (thread_current ()->spt_ptr, 
+      pg_round_down (ptr))->fte_ptr->pin_cnt--;
+}
+
+/* Unpin all frames assocated with a buffer being used by a system call */
+static void
+unpin_buffer (const void *buffer, int size) 
+{
+  const void *buffer_top = buffer + size * sizeof (char);
+  for (void *loc = (void *) buffer; 
+       loc <= buffer_top; 
+       loc = pg_round_up(loc) + 1) 
+    unpin_ptr (loc);
 }
 
 /* Checks whether a given pointer is valid for use */
