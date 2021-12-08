@@ -259,6 +259,7 @@ syscall_exec (const char *cmd_line)
 {
   if (!verify_ptr (cmd_line)) syscall_exit (-1);
   pid_t pid = process_execute (cmd_line);
+  unpin_ptr (cmd_line);
   return pid; 
 }
 
@@ -283,6 +284,8 @@ syscall_create (const char *file, unsigned initial_size)
   bool result = filesys_create (file, initial_size);
   
   release_filesys ();
+
+  unpin_ptr (file);
   
   return result;
 }
@@ -329,6 +332,8 @@ syscall_open (const char *file)
      the struct into the current thread's hash table */
   init_fd_item (new_fd_item, thread_current (), file_to_open);
 
+  unpin_ptr (file);
+
   return new_fd_item->fd;
 }
 
@@ -374,6 +379,7 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   release_filesys ();
 
+  unpin_buffer (buffer, size);
   /* Returns the total count of bytes read */
   return bytes_read;
 }
@@ -414,7 +420,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
-      !verify_buffer (buffer, strlen (buffer), true)) syscall_exit (-1);
+      !verify_buffer (buffer, size, true)) syscall_exit (-1);
 
 
   unsigned bytes_written;
@@ -428,6 +434,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   release_filesys ();
 
+  unpin_buffer (buffer, size);
 
   /* Returns the total count of bytes written */
   return bytes_written;
@@ -601,11 +608,10 @@ syscall_munmap (mapid_t mapping)
   /* try and retrieve the mmap entry, and fail skip to the end if not found */
   struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
   if (mmape_ptr == NULL)
-    goto fail;
+      return;
   
   /* Remove all allocated spt entries associated with the mmapped file. */
   void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
   while (loc >= mmape_ptr->uaddr) 
     spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
-  fail: ;
 }
