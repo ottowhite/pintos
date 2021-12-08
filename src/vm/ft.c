@@ -441,8 +441,7 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr)
 {
   /* if the last owner removed was not the last owner
      we dont need to do anything */
-  // TODO: Fix this broken if statement
-  if (fte_ptr->shared || fte_ptr->owners.owner_single.owner_ptr == NULL) 
+  if (fte_ptr->shared || fte_ptr->owners.owner_single.owner_ptr != NULL) 
       return;
 
   /* Otherwise we just removed the last owner. */
