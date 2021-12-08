@@ -575,7 +575,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       if (spte_ptr == NULL) 
         {
           spt_add_entry (t->spt_ptr,
-                         NULL,
                          upage,
                          frame_type,
                          (frame_type == ALL_ZERO) ? NULL : file->inode,
@@ -612,7 +611,7 @@ setup_stack (void **esp)
   uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
   
   /* attempt to add the new page to the supplemental page table */
-  struct spte *spte_ptr = spt_add_entry (t_ptr->spt_ptr, 0, uaddr, 
+  struct spte *spte_ptr = spt_add_entry (t_ptr->spt_ptr, uaddr, 
       STACK, NULL, 0, PGSIZE, true);
   if (spte_ptr == NULL)
       goto fail_1;

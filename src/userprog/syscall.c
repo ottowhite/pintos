@@ -582,7 +582,7 @@ syscall_mmap (int fd, void *addr)
   {
     int amount_occupied = (bytes_remaining > PGSIZE) ? PGSIZE
                                                      : bytes_remaining;
-    if (spt_add_entry (t_ptr->spt_ptr, 0, loc, MMAP, file_ptr->inode, offset, 
+    if (spt_add_entry (t_ptr->spt_ptr, loc, MMAP, file_ptr->inode, offset, 
         amount_occupied, true)== NULL) 
         goto fail_2;
   }
