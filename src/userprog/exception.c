@@ -153,6 +153,11 @@ page_fault (struct intr_frame *f_ptr)
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
 
+  if (write && 
+      spte_ptr != NULL && 
+      !spte_ptr->writable) 
+      goto fail;
+
   if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) || 
                            attempt_stack_growth (f_ptr, fault_addr)) 
       return;
@@ -163,9 +168,9 @@ page_fault (struct intr_frame *f_ptr)
       write ? "writing" : "reading",
       user ? "user" : "kernel");
 
-  page_fault_cnt++;
-  syscall_exit (-1);
-  kill (f_ptr);
+  fail: page_fault_cnt++;
+        syscall_exit (-1);
+        kill (f_ptr);
 }
 
 /* Attempts to load the given frame from an spte entry */
@@ -200,10 +205,10 @@ static bool
 attempt_stack_growth (struct intr_frame *f_ptr, void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  if ((fault_addr >  f_ptr->esp && fault_addr < PHYS_BASE) ||
-      (fault_addr == f_ptr->esp - 4   ||
-       fault_addr == f_ptr->esp - 32) &&
-       fault_addr > STACK_LIMIT)
+  if ( (fault_addr >  f_ptr->esp && fault_addr < PHYS_BASE) ||
+      ((fault_addr == f_ptr->esp - 4   ||
+        fault_addr == f_ptr->esp - 32) &&
+        fault_addr >  STACK_LIMIT))
     {
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
           pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
