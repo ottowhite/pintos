@@ -699,11 +699,9 @@ fte_less_func (const struct hash_elem *a_ptr,
 static void
 fte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
 {
-  // TODO (complete once allocation is done)
-  // Free all resources associated with a particular frame at the end of 
-  // execution. This should in theory have to run on no FTEs
-
-  // ft_lock held by caller
+  /* Only need to deallocate the frame structs themselves as our
+     SPT deallocation for each thread will deal with cleaning up all resources 
+     indirectly. This should in theory run on no FTEs */
   free (hash_entry (e_ptr, struct fte, hash_elem));
 }
 
