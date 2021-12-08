@@ -63,6 +63,8 @@ mmap_locate_entry (struct list *list_ptr, mapid_t mid)
   return (found) ? mmape_ptr : NULL;
 }
 
+/* Takes a pointer to the mmap_list of thread and removes all of the
+   mmap entries. */
 void
 mmap_remove_all (struct list *list_ptr)
 {
