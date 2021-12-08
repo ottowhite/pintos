@@ -399,8 +399,9 @@ get_eviction_method (enum frame_type frame_type)
 }
 
 /* Remove a single owner from an FTE, converting the FTE to non-shared if
-   necessary. Remove the referencing page table entry. */
-void 
+   necessary. Remove the referencing page table entry. Then return the 
+   owner. */
+struct owner 
 ft_remove_owner (struct fte *fte_ptr)
 {
   struct owner owner;
@@ -438,13 +439,13 @@ ft_remove_owner (struct fte *fte_ptr)
                             struct owner_list_elem, 
                             elem);
 
-          owner = owner_e_ptr->owner;
+          struct owner new_owner = owner_e_ptr->owner;
 
           free (owner_e_ptr);
           free (owner_list_ptr);
 
           fte_ptr->shared              = false;
-          fte_ptr->owners.owner_single = owner;
+          fte_ptr->owners.owner_single = new_owner;
         }
     } 
   else 
@@ -454,7 +455,7 @@ ft_remove_owner (struct fte *fte_ptr)
       frame_remove_pte (owner);
       fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
     }
-
+  return owner;
 }
 
 /* Remove a frame if the last owner was removed. In the swapped case
