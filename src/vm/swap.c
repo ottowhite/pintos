@@ -33,9 +33,6 @@ swap_in (struct fte *fte_ptr, void *kpage)
   block_sector_t sector  = fte_ptr->loc.swap_index * SECTORS_PER_PAGE;
   void *kpage_write_head = kpage;
 
-  if (sector < 0)
-    PANIC ("Data is not stored in the swap table");
-
   for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, 
                                         kpage_write_head += BLOCK_SECTOR_SIZE)
     block_read (swap_device, sector, kpage_write_head);
