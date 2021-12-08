@@ -400,13 +400,13 @@ thread_exit (void)
   struct thread *t_ptr = thread_current ();
 
 #ifdef VM
-/*
+
   if (t_ptr != initial_thread && !list_empty (&t_ptr->mmap_list))
     {
       mmap_remove_all (&t_ptr->mmap_list);
       spt_destroy (t_ptr->spt_ptr);
     }
-*/
+
 
 #endif
 #ifdef USERPROG
