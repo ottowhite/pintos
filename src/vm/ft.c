@@ -416,21 +416,28 @@ ft_remove_owner (struct fte *fte_ptr)
             e != list_end (owner_list_ptr);
             e  = list_next (e))
         {
-          owner = list_entry (e, struct owner_list_elem, elem)->owner;
+          struct owner_list_elem *owner_e_ptr 
+              = list_entry (e, struct owner_list_elem, elem);
+          owner = owner_e_ptr->owner;
+
           if (owner.owner_ptr == t_ptr)
             {
-              // TODO: Free the associated memory
               list_remove (e);
+              free (owner_e_ptr);
               break;
             }
         }
+
+      frame_remove_pte (owner);
 
       /* If the owner list became a singleton, convert the FTE to non shared */
       if (list_front (owner_list_ptr) == list_back (owner_list_ptr))
         {
           struct owner_list_elem *owner_e_ptr 
               = list_entry (list_front (owner_list_ptr), 
-                  struct owner_list_elem, elem);
+                            struct owner_list_elem, 
+                            elem);
+
           owner = owner_e_ptr->owner;
 
           free (owner_e_ptr);
@@ -443,10 +450,10 @@ ft_remove_owner (struct fte *fte_ptr)
   else 
     {
       owner = fte_ptr->owners.owner_single;
+      frame_remove_pte (owner);
       fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
     }
 
-  frame_remove_pte (owner);
 }
 
 /* Remove a frame if the last owner was removed. In the swapped case
