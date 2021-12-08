@@ -14,14 +14,22 @@ struct block *fs_device;
 static void do_format (void);
 static struct lock filesys_lock;
 
-void acquire_filesys (void)
+void 
+acquire_filesys (void)
 {
   lock_acquire (&filesys_lock);
 }
 
-void release_filesys (void)
+void 
+release_filesys (void)
 {
   lock_release (&filesys_lock);
+}
+
+bool 
+filesys_locked (void)
+{
+  return filesys_lock.semaphore.value == 0;
 }
 
 /* Initializes the file system module.

@@ -1,5 +1,4 @@
 FAIL tests/vm/mmap-exit
-FAIL tests/vm/mmap-write
 FAIL tests/vm/page-linear
 FAIL tests/vm/page-merge-mm
 FAIL tests/vm/page-merge-par
@@ -9,7 +8,6 @@ FAIL tests/vm/pt-big-stk-obj
 FAIL tests/vm/pt-grow-stack
 FAIL tests/vm/pt-grow-stk-sc
 FAIL tests/vm/pt-overflowstk
-FAIL tests/vm/pt-write-code2
 pass tests/filesys/base/lg-create
 pass tests/filesys/base/lg-full
 pass tests/filesys/base/lg-random
@@ -101,6 +99,7 @@ pass tests/vm/mmap-remove
 pass tests/vm/mmap-shuffle
 pass tests/vm/mmap-twice
 pass tests/vm/mmap-unmap
+pass tests/vm/mmap-write
 pass tests/vm/mmap-zero
 pass tests/vm/page-parallel
 pass tests/vm/page-shuffle
@@ -109,4 +108,5 @@ pass tests/vm/pt-bad-read
 pass tests/vm/pt-grow-bad
 pass tests/vm/pt-grow-pusha
 pass tests/vm/pt-write-code
-Warning: 12 of 111 tests failed!
+pass tests/vm/pt-write-code2
+Warning: 10 of 111 tests failed!

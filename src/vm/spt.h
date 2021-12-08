@@ -37,7 +37,6 @@ void         spt_destroy      (struct hash *spt_ptr);
 bool         spt_remove_entry (struct hash *spt_ptr, void *uaddr);
 struct spte *spt_find_entry   (struct hash *spt_ptr, void *uaddr);
 struct spte *spt_add_entry    (struct hash *spt_ptr,
-                               struct fte *fte_ptr,
                                void *uaddr,
                                enum frame_type frame_type,
                                struct inode *inode_ptr,

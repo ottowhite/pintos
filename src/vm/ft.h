@@ -70,4 +70,6 @@ struct fte  *ft_get_frame_preemptive      (enum frame_type frame_type,
                                           int amount_occupied);
 bool         ft_install_frame             (struct spte *spte_ptr, 
                                            struct fte *fte_ptr);
+void         acquire_ft                   (void);
+void         release_ft                   (void);
 #endif

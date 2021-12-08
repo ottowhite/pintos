@@ -7,6 +7,7 @@
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "filesys/filesys.h"
 #include "vm/spt.h"
 #include "vm/ft.h"
 
@@ -17,7 +18,7 @@ static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
 /* Page fault handler helpers */
-static void grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr);
+static bool attempt_stack_growth (struct intr_frame *f_ptr, void *fault_addr);
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -125,7 +126,7 @@ kill (struct intr_frame *f)
    description of "Interrupt 14--Page Fault Exception (#PF)" in
    [IA32-v3a] section 5.15 "Exception and Interrupt Reference". */
 static void
-page_fault (struct intr_frame *f) 
+page_fault (struct intr_frame *f_ptr) 
 {
 
   /* Obtain faulting address, the virtual address that was
@@ -135,8 +136,16 @@ page_fault (struct intr_frame *f)
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
      [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      (#PF)". */
-  void *fault_addr;
+  void *fault_addr;  /* Fault address. */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
+
+  /* Determine cause. */
+  /* True: not-present page, false: writing r/o page. */
+  bool not_present = (f_ptr->error_code & PF_P) == 0;
+  /* True: access was write, false: access was read. */
+  bool write       = (f_ptr->error_code & PF_W) != 0;
+  /* True: access by user, false: access by kernel. */
+  bool user        = (f_ptr->error_code & PF_U) != 0;
 
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
@@ -145,54 +154,70 @@ page_fault (struct intr_frame *f)
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
 
-  if (spte_ptr != NULL) attempt_frame_load (spte_ptr, false);
-  else                  grow_stack_or_fail (f, fault_addr);
+  if (write && 
+      spte_ptr != NULL && 
+      !spte_ptr->writable) 
+      goto fail;
+
+  if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) || 
+                           attempt_stack_growth (f_ptr, fault_addr)) 
+      return;
+
+  printf ("Page fault at %p: %s error %s page in %s context.\n",
+      fault_addr,
+      not_present ? "not present" : "rights violation",
+      write ? "writing" : "reading",
+      user ? "user" : "kernel");
+
+  fail: page_fault_cnt++;
+        if (filesys_locked ()) release_filesys ();
+        syscall_exit (-1);
+        kill (f_ptr);
 }
 
 /* Attempts to load the given frame from an spte entry */
-void
+bool
 attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 {
   /* Returns null if read failed, obtaining frame, or allocating fte failed */
+  acquire_ft ();
   struct fte *fte_ptr = ft_get_frame (spte_ptr);
+  release_ft ();
   if (fte_ptr == NULL) 
       goto fail_1;
 
   /* Returns false if installation failed, frame left pinned */
+  acquire_ft ();
   if (!ft_install_frame (spte_ptr, fte_ptr)) 
       goto fail_2;
+  release_ft ();
 
   /* Leave the frame pinned if left_pinned, for usage in syscall handlers */
   if (left_pinned) fte_ptr->pin_cnt++;
 
-  return;
+  return true;
 
   fail_2: spt_remove_entry (thread_current ()->spt_ptr, spte_ptr->uaddr);
-  fail_1: syscall_exit (-1);
+          release_ft ();
+  fail_1: return false;
 }
 
 /* Grows stack if fault_addr was a valid stack access, fails otherwise */
-static void
-grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
+static bool
+attempt_stack_growth (struct intr_frame *f_ptr, void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  if ((fault_addr == f_ptr->esp - 4   ||
-       fault_addr == f_ptr->esp - 32) &&
-       fault_addr > STACK_LIMIT)
+  if ( (fault_addr >  f_ptr->esp && fault_addr < PHYS_BASE) ||
+      ((fault_addr == f_ptr->esp - 4   ||
+        fault_addr == f_ptr->esp - 32) &&
+        fault_addr >  STACK_LIMIT))
     {
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
-          0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
-      attempt_frame_load (spte_ptr, false);
+          pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
 
-      if (spte_ptr == NULL) goto fail;
+      if (spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) 
+          return true;
     }
-  else
-      goto fail;
 
-  return;
-
-fail:
-  page_fault_cnt++;
-  syscall_exit (-1);
-  kill (f_ptr);
+  return false;
 }

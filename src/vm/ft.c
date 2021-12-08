@@ -86,7 +86,6 @@ static off_t write_to_inode  (void *frame_ptr,
 static int   index_from_frame_ptr (void *frame_ptr);
 static void *frame_ptr_from_index (int frame_index);
 
-
 /* Initilizes the frame table as a hash map of struct ftes */
 bool 
 ft_init (void)
@@ -180,23 +179,11 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 struct fte *
 ft_get_frame (struct spte *spte_ptr)
 {
-  struct fte *fte_ptr = ft_get_frame_preemptive (spte_ptr->frame_type,
-                                                 spte_ptr->inode_ptr,
-                                                 spte_ptr->offset,
-                                                 spte_ptr->amount_occupied);
-  spte_ptr->fte_ptr = fte_ptr;
-  return fte_ptr;
-}
+  enum frame_type frame_type = spte_ptr->frame_type;
+  struct inode *inode_ptr    = spte_ptr->inode_ptr;
+  off_t offset               = spte_ptr->offset;
+  int amount_occupied        = spte_ptr->amount_occupied;
 
-/* Generalised version of ft_get_frame.
-   Useful for getting frames before their spt entry exists.
-   These frames should be registered in an spt table after acquired. */
-struct fte *
-ft_get_frame_preemptive (enum frame_type frame_type, 
-                         struct inode *inode_ptr,
-                         off_t offset, 
-                         int amount_occupied)
-{
   struct fte *fte_ptr;
   if ((frame_type == EXECUTABLE_CODE ||
        frame_type == MMAP)           &&
@@ -222,6 +209,8 @@ ft_get_frame_preemptive (enum frame_type frame_type,
   int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
   frame_index_arr[frame_index] = fte_ptr;
 
+  /* Associate the supplemental page table entry with the frame */
+  spte_ptr->fte_ptr = fte_ptr;
   return fte_ptr;
 }
 
@@ -479,16 +468,7 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr, struct owner original_owner)
 
   /* NULL the slot in the frame_index_arr that the frame occupied */
   frame_index_arr[index_from_frame_ptr(fte_ptr->loc.frame_ptr)] = NULL;
-  ft_remove_frame (fte_ptr);
-}
-
-/* Frees a frame, deallocates and removes the assocated ft entry. */
-void 
-ft_remove_frame (struct fte *fte_ptr)
-{
-  palloc_free_page (fte_ptr->loc.frame_ptr);
-  hash_delete (&ft, &fte_ptr->hash_elem);
-  free (fte_ptr);
+  frame_delete (fte_ptr);
 }
 
 /* Constructs a pinned frame table entry stored in the kernel pool
@@ -571,7 +551,7 @@ frame_write (struct fte *fte_ptr)
 {
   ASSERT (!fte_ptr->swapped);
   if (write_to_inode (fte_ptr->loc.frame_ptr, fte_ptr->inode_ptr,
-      fte_ptr->offset, PGSIZE) != PGSIZE)
+      fte_ptr->offset, fte_ptr->amount_occupied) != fte_ptr->amount_occupied)
       syscall_exit (-1);
 }
 
@@ -582,6 +562,7 @@ frame_delete (struct fte *fte_ptr)
   /* Free the page in memory and the frame table entry */
   ASSERT (!fte_ptr->swapped);
   palloc_free_page (fte_ptr->loc.frame_ptr);
+  hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
 }
 
@@ -708,3 +689,14 @@ fte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
   free (hash_entry (e_ptr, struct fte, hash_elem));
 }
 
+void
+acquire_ft (void)
+{
+  lock_acquire (&ft_lock);
+}
+
+void
+release_ft (void)
+{
+  lock_release (&ft_lock);
+}

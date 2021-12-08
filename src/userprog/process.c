@@ -575,7 +575,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       if (spte_ptr == NULL) 
         {
           spt_add_entry (t->spt_ptr,
-                         NULL,
                          upage,
                          frame_type,
                          (frame_type == ALL_ZERO) ? NULL : file->inode,
@@ -609,26 +608,26 @@ setup_stack (void **esp)
 {
   struct thread *t_ptr = thread_current ();
 
-  struct fte *fte_ptr = ft_get_frame_preemptive (ALL_ZERO, NULL, 0, 0);
-
-  if (fte_ptr == NULL) 
-      goto fail_1;
-
   uint8_t *uaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
   
   /* attempt to add the new page to the supplemental page table */
-  struct spte *spte_ptr = spt_add_entry (t_ptr->spt_ptr, fte_ptr, uaddr, 
+  struct spte *spte_ptr = spt_add_entry (t_ptr->spt_ptr, uaddr, 
       STACK, NULL, 0, PGSIZE, true);
   if (spte_ptr == NULL)
+      goto fail_1;
+
+  /* Get a frame that fits our description*/
+  acquire_ft ();
+  struct fte *fte_ptr = ft_get_frame (spte_ptr);
+  release_ft ();
+  if (fte_ptr == NULL)
       goto fail_2;
   
   /* try and add the new frame to the page table */
+  acquire_ft ();
   if (!ft_install_frame (spte_ptr, fte_ptr))
-    {
-      /* Also implicitly removes the frame. */
-      spt_remove_entry (t_ptr->spt_ptr, uaddr);
-      goto fail_1;
-    }
+      goto fail_2;
+  release_ft ();
   
 
   *esp = PHYS_BASE;
@@ -636,7 +635,9 @@ setup_stack (void **esp)
 
   return true;
   
-  fail_2: ft_remove_frame (fte_ptr); 
+          /* Also implicitly removes the frame. */
+  fail_2: spt_remove_entry (t_ptr->spt_ptr, uaddr); 
+          release_ft ();
   fail_1: return false;
 }
 
