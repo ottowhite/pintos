@@ -550,7 +550,7 @@ syscall_mmap (int fd, void *addr)
   off_t offset = 0;
   void *loc = addr;
   for (loc = addr; loc <= mmap_top; 
-       loc              = pg_round_up(loc) + 1, 
+       loc             += PGSIZE, 
        bytes_remaining -= PGSIZE, 
        offset          += PGSIZE) 
   {
