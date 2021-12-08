@@ -4,9 +4,7 @@
 #include "vm/mmap.h"
 #include "spt.h"
 
-/* mmap_remove_entry helper functions */
 static struct mmape *mmap_locate_entry (struct list *list_ptr, mapid_t mid);
-static void          mmap_delete_entry (struct mmape *mmape_ptr);
 
 void mmap_init (struct list *list_ptr)
 {
@@ -63,8 +61,8 @@ mmap_locate_entry (struct list *list_ptr, mapid_t mid)
   return (found) ? mmape_ptr : NULL;
 }
 
-/* Takes a pointer to the mmap_list of thread and removes all of the
-   mmap entries. */
+/* Takes a pointer to the mmap_list of thread and removes and frees all of the
+   mmap entries. Called when a process is terminated. */
 void
 mmap_remove_all (struct list *list_ptr)
 {
@@ -83,14 +81,10 @@ mmap_remove_all (struct list *list_ptr)
       while (loc >= mmape_ptr->uaddr) 
           spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE); 
       release_ft ();
-      mmap_delete_entry (mmape_ptr);
+
+			/* Deallocate the list entry. */
+			free (mmape_ptr);
 			e = e_nxt;
     }
 }
 
-static void
-mmap_delete_entry (struct mmape *mmape_ptr)
-{
-  list_remove (&mmape_ptr->list_elem);
-  free (mmape_ptr);
-}
