@@ -624,6 +624,7 @@ setup_stack (void **esp)
       goto fail_2;
   
   /* try and add the new frame to the page table */
+  // TODO: Clean up this failure case 
   if (!ft_install_frame (spte_ptr, fte_ptr))
       goto fail_3;
   
@@ -634,6 +635,7 @@ setup_stack (void **esp)
   return true;
   
   fail_3: spt_remove_entry (t_ptr->spt_ptr, uaddr);
+          return false;
   fail_2: ft_remove_frame (fte_ptr); 
   fail_1: return false;
 }

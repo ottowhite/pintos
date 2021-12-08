@@ -34,7 +34,6 @@ static void     fte_deallocate_func (struct hash_elem *e_ptr,
 
 /* Frame table entry helpers */
 static void        fte_insert      (struct fte *fte_ptr);
-static void        fte_remove      (struct fte *fte_ptr);
 static struct fte *construct_fte   (union Frame_location loc,
                                     enum eviction_method eviction_method,
                                     struct inode *inode_ptr,
@@ -399,12 +398,70 @@ get_eviction_method (enum frame_type frame_type)
     }
 }
 
+/* Remove a single owner from an FTE, converting the FTE to non-shared if
+   necessary. Remove the referencing page table entry. */
+void 
+ft_remove_owner (struct fte *fte_ptr)
+{
+  struct owner owner;
+  if (fte_ptr->shared) 
+    {
+      /* loop through the list of owners in the fte until the 
+         list entry correspoding to the current thread is found
+         and then call list_remove on this element and save the 
+         owner to owner */
+      struct thread *t_ptr = thread_current ();
+      for (struct list_elem *e = list_begin (fte_ptr->owners.owner_list_ptr); 
+            e != list_end (fte_ptr->owners.owner_list_ptr);
+            e  = list_next (e))
+        {
+          owner = list_entry (e, struct owner_list_elem, elem)->owner;
+          if (owner.owner_ptr == t_ptr)
+            {
+              list_remove (e);
+              break;
+            }
+        }
+      // TODO: If the list becomes a singleton, convert it to non-shared
+    } 
+  else 
+    {
+      owner = fte_ptr->owners.owner_single;
+      fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
+    }
+
+  frame_remove_pte (owner);
+}
+
+/* Remove a frame if the last owner was removed. In the swapped case
+   remove the entry from the swap bitmap with swap_remove, in the 
+   non-swapped case write back if the frame is dirty. */
+void 
+ft_remove_frame_if_necessary (struct fte *fte_ptr)
+{
+  /* if the last owner removed was not the last owner
+     we dont need to do anything */
+  // TODO: Fix this broken if statement
+  if (fte_ptr->shared || fte_ptr->owners.owner_single.owner_ptr == NULL) 
+      return;
+
+  /* Otherwise we just removed the last owner. */
+  if (fte_ptr->swapped) 
+			swap_remove (fte_ptr);
+  else if (fte_ptr->eviction_method == WRITE_IF_DIRTY && frame_dirty (fte_ptr)) 
+      frame_write (fte_ptr);
+
+  ft_remove_frame (fte_ptr);
+  // TODO: Update the frame_index_arr
+}
+
 /* Frees a frame, deallocates and removes the assocated ft entry. */
 void 
 ft_remove_frame (struct fte *fte_ptr)
 {
   palloc_free_page (fte_ptr->loc.frame_ptr);
-  fte_remove (fte_ptr);
+  hash_delete (&ft, &fte_ptr->hash_elem);
+  free (fte_ptr);
 }
 
 /* Constructs a pinned frame table entry stored in the kernel pool
@@ -597,15 +654,6 @@ static void
 fte_insert (struct fte *fte_ptr)
 {
   hash_insert (&ft, &fte_ptr->hash_elem);
-}
-
-/* Removes a frame table entry from the frame table and frees the 
-   space used to store it. Doesn't free the user page. */
-static void
-fte_remove (struct fte *fte_ptr)
-{
-  hash_delete (&ft, &fte_ptr->hash_elem);
-  free (fte_ptr);
 }
 
 static unsigned

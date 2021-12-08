@@ -1,5 +1,8 @@
 #include "threads/malloc.h"
+#include "threads/thread.h"
+#include "threads/vaddr.h"
 #include "vm/mmap.h"
+#include "spt.h"
 
 /* mmap_remove_entry helper functions */
 static struct mmape *mmap_locate_entry (struct list *list_ptr, mapid_t mid);
@@ -57,6 +60,27 @@ mmap_locate_entry (struct list *list_ptr, mapid_t mid)
     }
 
   return (found) ? mmape_ptr : NULL;
+}
+
+void
+mmap_remove_all (struct list *list_ptr)
+{
+  struct thread *t_ptr = thread_current ();
+  /* loops through each mmap entry removing it from the list and freeing it
+     as well as calling spt_remove on each of its user addresses */
+  for (struct list_elem *e = list_begin (list_ptr); 
+       e != list_end (list_ptr);
+       e  = list_next (e))
+    {
+      struct mmape *mmape_ptr = list_entry (e, struct mmape, list_elem);
+      /* Remove all allocated spt entries associated with the mmapped file. */
+      void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
+      while (loc >= mmape_ptr->uaddr) 
+          spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE); 
+      // TODO: Replace with mmap_delete_entry
+      list_remove (e);
+      free (mmape_ptr);
+    }
 }
 
 static void
