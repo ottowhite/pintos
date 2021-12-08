@@ -568,7 +568,7 @@ frame_write (struct fte *fte_ptr)
 {
   ASSERT (!fte_ptr->swapped);
   if (write_to_inode (fte_ptr->loc.frame_ptr, fte_ptr->inode_ptr,
-      fte_ptr->offset, PGSIZE) != PGSIZE)
+      fte_ptr->offset, fte_ptr->amount_occupied) != fte_ptr->amount_occupied)
       syscall_exit (-1);
 }
 
