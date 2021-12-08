@@ -17,7 +17,7 @@ static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
 /* Page fault handler helpers */
-static bool grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr);
+static bool attempt_stack_growth (struct intr_frame *f_ptr, void *fault_addr);
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -154,7 +154,8 @@ page_fault (struct intr_frame *f_ptr)
                                           pg_round_down (fault_addr));
 
   if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) || 
-       grow_stack_or_fail (f_ptr, fault_addr)) return;
+                           attempt_stack_growth (f_ptr, fault_addr)) 
+      return;
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",
     fault_addr,
@@ -195,7 +196,7 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 
 /* Grows stack if fault_addr was a valid stack access, fails otherwise */
 static bool
-grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
+attempt_stack_growth (struct intr_frame *f_ptr, void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
   if ((fault_addr == f_ptr->esp - 4   ||
