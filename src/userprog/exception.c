@@ -177,9 +177,9 @@ grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
        fault_addr == f_ptr->esp - 32) &&
        fault_addr > STACK_LIMIT)
     {
-      // TODO: add the frame then spte after
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
           0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
+      attempt_frame_load (spte_ptr);
 
       if (spte_ptr == NULL) goto fail;
     }
