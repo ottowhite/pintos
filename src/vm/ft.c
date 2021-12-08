@@ -126,8 +126,8 @@ ft_destroy (void)
 bool
 ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 {
+  ASSERT (!fte_ptr->swapped);
   void *upage   = spte_ptr->uaddr;
-  /* TODO: handle case in which the frame is swapped*/
   void *kpage   = fte_ptr->loc.frame_ptr;
   bool writable = spte_ptr->writable;
 
