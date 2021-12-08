@@ -17,6 +17,7 @@
 #endif
 #ifdef VM
 #include "vm/spt.h"
+#include "vm/mmap.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -399,7 +400,14 @@ thread_exit (void)
   struct thread *t_ptr = thread_current ();
 
 #ifdef VM
-  if (t_ptr != initial_thread) spt_destroy (t_ptr->spt_ptr);
+/*
+  if (t_ptr != initial_thread && !list_empty (&t_ptr->mmap_list))
+    {
+      mmap_remove_all (&t_ptr->mmap_list);
+      spt_destroy (t_ptr->spt_ptr);
+    }
+*/
+
 #endif
 #ifdef USERPROG
   process_exit ();
