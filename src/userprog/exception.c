@@ -17,7 +17,7 @@ static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
 /* Page fault handler helpers */
-static void grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr);
+static bool grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr);
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -147,10 +147,19 @@ page_fault (struct intr_frame *f)
 
   if (spte_ptr != NULL) attempt_frame_load (spte_ptr, false);
   else                  grow_stack_or_fail (f, fault_addr);
+
+  // printf ("Page fault at %p: %s error %s page in %s context.\n",
+  //   fault_addr,
+  //   not_present ? "not present" : "rights violation",
+  //   write ? "writing" : "reading",
+  //   user ? "user" : "kernel");
+  // page_fault_cnt++;
+  // syscall_exit (-1);
+  // kill (f_ptr);
 }
 
 /* Attempts to load the given frame from an spte entry */
-void
+bool
 attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 {
   /* Returns null if read failed, obtaining frame, or allocating fte failed */
@@ -169,15 +178,16 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
   /* Leave the frame pinned if left_pinned, for usage in syscall handlers */
   if (left_pinned) fte_ptr->pin_cnt++;
 
-  return;
+  return true;
 
   fail_2: spt_remove_entry (thread_current ()->spt_ptr, spte_ptr->uaddr);
           release_ft ();
-  fail_1: syscall_exit (-1);
+  syscall_exit (-1);
+  fail_1: return false;
 }
 
 /* Grows stack if fault_addr was a valid stack access, fails otherwise */
-static void
+static bool
 grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
@@ -187,17 +197,11 @@ grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
     {
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
           pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
-      attempt_frame_load (spte_ptr, false);
 
-      if (spte_ptr == NULL) goto fail;
+      if (spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) 
+          return true;
     }
-  else
-      goto fail;
 
-  return;
-
-fail:
-  page_fault_cnt++;
   syscall_exit (-1);
-  kill (f_ptr);
+  return false;
 }
