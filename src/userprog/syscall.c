@@ -579,17 +579,19 @@ syscall_munmap (mapid_t mapping)
 {
   struct thread *t_ptr = thread_current ();
 
-  /* try and retrieve the mmap entry, and fail skip to the end if not found */
+  /* try and retrieve and remove the mmap entry, and fail skip to the end if 
+     not found */
   struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
-  if (mmape_ptr == NULL)
-    goto fail;
+  if (mmape_ptr == NULL) return;
   
+  // TODO: check if and where we need to acquire_ft()
+
+  // TODO: ask jay why he calls file open and then file reopen
+
   /* Remove all allocated spt entries associated with the mmapped file. */
   void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
   while (loc >= mmape_ptr->uaddr) 
     spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
 
   free (mmape_ptr);
-
-  fail: ;
 }
