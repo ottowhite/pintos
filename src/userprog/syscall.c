@@ -28,6 +28,9 @@ static bool verify_ptr_privileged (const void *ptr, bool write);
 static bool verify_buffer         (const void *buffer, int size, bool write);
 static bool verify_args           (int argc, const uint32_t *esp);
 
+static void unpin_ptr    (const void *ptr);
+static void unpin_buffer (const void *buffer, int size);
+
 /* System calls */
 static void     syscall_halt     (void);
        void     syscall_exit     (int status);
@@ -140,6 +143,26 @@ verify_ptr_privileged (const void *ptr, bool write)
   return true;
 }
 
+/* Unpins the frame associated with a particular user address for the process, 
+ * for usage at the end of a syscall. */
+static void
+unpin_ptr (const void *ptr)
+{
+  spt_find_entry (thread_current ()->spt_ptr, 
+      pg_round_down (ptr))->fte_ptr->pin_cnt--;
+}
+
+/* Unpin all frames assocated with a buffer being used by a system call */
+static void
+unpin_buffer (const void *buffer, int size) 
+{
+  const void *buffer_top = buffer + size * sizeof (char);
+  for (void *loc = (void *) buffer; 
+       loc <= buffer_top; 
+       loc = pg_round_up(loc) + 1) 
+    unpin_ptr (loc);
+}
+
 /* Checks whether a given pointer is valid for use */
 static bool
 verify_ptr (const void *ptr)
@@ -236,6 +259,7 @@ syscall_exec (const char *cmd_line)
 {
   if (!verify_ptr (cmd_line)) syscall_exit (-1);
   pid_t pid = process_execute (cmd_line);
+  unpin_ptr (cmd_line);
   return pid; 
 }
 
@@ -260,6 +284,8 @@ syscall_create (const char *file, unsigned initial_size)
   bool result = filesys_create (file, initial_size);
   
   release_filesys ();
+
+  unpin_ptr (file);
   
   return result;
 }
@@ -306,6 +332,8 @@ syscall_open (const char *file)
      the struct into the current thread's hash table */
   init_fd_item (new_fd_item, thread_current (), file_to_open);
 
+  unpin_ptr (file);
+
   return new_fd_item->fd;
 }
 
@@ -351,6 +379,7 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   release_filesys ();
 
+  unpin_buffer (buffer, size);
   /* Returns the total count of bytes read */
   return bytes_read;
 }
@@ -391,7 +420,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
-      !verify_buffer (buffer, strlen (buffer), true)) syscall_exit (-1);
+      !verify_buffer (buffer, size, true)) syscall_exit (-1);
 
 
   unsigned bytes_written;
@@ -405,6 +434,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   release_filesys ();
 
+  unpin_buffer (buffer, size);
 
   /* Returns the total count of bytes written */
   return bytes_written;
@@ -556,7 +586,7 @@ syscall_mmap (int fd, void *addr)
   {
     int amount_occupied = (bytes_remaining > PGSIZE) ? PGSIZE
                                                      : bytes_remaining;
-    if (spt_add_entry (t_ptr->spt_ptr, 0, loc, MMAP, file_ptr->inode, offset, 
+    if (spt_add_entry (t_ptr->spt_ptr, loc, MMAP, file_ptr->inode, offset, 
         amount_occupied, true)== NULL) 
         goto fail_2;
   }
@@ -582,11 +612,10 @@ syscall_munmap (mapid_t mapping)
   /* try and retrieve the mmap entry, and fail skip to the end if not found */
   struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
   if (mmape_ptr == NULL)
-    goto fail;
+      return;
   
   /* Remove all allocated spt entries associated with the mmapped file. */
   void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
   while (loc >= mmape_ptr->uaddr) 
     spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
-  fail: ;
 }
