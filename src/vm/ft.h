@@ -64,4 +64,7 @@ void        ft_remove_frame_if_necessary (struct fte *fte_ptr);
 struct fte *ft_get_frame                 (struct spte *spte_ptr);
 bool        ft_install_frame             (struct spte *spte_ptr, 
                                           struct fte *fte_ptr);
+void acquire_ft (void);
+void release_ft (void);
+
 #endif

@@ -86,7 +86,6 @@ static off_t write_to_inode  (void *frame_ptr,
 static int   index_from_frame_ptr (void *frame_ptr);
 static void *frame_ptr_from_index (int frame_index);
 
-
 /* Initilizes the frame table as a hash map of struct ftes */
 bool 
 ft_init (void)
@@ -687,3 +686,14 @@ fte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
   free (hash_entry (e_ptr, struct fte, hash_elem));
 }
 
+void
+acquire_ft (void)
+{
+  lock_acquire (&ft_lock);
+}
+
+void
+release_ft (void)
+{
+  lock_release (&ft_lock);
+}
