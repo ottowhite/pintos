@@ -66,6 +66,7 @@ mmap_remove_all (struct list *list_ptr)
 			e_nxt = list_next (e);
       struct mmape *mmape_ptr = list_entry (e, struct mmape, list_elem);
       /* Remove all allocated spt entries associated with the mmapped file. */
+			// TODO: remove this duplication of code (repeated in remove entry)
       void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
       acquire_ft ();
       while (loc >= mmape_ptr->uaddr) 
