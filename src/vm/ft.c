@@ -410,9 +410,10 @@ ft_remove_owner (struct fte *fte_ptr)
          list entry correspoding to the current thread is found
          and then call list_remove on this element and save the 
          owner to owner */
+      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
       struct thread *t_ptr = thread_current ();
-      for (struct list_elem *e = list_begin (fte_ptr->owners.owner_list_ptr); 
-            e != list_end (fte_ptr->owners.owner_list_ptr);
+      for (struct list_elem *e = list_begin (owner_list_ptr); 
+            e != list_end (owner_list_ptr);
             e  = list_next (e))
         {
           owner = list_entry (e, struct owner_list_elem, elem)->owner;
@@ -422,7 +423,12 @@ ft_remove_owner (struct fte *fte_ptr)
               break;
             }
         }
-      // TODO: If the list becomes a singleton, convert it to non-shared
+
+      if (list_front (owner_list_ptr) == list_back (owner_list_ptr))
+        {
+          // TODO: Convert the frame to a non-shared frame
+
+        }
     } 
   else 
     {
