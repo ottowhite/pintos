@@ -451,8 +451,9 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr)
   else if (fte_ptr->eviction_method == WRITE_IF_DIRTY && frame_dirty (fte_ptr)) 
       frame_write (fte_ptr);
 
+  /* NULL the slot in the frame_index_arr that the frame occupied */
+  frame_index_arr[index_from_frame_ptr(fte_ptr->loc.frame_ptr)] = NULL;
   ft_remove_frame (fte_ptr);
-  // TODO: Update the frame_index_arr
 }
 
 /* Frees a frame, deallocates and removes the assocated ft entry. */
