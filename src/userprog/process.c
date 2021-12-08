@@ -617,13 +617,17 @@ setup_stack (void **esp)
       goto fail_1;
 
   /* Get a frame that fits our description*/
+  acquire_ft ();
   struct fte *fte_ptr = ft_get_frame (spte_ptr);
+  release_ft ();
   if (fte_ptr == NULL)
       goto fail_2;
   
   /* try and add the new frame to the page table */
+  acquire_ft ();
   if (!ft_install_frame (spte_ptr, fte_ptr))
       goto fail_2;
+  release_ft ();
   
 
   *esp = PHYS_BASE;
@@ -633,6 +637,7 @@ setup_stack (void **esp)
   
           /* Also implicitly removes the frame. */
   fail_2: spt_remove_entry (t_ptr->spt_ptr, uaddr); 
+          release_ft ();
   fail_1: return false;
 }
 

@@ -75,8 +75,10 @@ mmap_remove_all (struct list *list_ptr)
       struct mmape *mmape_ptr = list_entry (e, struct mmape, list_elem);
       /* Remove all allocated spt entries associated with the mmapped file. */
       void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
+      acquire_ft ();
       while (loc >= mmape_ptr->uaddr) 
           spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE); 
+      release_ft ();
       mmap_delete_entry (mmape_ptr);
     }
 }

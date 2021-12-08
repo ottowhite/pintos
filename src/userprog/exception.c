@@ -154,13 +154,17 @@ void
 attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 {
   /* Returns null if read failed, obtaining frame, or allocating fte failed */
+  acquire_ft ();
   struct fte *fte_ptr = ft_get_frame (spte_ptr);
+  release_ft ();
   if (fte_ptr == NULL) 
       goto fail_1;
 
   /* Returns false if installation failed, frame left pinned */
+  acquire_ft ();
   if (!ft_install_frame (spte_ptr, fte_ptr)) 
       goto fail_2;
+  release_ft ();
 
   /* Leave the frame pinned if left_pinned, for usage in syscall handlers */
   if (left_pinned) fte_ptr->pin_cnt++;
@@ -168,6 +172,7 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
   return;
 
   fail_2: spt_remove_entry (thread_current ()->spt_ptr, spte_ptr->uaddr);
+          release_ft ();
   fail_1: syscall_exit (-1);
 }
 
