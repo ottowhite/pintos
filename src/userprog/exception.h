@@ -10,6 +10,6 @@
 void exception_init (void);
 void exception_print_stats (void);
 
-void attempt_frame_load (struct spte *spte_ptr);
+void attempt_frame_load (struct spte *spte_ptr, bool left_pinned);
 
 #endif /* userprog/exception.h */

@@ -129,8 +129,9 @@ verify_ptr_privileged (const void *ptr, bool write)
           if (spte_ptr == NULL || (write && !spte_ptr->writable)) 
               return false;
           else
-              // TODO: Pin this frame until syscall finished
-              attempt_frame_load (spte_ptr);
+              /* Frame is left pinned, each syscall should unpin the frame
+                 before termination */
+              attempt_frame_load (spte_ptr, true);
         }
     }
   else 

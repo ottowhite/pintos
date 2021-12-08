@@ -145,13 +145,13 @@ page_fault (struct intr_frame *f)
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
 
-  if (spte_ptr != NULL) attempt_frame_load (spte_ptr);
+  if (spte_ptr != NULL) attempt_frame_load (spte_ptr, false);
   else                  grow_stack_or_fail (f, fault_addr);
 }
 
 /* Attempts to load the given frame from an spte entry */
 void
-attempt_frame_load (struct spte *spte_ptr)
+attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 {
   /* Returns null if read failed, obtaining frame, or allocating fte failed */
   struct fte *fte_ptr = ft_get_frame (spte_ptr);
@@ -161,6 +161,9 @@ attempt_frame_load (struct spte *spte_ptr)
   /* Returns false if installation failed, frame left pinned */
   if (!ft_install_frame (spte_ptr, fte_ptr)) 
       goto fail_2;
+
+  /* Leave the frame pinned if left_pinned, for usage in syscall handlers */
+  if (left_pinned) fte_ptr->pin_cnt++;
 
   return;
 
@@ -179,7 +182,7 @@ grow_stack_or_fail (struct intr_frame *f_ptr, void *fault_addr)
     {
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
           0, pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
-      attempt_frame_load (spte_ptr);
+      attempt_frame_load (spte_ptr, false);
 
       if (spte_ptr == NULL) goto fail;
     }
