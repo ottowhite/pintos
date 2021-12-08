@@ -7,6 +7,7 @@
 #include "threads/vaddr.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "filesys/filesys.h"
 #include "vm/spt.h"
 #include "vm/ft.h"
 
@@ -169,6 +170,7 @@ page_fault (struct intr_frame *f_ptr)
       user ? "user" : "kernel");
 
   fail: page_fault_cnt++;
+        if (filesys_locked ()) release_filesys ();
         syscall_exit (-1);
         kill (f_ptr);
 }
