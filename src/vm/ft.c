@@ -449,6 +449,7 @@ ft_remove_owner (struct fte *fte_ptr)
     } 
   else 
     {
+      /* Non-shared case: remove the page table entry and NULL the owner */
       owner = fte_ptr->owners.owner_single;
       frame_remove_pte (owner);
       fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
