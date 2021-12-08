@@ -77,9 +77,7 @@ mmap_remove_all (struct list *list_ptr)
       void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
       while (loc >= mmape_ptr->uaddr) 
           spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE); 
-      // TODO: Replace with mmap_delete_entry
-      list_remove (e);
-      free (mmape_ptr);
+      mmap_delete_entry (mmape_ptr);
     }
 }
 
