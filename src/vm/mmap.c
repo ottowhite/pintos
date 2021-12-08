@@ -31,12 +31,13 @@ mmap_add_entry (struct list *list_ptr,
   return true;
 }
 
-/* Locates and deletes an mmap entry, returns NULL if not located */
+/* Locates and deletes an mmap entry, returns NULL if not located 
+   and does not free the mmape_ptr*/
 struct mmape *
 mmap_remove_entry (struct list *list_ptr, mapid_t mid)
 {
   struct mmape *mmape_ptr = mmap_locate_entry (list_ptr, mid);
-  if (mmape_ptr != NULL) mmap_delete_entry (mmape_ptr);
+  if (mmape_ptr != NULL) list_remove (&mmape_ptr->list_elem);
   return mmape_ptr;
 }
 

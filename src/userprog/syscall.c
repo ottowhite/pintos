@@ -588,5 +588,8 @@ syscall_munmap (mapid_t mapping)
   void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
   while (loc >= mmape_ptr->uaddr) 
     spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
+
+  // TODO: free mmape_ptr
+
   fail: ;
 }
