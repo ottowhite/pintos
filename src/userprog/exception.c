@@ -164,7 +164,7 @@ attempt_frame_load (struct spte *spte_ptr)
 
   return;
 
-  fail_2: //TODO: Remove spte, will implicitly remove frame if not shared
+  fail_2: spt_remove_entry (thread_current ()->spt_ptr, spte_ptr->uaddr);
   fail_1: syscall_exit (-1);
 }
 
