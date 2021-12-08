@@ -125,7 +125,7 @@ kill (struct intr_frame *f)
    description of "Interrupt 14--Page Fault Exception (#PF)" in
    [IA32-v3a] section 5.15 "Exception and Interrupt Reference". */
 static void
-page_fault (struct intr_frame *f) 
+page_fault (struct intr_frame *f_ptr) 
 {
 
   /* Obtain faulting address, the virtual address that was
@@ -135,8 +135,16 @@ page_fault (struct intr_frame *f)
      See [IA32-v2a] "MOV--Move to/from Control Registers" and
      [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      (#PF)". */
-  void *fault_addr;
+  void *fault_addr;  /* Fault address. */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
+
+  /* Determine cause. */
+  /* True: not-present page, false: writing r/o page. */
+  bool not_present = (f_ptr->error_code & PF_P) == 0;
+  /* True: access was write, false: access was read. */
+  bool write       = (f_ptr->error_code & PF_W) != 0;
+  /* True: access by user, false: access by kernel. */
+  bool user        = (f_ptr->error_code & PF_U) != 0;
 
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
@@ -146,18 +154,16 @@ page_fault (struct intr_frame *f)
                                           pg_round_down (fault_addr));
 
   if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) || 
-       grow_stack_or_fail (f, fault_addr)) return;
+       grow_stack_or_fail (f_ptr, fault_addr)) return;
 
+  printf ("Page fault at %p: %s error %s page in %s context.\n",
+    fault_addr,
+    not_present ? "not present" : "rights violation",
+    write ? "writing" : "reading",
+    user ? "user" : "kernel");
+  page_fault_cnt++;
   syscall_exit (-1);
-
-  // printf ("Page fault at %p: %s error %s page in %s context.\n",
-  //   fault_addr,
-  //   not_present ? "not present" : "rights violation",
-  //   write ? "writing" : "reading",
-  //   user ? "user" : "kernel");
-  // page_fault_cnt++;
-  // syscall_exit (-1);
-  // kill (f_ptr);
+  kill (f_ptr);
 }
 
 /* Attempts to load the given frame from an spte entry */
