@@ -59,7 +59,6 @@ struct fte
 
 bool        ft_init                      (void);
 void        ft_destroy                   (void);
-void        ft_remove_frame              (struct fte *fte_ptr);
 void        ft_remove_owner              (struct fte *fte_ptr);
 void        ft_remove_frame_if_necessary (struct fte *fte_ptr);
 struct fte *ft_get_frame                 (struct spte *spte_ptr);

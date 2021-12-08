@@ -476,16 +476,7 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr)
 
   /* NULL the slot in the frame_index_arr that the frame occupied */
   frame_index_arr[index_from_frame_ptr(fte_ptr->loc.frame_ptr)] = NULL;
-  ft_remove_frame (fte_ptr);
-}
-
-/* Frees a frame, deallocates and removes the assocated ft entry. */
-void 
-ft_remove_frame (struct fte *fte_ptr)
-{
-  palloc_free_page (fte_ptr->loc.frame_ptr);
-  hash_delete (&ft, &fte_ptr->hash_elem);
-  free (fte_ptr);
+  frame_delete (fte_ptr);
 }
 
 /* Constructs a pinned frame table entry stored in the kernel pool
@@ -579,6 +570,7 @@ frame_delete (struct fte *fte_ptr)
   /* Free the page in memory and the frame table entry */
   ASSERT (!fte_ptr->swapped);
   palloc_free_page (fte_ptr->loc.frame_ptr);
+  hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
 }
 
