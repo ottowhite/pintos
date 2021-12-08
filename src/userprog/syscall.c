@@ -611,16 +611,6 @@ syscall_munmap (mapid_t mapping)
 
   /* try and retrieve and remove the mmap entry, and fail skip to the end if 
      not found */
-  struct mmape *mmape_ptr = mmap_remove_entry (&t_ptr->mmap_list, mapping);
-  if (mmape_ptr == NULL) return;
-
+  mmap_remove_entry (mapping);
   // TODO: ask jay why he calls file open and then file reopen
-
-  /* Remove all allocated spt entries associated with the mmapped file. */
-  void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
-  acquire_ft ();
-  while (loc >= mmape_ptr->uaddr) 
-    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
-  release_ft ();
-  free (mmape_ptr);
 }

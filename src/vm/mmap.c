@@ -29,14 +29,26 @@ mmap_add_entry (struct list *list_ptr,
   return true;
 }
 
-/* Locates and deletes an mmap entry, returns NULL if not located 
-   and does not free the mmape_ptr*/
-struct mmape *
-mmap_remove_entry (struct list *list_ptr, mapid_t mid)
+/* Locates and deletes an mmap entry in the current thread, returns NULL 
+   if not located and does not free the mmape_ptr. */
+void
+mmap_remove_entry (mapid_t mid)
 {
+	struct thread *t_ptr  = thread_current ();
+	struct list *list_ptr = &t_ptr->mmap_list;
+
   struct mmape *mmape_ptr = mmap_locate_entry (list_ptr, mid);
-  if (mmape_ptr != NULL) list_remove (&mmape_ptr->list_elem);
-  return mmape_ptr;
+/* If list mmap entry not found return. */
+	if (mmape_ptr == NULL) return;
+	
+	list_remove (&mmape_ptr->list_elem);
+	/* Remove all allocated spt entries associated with the mmapped file. */
+  void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
+  acquire_ft ();
+  while (loc >= mmape_ptr->uaddr) 
+    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
+  release_ft ();
+  free (mmape_ptr);
 }
 
 /* Iterates over the given list and returns the mmape pointer if found,
