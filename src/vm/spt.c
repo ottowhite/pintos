@@ -44,7 +44,6 @@ spt_init (struct hash **spt_ptr_ptr)
 void 
 spt_destroy (struct hash *spt_ptr)
 {
-  /* TODO: Close associated files if necesary (and if not shared) */
   ASSERT (spt_ptr != NULL);
   hash_destroy (spt_ptr, &spte_deallocate_func);
   free (spt_ptr);

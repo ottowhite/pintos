@@ -692,7 +692,6 @@ fte_less_func (const struct hash_elem *a_ptr,
                const struct hash_elem *b_ptr,
                void *aux UNUSED) 
 {
-  // TODO: Is this comparison operation safe with the union type?
   return hash_entry (a_ptr, struct fte, hash_elem)->loc.swap_index <
          hash_entry (b_ptr, struct fte, hash_elem)->loc.swap_index;
 }
