@@ -602,10 +602,8 @@ fail_2: /* Remove all allocated spt entries associated with the mmapped file */
             spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE);
         release_ft ();
 fail_1: return -1;
-
-
-
 }
+
 static void 
 syscall_munmap (mapid_t mapping)
 {
