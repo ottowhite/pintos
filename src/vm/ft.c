@@ -462,7 +462,7 @@ ft_remove_owner (struct fte *fte_ptr)
    remove the entry from the swap bitmap with swap_remove, in the 
    non-swapped case write back if the frame is dirty. */
 void 
-ft_remove_frame_if_necessary (struct fte *fte_ptr)
+ft_remove_frame_if_necessary (struct fte *fte_ptr, struct owner original_owner)
 {
   /* if the last owner removed was not the last owner
      we dont need to do anything */
@@ -472,7 +472,9 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr)
   /* Otherwise we just removed the last owner. */
   if (fte_ptr->swapped) 
 			swap_remove (fte_ptr);
-  else if (fte_ptr->eviction_method == WRITE_IF_DIRTY && frame_dirty (fte_ptr)) 
+  else if (fte_ptr->eviction_method == WRITE_IF_DIRTY && 
+           pagedir_is_dirty (original_owner.owner_ptr->pagedir,
+                             original_owner.upage_ptr)) 
       frame_write (fte_ptr);
 
   /* NULL the slot in the frame_index_arr that the frame occupied */

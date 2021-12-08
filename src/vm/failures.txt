@@ -1,8 +1,4 @@
-FAIL tests/vm/mmap-clean
-FAIL tests/vm/mmap-close
 FAIL tests/vm/mmap-exit
-FAIL tests/vm/mmap-read
-FAIL tests/vm/mmap-remove
 FAIL tests/vm/mmap-write
 FAIL tests/vm/page-linear
 FAIL tests/vm/page-merge-mm
@@ -91,6 +87,8 @@ pass tests/userprog/write-normal
 pass tests/userprog/write-stdin
 pass tests/userprog/write-zero
 pass tests/vm/mmap-bad-fd
+pass tests/vm/mmap-clean
+pass tests/vm/mmap-close
 pass tests/vm/mmap-inherit
 pass tests/vm/mmap-misalign
 pass tests/vm/mmap-null
@@ -98,6 +96,8 @@ pass tests/vm/mmap-over-code
 pass tests/vm/mmap-over-data
 pass tests/vm/mmap-overlap
 pass tests/vm/mmap-over-stk
+pass tests/vm/mmap-read
+pass tests/vm/mmap-remove
 pass tests/vm/mmap-shuffle
 pass tests/vm/mmap-twice
 pass tests/vm/mmap-unmap
@@ -109,4 +109,4 @@ pass tests/vm/pt-bad-read
 pass tests/vm/pt-grow-bad
 pass tests/vm/pt-grow-pusha
 pass tests/vm/pt-write-code
-Warning: 16 of 111 tests failed!
+Warning: 12 of 111 tests failed!

@@ -154,8 +154,8 @@ spte_deallocate_func (struct hash_elem *e_ptr, void *aux UNUSED)
      the frame is removed from memory/swap space inside of ft_remove_frame */
   if (spte_ptr->fte_ptr != NULL) 
     {
-      ft_remove_owner (spte_ptr->fte_ptr);
-      ft_remove_frame_if_necessary (spte_ptr->fte_ptr);
+      struct owner original_owner = ft_remove_owner (spte_ptr->fte_ptr);
+      ft_remove_frame_if_necessary (spte_ptr->fte_ptr, original_owner);
     } 
 
 
