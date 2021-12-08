@@ -531,7 +531,11 @@ syscall_mmap (int fd, void *addr)
   void *mmap_top = addr + filesize;
   if ((uint32_t) mmap_top >= (uint32_t) STACK_LIMIT) 
       goto fail_1;
-
+  
+  /* Fail if the reopened file is empty */
+  if (file_reopen (file_ptr) == NULL)
+      goto fail_1;
+  
   /* Fail if mmapped file will overwrite any supplemental pages */
   for (void *loc = addr; 
        loc <= mmap_top; 
