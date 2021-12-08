@@ -180,23 +180,11 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 struct fte *
 ft_get_frame (struct spte *spte_ptr)
 {
-  struct fte *fte_ptr = ft_get_frame_preemptive (spte_ptr->frame_type,
-                                                 spte_ptr->inode_ptr,
-                                                 spte_ptr->offset,
-                                                 spte_ptr->amount_occupied);
-  spte_ptr->fte_ptr = fte_ptr;
-  return fte_ptr;
-}
+  enum frame_type frame_type = spte_ptr->frame_type;
+  struct inode *inode_ptr    = spte_ptr->inode_ptr;
+  off_t offset               = spte_ptr->offset;
+  int amount_occupied        = spte_ptr->amount_occupied;
 
-/* Generalised version of ft_get_frame.
-   Useful for getting frames before their spt entry exists.
-   These frames should be registered in an spt table after acquired. */
-struct fte *
-ft_get_frame_preemptive (enum frame_type frame_type, 
-                         struct inode *inode_ptr,
-                         off_t offset, 
-                         int amount_occupied)
-{
   struct fte *fte_ptr;
   if ((frame_type == EXECUTABLE_CODE ||
        frame_type == MMAP)           &&
@@ -222,6 +210,8 @@ ft_get_frame_preemptive (enum frame_type frame_type,
   int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
   frame_index_arr[frame_index] = fte_ptr;
 
+  /* Associate the supplemental page table entry with the frame */
+  spte_ptr->fte_ptr = fte_ptr;
   return fte_ptr;
 }
 
