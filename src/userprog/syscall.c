@@ -607,10 +607,6 @@ fail_1: return -1;
 static void 
 syscall_munmap (mapid_t mapping)
 {
-  struct thread *t_ptr = thread_current ();
-
-  /* try and retrieve and remove the mmap entry, and fail skip to the end if 
-     not found */
   mmap_remove_entry (mapping);
   // TODO: ask jay why he calls file open and then file reopen
 }
