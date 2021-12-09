@@ -5,6 +5,9 @@
 #include "vm/ft.h"
 
 static int evict_find_victim_random (void);
+static int evict_find_victim_sca    (void);
+
+static int sca_victim_candidate = 0;
 
 int
 evict (void)
@@ -78,4 +81,12 @@ evict_find_victim_random (void)
 
   ASSERT (frame_index_arr[i]->pin_cnt == 0);
   return i;
+}
+
+/* Second chance eviction. */
+static int
+evict_find_victim_sca (void)
+{
+
+  return 0;
 }
