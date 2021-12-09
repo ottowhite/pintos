@@ -629,12 +629,7 @@ setup_stack (void **esp)
       goto fail_2;
   release_ft ();
   
-
   *esp = PHYS_BASE;
-  // TODO: Remove this erroneous pin_cnt decrementation, done in 
-  //       ft_install_frame
-  fte_ptr->pin_cnt--;
-
   return true;
   
           /* Also implicitly removes the frame. */
