@@ -127,24 +127,28 @@ page_fault_trigger (const void *fault_addr, void *esp, bool not_present,
   struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
                                           pg_round_down (fault_addr));
 
-  if (write && 
-      spte_ptr != NULL && 
-      !spte_ptr->writable) 
-      goto fail;
+  if (spte_ptr != NULL)
+    {
+      if (write && !spte_ptr->writable) goto fail;
 
-  if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, left_pinned)) || 
-                           attempt_stack_growth (esp, fault_addr)) 
-      return;
+      if (!attempt_frame_load (spte_ptr, fault_addr)) goto fail;
+    }
+  else
+    {
+      if (!attempt_stack_growth (esp, fault_addr)) goto fail;
+    }
+
+  return;
 
   printf ("Page fault at %p: %s error %s page in %s context.\n",
       fault_addr,
       not_present ? "not present" : "rights violation",
       write ? "writing" : "reading",
       user ? "user" : "kernel");
-
-  fail: page_fault_cnt++;
-        if (filesys_locked ()) release_filesys ();
-        syscall_exit (-1);
+fail:
+  page_fault_cnt++;
+  if (filesys_locked ()) release_filesys ();
+  syscall_exit (-1);
 }
 
 /* Page fault handler.  This is a skeleton that must be filled in

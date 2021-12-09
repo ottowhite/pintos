@@ -127,21 +127,14 @@ verify_and_pin_ptr_privileged (const void *ptr, bool write)
     {
       if (pagedir_get_page (active_pd (), ptr) == NULL) 
         {
-
-          struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
-                                                  pg_round_down (ptr));
-
-          if (spte_ptr == NULL || (write && !spte_ptr->writable)) 
-              return false;
-          else
-              /* Frame is left pinned, each syscall should unpin the frame
-                 before termination */
-              page_fault_trigger (ptr, 
-                                  thread_current ()->esp, 
-                                  false, /* Page was not present */
-                                  write, /* Was access a read or write? */
-                                  true,  /* User processed triggered */
-                                  true); /* Do leave the frame pinned */
+          /* Frame is left pinned, each syscall should unpin the frame
+             before termination */
+          page_fault_trigger (ptr, 
+                              thread_current ()->esp, 
+                              false, /* Page was not present */
+                              write, /* Was access a read or write? */
+                              true,  /* User processed triggered */
+                              true); /* Do leave the frame pinned */
         }
     }
   else 
