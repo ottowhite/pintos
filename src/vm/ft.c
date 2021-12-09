@@ -563,6 +563,8 @@ evict (void)
       i = (int) (random_ulong () % frame_index_size);
     }
 
+  ASSERT (frame_index_arr[i]->pin_cnt == 0);
+
   struct fte *fte_ptr = frame_index_arr[i];
 
   switch (fte_ptr->eviction_method)
