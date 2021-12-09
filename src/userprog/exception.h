@@ -10,6 +10,7 @@
 void exception_init (void);
 void exception_print_stats (void);
 
-bool attempt_frame_load (struct spte *spte_ptr, bool left_pinned);
+void page_fault_trigger (const void *fault_addr, void *esp, bool not_present, 
+                         bool write, bool user, bool left_pinned);
 
 #endif /* userprog/exception.h */

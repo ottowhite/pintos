@@ -18,7 +18,8 @@ static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
 
 /* Page fault handler helpers */
-static bool attempt_stack_growth (struct intr_frame *f_ptr, void *fault_addr);
+static bool attempt_stack_growth (void *esp, const void *fault_addr);
+static bool attempt_frame_load (struct spte *spte_ptr, bool left_pinned);
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -114,6 +115,38 @@ kill (struct intr_frame *f)
     }
 }
 
+void
+page_fault_trigger (const void *fault_addr, void *esp, bool not_present, 
+                    bool write, bool user, bool left_pinned)
+{
+
+  /* Turn interrupts back on (they were only off so that we could
+     be assured of reading CR2 before it changed). */
+  intr_enable ();
+
+  struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
+                                          pg_round_down (fault_addr));
+
+  if (write && 
+      spte_ptr != NULL && 
+      !spte_ptr->writable) 
+      goto fail;
+
+  if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, left_pinned)) || 
+                           attempt_stack_growth (esp, fault_addr)) 
+      return;
+
+  printf ("Page fault at %p: %s error %s page in %s context.\n",
+      fault_addr,
+      not_present ? "not present" : "rights violation",
+      write ? "writing" : "reading",
+      user ? "user" : "kernel");
+
+  fail: page_fault_cnt++;
+        if (filesys_locked ()) release_filesys ();
+        syscall_exit (-1);
+}
+
 /* Page fault handler.  This is a skeleton that must be filled in
    to implement virtual memory.  Some solutions to task 2 may
    also require modifying this code.
@@ -147,36 +180,11 @@ page_fault (struct intr_frame *f_ptr)
   /* True: access by user, false: access by kernel. */
   bool user        = (f_ptr->error_code & PF_U) != 0;
 
-  /* Turn interrupts back on (they were only off so that we could
-     be assured of reading CR2 before it changed). */
-  intr_enable ();
-
-  struct spte *spte_ptr = spt_find_entry (thread_current ()->spt_ptr, 
-                                          pg_round_down (fault_addr));
-
-  if (write && 
-      spte_ptr != NULL && 
-      !spte_ptr->writable) 
-      goto fail;
-
-  if ((spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) || 
-                           attempt_stack_growth (f_ptr, fault_addr)) 
-      return;
-
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-      fault_addr,
-      not_present ? "not present" : "rights violation",
-      write ? "writing" : "reading",
-      user ? "user" : "kernel");
-
-  fail: page_fault_cnt++;
-        if (filesys_locked ()) release_filesys ();
-        syscall_exit (-1);
-        kill (f_ptr);
+  page_fault_trigger (fault_addr, f_ptr->esp, not_present, write, user, false);
 }
 
 /* Attempts to load the given frame from an spte entry */
-bool
+static bool
 attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 {
   /* Returns null if read failed, obtaining frame, or allocating fte failed */
@@ -205,12 +213,12 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
 
 /* Grows stack if fault_addr was a valid stack access, fails otherwise */
 static bool
-attempt_stack_growth (struct intr_frame *f_ptr, void *fault_addr)
+attempt_stack_growth (void *esp, const void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  if ( (fault_addr >  f_ptr->esp && fault_addr < PHYS_BASE) ||
-      ((fault_addr == f_ptr->esp - 4   ||
-        fault_addr == f_ptr->esp - 32) &&
+  if ( (fault_addr >  esp && fault_addr < PHYS_BASE) ||
+      ((fault_addr == esp - 4   ||
+        fault_addr == esp - 32) &&
         fault_addr >  STACK_LIMIT))
     {
       struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 

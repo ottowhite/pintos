@@ -115,6 +115,7 @@ struct thread
     struct hash *spt_ptr;
     struct list mmap_list;
     int mid_cnt;
+    void *esp;
 #endif
 
     /* Owned by thread.c. */
