@@ -11,9 +11,8 @@ static int evict_find_victim_random (void);
 static int  evict_find_victim_sca      (void);
 static bool frame_unset_accessed_ptes  (struct fte *fte_ptr);
 static bool pagedir_unset_accessed_pte (struct owner owner);
+static int  sca_victim_candidate_index = 0;
 
-static int sca_victim_candidate_index = 0;
-struct fte *sca_victim_candidate_ptr;
 
 int
 evict (void)
@@ -74,6 +73,12 @@ evict (void)
   return victim_index;
 }
 
+static int
+evict_find_victim_linear (void)
+{
+  return 0;
+}
+
 /* Random eviction. */
 static int
 evict_find_victim_random (void)
@@ -94,6 +99,7 @@ evict_find_victim_random (void)
 static int
 evict_find_victim_sca (void)
 {
+  struct fte *sca_victim_candidate_ptr;
   for (int i = sca_victim_candidate_index; true;
        i = (i + 1) % frame_index_size)
     {
