@@ -631,6 +631,8 @@ setup_stack (void **esp)
   
 
   *esp = PHYS_BASE;
+  // TODO: Remove this erroneous pin_cnt decrementation, done in 
+  //       ft_install_frame
   fte_ptr->pin_cnt--;
 
   return true;

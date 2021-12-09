@@ -166,6 +166,7 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 
   /* Unpin the frame and associate SPTE with FTE */
   spte_ptr->fte_ptr = fte_ptr;
+  ASSERT (fte_ptr->pin_cnt > 0);
   fte_ptr->pin_cnt--;
   return true;
 
@@ -196,6 +197,7 @@ ft_get_frame (struct spte *spte_ptr)
           int free_index = evict ();
           swap_in (fte_ptr, frame_ptr_from_index (free_index));
         }
+      ASSERT (fte_ptr->pin_cnt >= 0);
       fte_ptr->pin_cnt++;
     }
   else
@@ -515,7 +517,7 @@ evict (void)
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
   int i = (int) (random_ulong () % frame_index_size);
   /* Keep trying until we find a frame that is not pinned to evict */
-  for (; frame_index_arr[i]->pin_cnt != 0; 
+  for (; frame_index_arr[i]->pin_cnt != 0;
          i = (int) (random_ulong () % frame_index_size));
 
   struct fte *fte_ptr = frame_index_arr[i];

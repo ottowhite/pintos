@@ -145,11 +145,14 @@ verify_and_pin_ptr_privileged (const void *ptr, bool write)
 
 /* Unpins the frame associated with a particular user address for the process, 
  * for usage at the end of a syscall. */
+// TODO: Rename associated functions to try_unpin, update comments
 static void
 unpin_ptr (const void *ptr)
 {
-  spt_find_entry (thread_current ()->spt_ptr, 
-      pg_round_down (ptr))->fte_ptr->pin_cnt--;
+  int *pin_cnt = &spt_find_entry (thread_current ()->spt_ptr, 
+                                  pg_round_down (ptr))->fte_ptr->pin_cnt;
+
+  *pin_cnt = (*pin_cnt > 0) ? *pin_cnt - 1 : 0;
 }
 
 /* Unpin all frames assocated with a buffer being used by a system call */

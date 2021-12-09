@@ -193,6 +193,7 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
   release_ft ();
 
   /* Leave the frame pinned if left_pinned, for usage in syscall handlers */
+  ASSERT (fte_ptr->pin_cnt >= 0);
   if (left_pinned) fte_ptr->pin_cnt++;
 
   return true;
