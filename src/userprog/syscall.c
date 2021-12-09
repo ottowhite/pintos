@@ -243,9 +243,9 @@ syscall_exit (int status)
 	if (child_ptr != NULL) 
 		{
 			child_ptr->exit_status = status;
-			lock_release (&cur->self_lock);
 			sema_up (&child_ptr->sema);
       sema_up (&child_ptr->load_sema);
+			lock_release (&cur->self_lock);
 		}
 	else lock_release (&cur->self_lock);
 
