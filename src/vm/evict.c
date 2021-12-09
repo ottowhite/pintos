@@ -21,7 +21,7 @@ evict (void)
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
   /* Keep trying until we find a frame that is not pinned to evict */
 
-  int victim_index    = evict_find_victim_random ();
+  int victim_index    = evict_find_victim_sca ();
   struct fte *fte_ptr = frame_index_arr[victim_index];
 
   switch (fte_ptr->eviction_method)
