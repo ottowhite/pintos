@@ -218,7 +218,6 @@ static bool
 attempt_stack_growth (void *esp, const void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  // DELETE: CERTAINLY WHERE FAILURE HAPPENS
 
   /* esp must be between STACK_LIMIT and PHYS_BASE */
   if (fault_addr <  STACK_LIMIT ||
