@@ -207,40 +207,41 @@ ft_get_frame (struct spte *spte_ptr)
   struct inode *inode_ptr    = spte_ptr->inode_ptr;
   off_t offset               = spte_ptr->offset;
   int amount_occupied        = spte_ptr->amount_occupied;
+  
+  // TODO: Remove free index return value from eviction
+  // TODO: Use palloc get page here
 
-  struct fte *fte_ptr;
-  if (spte_ptr->fte_ptr != NULL)
-    {
-      if (debug) printf (" --------------- Swapping back in. \n");
-      fte_ptr = spte_ptr->fte_ptr;
-      evict ();
-      swap_in (fte_ptr, palloc_get_page (PAL_USER));
-    }
 
-  if ((frame_type == EXECUTABLE_CODE ||
-       frame_type == MMAP)           &&
-      (fte_ptr = ft_find_frame (inode_ptr, offset)) != NULL)
+  /* Set the fte_ptr to what the SPT entry refers to, null if no frame yet. */
+  struct fte *fte_ptr = spte_ptr->fte_ptr;
+
+  /* If this failed look for a shared frame. */
+  if ((fte_ptr == NULL) &&
+      (frame_type == EXECUTABLE_CODE || frame_type == MMAP))
+      fte_ptr = ft_find_frame (inode_ptr, offset);
+
+  /* If we found a frame, bring it in from swap if necessary. */
+  if (fte_ptr != NULL)
     {
-      /* Found shared frame, pin it until installation. */
-      if (fte_ptr->swapped)
+      if (debug) printf ("Swapping back in. \n");
+
+      if (fte_ptr->swapped) 
         {
-          if (debug) printf ("Swapping back in. \n");
-          // TODO: Remove free index return value from eviction
-          int free_index = evict ();
-          // TODO: Use palloc get page here
-          swap_in (fte_ptr, frame_ptr_from_index (free_index));
+          evict ();
+          swap_in (fte_ptr, palloc_get_page (PAL_USER));
         }
-
-      ASSERT (fte_ptr->pin_cnt >= 0);
-      fte_ptr->pin_cnt++;
     }
   else
     {
-      /* Construct a new pinned frame */
+      // TODO: Make not pinned
+      /* Otherwise construct a new pinned frame */
       fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
           amount_occupied);
       if (fte_ptr == NULL) return NULL;
     }
+
+  ASSERT (fte_ptr->pin_cnt >= 0);
+  fte_ptr->pin_cnt++;
 
   /* Associate the new frame location in the user pool with the fte */
   int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
