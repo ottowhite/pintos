@@ -228,14 +228,14 @@ ft_get_frame (struct spte *spte_ptr)
 static int
 index_from_frame_ptr (void *frame_ptr)
 {
-  return (frame_ptr - PHYS_BASE) / PGSIZE;
+  return (frame_ptr - user_pool_bottom) / PGSIZE;
 }
 
 /* Obtains the frame_ptr from an index used by the frame_index_arr */
 static void *
 frame_ptr_from_index (int frame_index)
 {
-  return (frame_index * PGSIZE) + PHYS_BASE;
+  return (frame_index * PGSIZE) + user_pool_bottom;
 }
 
 struct fte *
