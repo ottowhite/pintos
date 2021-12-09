@@ -8,6 +8,9 @@
 
 static int evict_find_victim_random (void);
 
+static int evict_find_victim_linear (void);
+static int linear_victim_candidate_index = 0;
+
 static int  evict_find_victim_sca      (void);
 static bool frame_unset_accessed_ptes  (struct fte *fte_ptr);
 static bool pagedir_unset_accessed_pte (struct owner owner);
@@ -76,7 +79,10 @@ evict (void)
 static int
 evict_find_victim_linear (void)
 {
-  return 0;
+  while (frame_index_arr[linear_victim_candidate_index]->pin_cnt > 0)
+      linear_victim_candidate_index += 1;
+
+  return linear_victim_candidate_index;
 }
 
 /* Random eviction. */
