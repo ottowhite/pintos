@@ -9,12 +9,12 @@
 static int evict_find_victim_random (void);
 
 static int evict_find_victim_linear (void);
-static int linear_victim_candidate_index = 1;
+static int linear_victim_candidate_index = 0;
 
 static int  evict_find_victim_sca      (void);
 static bool frame_unset_accessed_ptes  (struct fte *fte_ptr);
 static bool pagedir_unset_accessed_pte (struct owner owner);
-static int  sca_victim_candidate_index = 1;
+static int  sca_victim_candidate_index = 0;
 
 
 int
