@@ -232,7 +232,7 @@ attempt_stack_growth (void *esp, const void *fault_addr)
       return false;
 
   struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
-      pg_round_down (fault_addr), STACK, NULL, 0, 0, true);
+      pg_round_down (fault_addr), STACK, NULL, 0, PGSIZE, true);
 
   if (spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) 
       return true;
