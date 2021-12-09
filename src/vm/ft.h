@@ -56,6 +56,7 @@ struct fte
   struct hash_elem hash_elem;
 };
 
+extern bool debug;
 
 bool         ft_init                      (void);
 void         ft_destroy                   (void);
@@ -72,4 +73,20 @@ bool         ft_install_frame             (struct spte *spte_ptr,
                                            struct fte *fte_ptr);
 void         acquire_ft                   (void);
 void         release_ft                   (void);
+
+bool frame_dirty  (struct fte *fte_ptr);
+void frame_write  (struct fte *fte_ptr);
+void frame_delete (struct fte *fte_ptr);
+void frame_swap   (struct fte *fte_ptr);
+
+void frame_remove_owner  (struct owner owner, 
+                          bool remove_spte_reference);
+void frame_remove_owners (struct fte *fte_ptr, 
+                          bool remove_spte_reference);
+
+void frame_remove_spte_reference (struct owner owner);
+void frame_remove_pte            (struct owner owner);
+
+extern struct fte** frame_index_arr;
+extern size_t       frame_index_size;
 #endif

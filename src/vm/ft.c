@@ -2,7 +2,6 @@
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
-#include <random.h>
 #include <list.h>
 #include "threads/malloc.h"
 #include "threads/synch.h"
@@ -17,12 +16,11 @@
 #include "vm/ft.h"
 #include "vm/spt.h"
 #include "vm/swap.h"
+#include "vm/evict.h"
 
 /* Frame table globals */
 static struct hash  ft;
 static struct lock  ft_lock;
-static struct fte** frame_index_arr;
-static size_t       frame_index_size;
 
 /* Frame table hashmap helpers */
 static unsigned fte_hash_func       (const struct hash_elem *e_ptr, 
@@ -58,21 +56,6 @@ static void convert_fte_to_non_shared  (struct fte *fte_ptr);
 /* Helper to obtain eviction methods by frame type */
 static enum eviction_method get_eviction_method (enum frame_type frame_type);
 
-/* Eviction and eviction helpers */
-static int  evict        (void);
-static bool frame_dirty  (struct fte *fte_ptr);
-static void frame_delete (struct fte *fte_ptr);
-static void frame_swap   (struct fte *fte_ptr);
-static void frame_write  (struct fte *fte_ptr);
-
-static void frame_remove_spte_reference (struct owner owner);
-static void frame_remove_pte            (struct owner owner);
-static void frame_remove_owner          (struct owner owner, 
-                                         bool remove_spte_reference);
-static void frame_remove_owners         (struct fte *fte_ptr, 
-                                         bool remove_spte_reference);
-
-
 /* Helper for reading from inode when creating frame */
 static off_t read_from_inode (void *frame_ptr, 
                               struct inode *inode_ptr, 
@@ -91,7 +74,10 @@ static void *frame_ptr_from_index (int frame_index);
 static void *user_pool_top;
 static void *user_pool_bottom;
 
-static bool debug;
+bool debug;
+
+struct fte** frame_index_arr;
+size_t       frame_index_size;
 
 /* Initilizes the frame table as a hash map of struct ftes */
 bool 
@@ -225,6 +211,7 @@ ft_get_frame (struct spte *spte_ptr)
       if (fte_ptr->swapped) 
         {
           evict ();
+          // TODO: Check if there is free space
           swap_in (fte_ptr, palloc_get_page (PAL_USER));
         }
     }
@@ -547,78 +534,10 @@ construct_fte (union Frame_location loc,
   return fte_ptr;
 }
 
-static int
-evict (void)
-{
-  /* Obtain a random int from 0 to frame_index_size (exclusive) */
-  /* Keep trying until we find a frame that is not pinned to evict */
-
-  int i = (int) (random_ulong () % frame_index_size);
-
-  while (true)
-    {
-      if (frame_index_arr[i]->pin_cnt == 0) break;
-      i = (int) (random_ulong () % frame_index_size);
-    }
-
-  ASSERT (frame_index_arr[i]->pin_cnt == 0);
-
-  struct fte *fte_ptr = frame_index_arr[i];
-
-  switch (fte_ptr->eviction_method)
-    {
-      case SWAP:
-        {
-          debugf("Eviction by swap. \n");
-          frame_swap (fte_ptr);
-          break;
-        }
-      case DELETE: 
-        {
-          debugf("Eviction by deletion. \n");
-          frame_remove_owners (fte_ptr, true);
-          frame_delete (fte_ptr); 
-          break;
-        }
-      case SWAP_IF_DIRTY:
-        {
-          bool dirty = frame_dirty (fte_ptr);
-
-          if (dirty) debugf("Eviction by swapping as dirty. \n");
-          else       debugf("Eviction by deletion as not dirty. \n");
-
-          if (dirty) frame_swap (fte_ptr);
-          else 
-            {
-              frame_remove_owners (fte_ptr, !dirty);
-              frame_delete (fte_ptr);
-            }
-
-          break;
-        }
-      case WRITE_IF_DIRTY:
-        {
-          bool dirty = frame_dirty (fte_ptr);
-          if (dirty) frame_write (fte_ptr);
-
-          if (dirty) debugf("Eviction by writing as dirty. \n");
-          else       debugf("Eviction by deletion as not dirty.");
-
-          frame_remove_owners (fte_ptr, true);
-          frame_delete        (fte_ptr);
-          break;
-        }
-      default: NOT_REACHED ();
-    }
-
-  frame_index_arr[i] = NULL;
-  return i;
-}
-
 /* Attempt to write a frames contents to the filesystem, exit the process
    on failure to avoid undefined behaviour in the program whose memory 
    has been lost. */
-static void
+void
 frame_write (struct fte *fte_ptr)
 {
   ASSERT (!fte_ptr->swapped);
@@ -628,7 +547,7 @@ frame_write (struct fte *fte_ptr)
 }
 
 /* Deletes a frame and frees the associated frame table entry */
-static void
+void
 frame_delete (struct fte *fte_ptr)
 {
   /* Free the page in memory and the frame table entry */
@@ -639,7 +558,7 @@ frame_delete (struct fte *fte_ptr)
 }
 
 /* Swaps a into the swap partition and frees the page in memory */
-static void
+void
 frame_swap (struct fte *fte_ptr)
 {
   void *frame_ptr = fte_ptr->loc.frame_ptr;
@@ -647,7 +566,7 @@ frame_swap (struct fte *fte_ptr)
   palloc_free_page (frame_ptr);
 }
 
-static bool
+bool
 frame_dirty (struct fte *fte_ptr)
 {
   if (fte_ptr->shared)
@@ -675,7 +594,7 @@ frame_dirty (struct fte *fte_ptr)
   return false;
 }
 
-static void
+void
 frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
 {
   if (fte_ptr->shared)
@@ -702,7 +621,7 @@ frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
     }
 }
 
-static void
+void
 frame_remove_owner (struct owner owner, bool remove_spte_reference)
 {
   if (remove_spte_reference)
@@ -711,7 +630,7 @@ frame_remove_owner (struct owner owner, bool remove_spte_reference)
   frame_remove_pte (owner);
 }
 
-static void
+void
 frame_remove_spte_reference (struct owner owner)
 {
   /* Remove reference to the frame from the owners spte */
@@ -721,7 +640,7 @@ frame_remove_spte_reference (struct owner owner)
   spte_ptr->fte_ptr = NULL;
 }
 
-static void
+void
 frame_remove_pte (struct owner owner)
 {
   /* Clear the page in the owners page directory */
