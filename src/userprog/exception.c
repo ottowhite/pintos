@@ -129,14 +129,12 @@ page_fault_trigger (const void *fault_addr, void *esp, bool not_present,
 
   if (spte_ptr != NULL)
     {
-      if (write && !spte_ptr->writable) goto fail;
-
-      if (!attempt_frame_load (spte_ptr, fault_addr)) goto fail;
+      if ((write && !spte_ptr->writable) ||
+          !attempt_frame_load (spte_ptr, fault_addr))
+        goto fail;
     }
-  else
-    {
-      if (!attempt_stack_growth (esp, fault_addr)) goto fail;
-    }
+  else if (!attempt_stack_growth (esp, fault_addr)) 
+      goto fail;
 
   return;
 
