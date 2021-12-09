@@ -55,6 +55,7 @@ static void convert_fte_to_non_shared  (struct fte *fte_ptr);
 
 /* Helper to obtain eviction methods by frame type */
 static enum eviction_method get_eviction_method (enum frame_type frame_type);
+static void *palloc_get_page_with_eviction (enum palloc_flags flags);
 
 /* Helper for reading from inode when creating frame */
 static off_t read_from_inode (void *frame_ptr, 
@@ -75,7 +76,6 @@ static void *user_pool_top;
 static void *user_pool_bottom;
 
 bool debug;
-
 struct fte** frame_index_arr;
 size_t       frame_index_size;
 
@@ -191,9 +191,6 @@ ft_get_frame (struct spte *spte_ptr)
   struct inode *inode_ptr    = spte_ptr->inode_ptr;
   off_t offset               = spte_ptr->offset;
   int amount_occupied        = spte_ptr->amount_occupied;
-  
-  // TODO: Remove free index return value from eviction
-  // TODO: Use palloc get page here
 
   /* Set the fte_ptr to what the SPT entry refers to, null if no frame yet. */
   struct fte *fte_ptr = spte_ptr->fte_ptr;
@@ -206,13 +203,12 @@ ft_get_frame (struct spte *spte_ptr)
   /* If we found a frame, bring it in from swap if necessary. */
   if (fte_ptr != NULL)
     {
-      debugf("Swapping back in. \n");
+      debugf("------------------Swapping back in. \n");
 
       if (fte_ptr->swapped) 
         {
-          evict ();
-          // TODO: Check if there is free space
-          swap_in (fte_ptr, palloc_get_page (PAL_USER));
+          void *frame_ptr = palloc_get_page_with_eviction (PAL_USER);
+          swap_in (fte_ptr, frame_ptr);
         }
     }
   else
@@ -251,6 +247,18 @@ frame_ptr_from_index (int frame_index)
   return ((frame_index - 1) * PGSIZE) + user_pool_bottom;
 }
 
+static void *
+palloc_get_page_with_eviction (enum palloc_flags flags)
+{
+  void *frame_ptr = palloc_get_page (flags);
+  if (frame_ptr == NULL) 
+    {
+      evict ();
+      frame_ptr = palloc_get_page (flags);
+    }
+  return frame_ptr;
+}
+
 struct fte *
 construct_frame (enum frame_type frame_type, 
                  struct inode *inode_ptr,
@@ -260,13 +268,9 @@ construct_frame (enum frame_type frame_type,
   enum palloc_flags flags = frame_type == STACK 
                                 ? PAL_USER | PAL_ZERO 
                                 : PAL_USER;
+
   /* Gets a page from the user pool, zeroed if stack page */
-  void *frame_ptr = palloc_get_page (flags);
-  if (frame_ptr == NULL) 
-    {
-      evict ();
-      frame_ptr = palloc_get_page (flags);
-    }
+  void *frame_ptr = palloc_get_page_with_eviction (flags);
 
   enum eviction_method eviction_method = get_eviction_method (frame_type);
 
