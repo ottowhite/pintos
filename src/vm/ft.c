@@ -88,6 +88,9 @@ static off_t write_to_inode  (void *frame_ptr,
 static int   index_from_frame_ptr (void *frame_ptr);
 static void *frame_ptr_from_index (int frame_index);
 
+static void *user_pool_top;
+static void *user_pool_bottom;
+
 /* Initilizes the frame table as a hash map of struct ftes */
 bool 
 ft_init (void)
@@ -97,7 +100,10 @@ ft_init (void)
   lock_init (&ft_lock);
   /* Frame index is used for eviction to store which ftes correspond to
      which frames */
-  frame_index_size = (get_user_pool_start () - PHYS_BASE) / PGSIZE;
+  user_pool_top    = get_user_pool_top ();
+  user_pool_bottom = get_user_pool_bottom ();
+  frame_index_size = (user_pool_top - user_pool_bottom) / PGSIZE;
+
   frame_index_arr  = malloc (frame_index_size * sizeof (struct fte *));
   if (frame_index_arr == NULL)
       goto fail_2;

@@ -21,6 +21,7 @@ size_t update_pool_bitmap (enum palloc_flags flags,
                            size_t page_cnt, 
                            bool value);
 
-void *get_user_pool_start (void);
+void *get_user_pool_bottom (void);
+void *get_user_pool_top    (void);
 
 #endif /* threads/palloc.h */
