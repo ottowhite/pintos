@@ -228,6 +228,8 @@ ft_get_frame (struct spte *spte_ptr)
 
   /* Associate the new frame location in the user pool with the fte */
   int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
+  debugf("Setting frame index %d to %p. \n", 
+      frame_index, fte_ptr->loc.frame_ptr);
   frame_index_arr[frame_index] = fte_ptr;
 
   /* Associate the supplemental page table entry with the frame */
@@ -239,14 +241,14 @@ ft_get_frame (struct spte *spte_ptr)
 static int
 index_from_frame_ptr (void *frame_ptr)
 {
-  return (frame_ptr - user_pool_bottom) / PGSIZE;
+  return ((frame_ptr - user_pool_bottom) / PGSIZE) - 1;
 }
 
 /* Obtains the frame_ptr from an index used by the frame_index_arr */
 static void *
 frame_ptr_from_index (int frame_index)
 {
-  return (frame_index * PGSIZE) + user_pool_bottom;
+  return ((frame_index - 1) * PGSIZE) + user_pool_bottom;
 }
 
 struct fte *
