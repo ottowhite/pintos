@@ -7,7 +7,8 @@
 static int evict_find_victim_random (void);
 static int evict_find_victim_sca    (void);
 
-static int sca_victim_candidate = 0;
+static int sca_victim_candidate_index = 0;
+struct fte *sca_victim_candidate_ptr;
 
 int
 evict (void)
@@ -68,6 +69,7 @@ evict (void)
   return victim_index;
 }
 
+/* Random eviction. */
 static int
 evict_find_victim_random (void)
 {
@@ -87,6 +89,15 @@ evict_find_victim_random (void)
 static int
 evict_find_victim_sca (void)
 {
+  while (true)
+    {
+      // If the candidate pinned
+      //      continue
+      // If the candidate is accessed
+      //      set access bit to 0, continue
+      // If not accessed, victim found
+      //      add one to the victim index and return our original victim index
 
+    }
   return 0;
 }
