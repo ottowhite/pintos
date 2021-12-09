@@ -211,7 +211,6 @@ ft_get_frame (struct spte *spte_ptr)
   // TODO: Remove free index return value from eviction
   // TODO: Use palloc get page here
 
-
   /* Set the fte_ptr to what the SPT entry refers to, null if no frame yet. */
   struct fte *fte_ptr = spte_ptr->fte_ptr;
 
@@ -589,9 +588,13 @@ evict (void)
               if (dirty) printf ("Eviction by swapping as dirty. \n");
               else       printf ("Eviction by deletion as not dirty. \n");
             }
-          frame_remove_owners (fte_ptr, !dirty);
-          if (dirty) frame_swap   (fte_ptr);
-          else       frame_delete (fte_ptr);
+
+          if (dirty) frame_swap (fte_ptr);
+          else 
+            {
+              frame_remove_owners (fte_ptr, !dirty);
+              frame_delete (fte_ptr);
+            }
 
           break;
         }
