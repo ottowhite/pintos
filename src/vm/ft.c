@@ -233,8 +233,7 @@ ft_get_frame (struct spte *spte_ptr)
     }
   else
     {
-      // TODO: Make not pinned
-      /* Otherwise construct a new pinned frame */
+      /* Otherwise construct a new frame */
       fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
           amount_occupied);
       if (fte_ptr == NULL) return NULL;
@@ -526,7 +525,7 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr, struct owner original_owner)
   frame_delete (fte_ptr);
 }
 
-/* Constructs a pinned frame table entry stored in the kernel pool
+/* Constructs a frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
 construct_fte (union Frame_location loc,
@@ -540,7 +539,7 @@ construct_fte (union Frame_location loc,
 
   fte_ptr->swapped             = false;
   fte_ptr->shared              = false;
-  fte_ptr->pin_cnt             = 1;
+  fte_ptr->pin_cnt             = 0;
   fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
   fte_ptr->loc                 = loc;
   fte_ptr->inode_ptr           = inode_ptr;
