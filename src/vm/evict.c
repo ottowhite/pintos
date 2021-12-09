@@ -80,7 +80,8 @@ static int
 evict_find_victim_linear (void)
 {
   while (frame_index_arr[linear_victim_candidate_index]->pin_cnt > 0)
-      linear_victim_candidate_index += 1;
+      linear_victim_candidate_index 
+          = (linear_victim_candidate_index + 1) % frame_index_size;
 
   return linear_victim_candidate_index;
 }
