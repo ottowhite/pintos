@@ -1,4 +1,5 @@
 #include "vm/swap.h"
+#include <stdio.h>
 #include "vm/spt.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -16,9 +17,10 @@ swap_init (void)
 {
   swap_device = block_get_role (BLOCK_SWAP);
   swap_bitmap = bitmap_create (block_size (swap_device) / SECTORS_PER_PAGE);
+  printf ("Swap slots: %d\n", block_size (swap_device));
 
   if (swap_bitmap == NULL)
-    PANIC ("Memory allocation for swap bitmap failed--Swap device is too large");
+      PANIC ("Memory allocation for swap bitmap failed--Swap device is too large");
 
   lock_init (&swap_lock);
 }
@@ -35,7 +37,7 @@ swap_in (struct fte *fte_ptr, void *kpage)
 
   for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, 
                                         kpage_write_head += BLOCK_SECTOR_SIZE)
-    block_read (swap_device, sector, kpage_write_head);
+      block_read (swap_device, sector, kpage_write_head);
 
   bitmap_reset (swap_bitmap, fte_ptr->loc.swap_index);
   
@@ -59,7 +61,7 @@ swap_out (struct fte *fte_ptr)
   fte_ptr->loc.swap_index = sector / SECTORS_PER_PAGE;
  
   for (int i = 0; i < SECTORS_PER_PAGE; i++, sector++, kpage += BLOCK_SECTOR_SIZE)
-    block_write (swap_device, sector, kpage);
+      block_write (swap_device, sector, kpage);
 }
 
 /* Resets the bit corresponding to the fte in the swap bitmap. */
