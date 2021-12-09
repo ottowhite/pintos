@@ -94,16 +94,20 @@ evict_find_victim_random (void)
 static int
 evict_find_victim_sca (void)
 {
-  while (true)
+  for (int i = sca_victim_candidate_index; true;
+       i = (i + 1) % frame_index_size)
     {
-      // If the candidate pinned
-      //      continue
-      // If the candidate is accessed
-      //      set access bit to 0, continue
-      // If not accessed, victim found
-      //      add one to the victim index and return our original victim index
+      sca_victim_candidate_ptr = frame_index_arr[i];
+      if (sca_victim_candidate_ptr->pin_cnt > 0)
+          continue;
+      else if (frame_unset_accessed_ptes (sca_victim_candidate_ptr))
+          continue;
+      else
+        {
+          sca_victim_candidate_index = i + 1;
+          return i;
+        }
     }
-  return 0;
 }
 
 /* Returns true if the frame was accessed, all access bits of owners will
