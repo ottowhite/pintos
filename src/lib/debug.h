@@ -20,7 +20,8 @@ void debug_backtrace_all (void);
 
 #endif
 
-
+#define debugf(FS, ...) \
+    if (debug) printf (FS, ##__VA_ARGS__)
 
 /* This is outside the header guard so that debug.h may be
    included multiple times with different settings of NDEBUG. */

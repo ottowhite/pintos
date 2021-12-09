@@ -192,17 +192,15 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 struct fte *
 ft_get_frame (struct spte *spte_ptr)
 {
-  if (debug)
+  switch (spte_ptr->frame_type)
   {
-    switch (spte_ptr->frame_type)
-    {
-      case EXECUTABLE_DATA: printf ("Getting EXECUTABLE_DATA page. \n"); break;
-      case EXECUTABLE_CODE: printf ("Getting EXECUTABLE_CODE page. \n"); break;
-      case STACK:           printf ("Getting STACK page. \n"); break;
-      case ALL_ZERO:        printf ("Getting ALL_ZERO page. \n"); break;
-      case MMAP:            printf ("Getting MMAP page. \n"); break;
-    }
+    case EXECUTABLE_DATA: debugf("Getting EXECUTABLE_DATA page. \n"); break;
+    case EXECUTABLE_CODE: debugf("Getting EXECUTABLE_CODE page. \n"); break;
+    case STACK:           debugf("Getting STACK page. \n"); break;
+    case ALL_ZERO:        debugf("Getting ALL_ZERO page. \n"); break;
+    case MMAP:            debugf("Getting MMAP page. \n"); break;
   }
+
   enum frame_type frame_type = spte_ptr->frame_type;
   struct inode *inode_ptr    = spte_ptr->inode_ptr;
   off_t offset               = spte_ptr->offset;
@@ -210,7 +208,6 @@ ft_get_frame (struct spte *spte_ptr)
   
   // TODO: Remove free index return value from eviction
   // TODO: Use palloc get page here
-
 
   /* Set the fte_ptr to what the SPT entry refers to, null if no frame yet. */
   struct fte *fte_ptr = spte_ptr->fte_ptr;
@@ -223,7 +220,7 @@ ft_get_frame (struct spte *spte_ptr)
   /* If we found a frame, bring it in from swap if necessary. */
   if (fte_ptr != NULL)
     {
-      if (debug) printf ("Swapping back in. \n");
+      debugf("Swapping back in. \n");
 
       if (fte_ptr->swapped) 
         {
@@ -564,19 +561,21 @@ evict (void)
       i = (int) (random_ulong () % frame_index_size);
     }
 
+  ASSERT (frame_index_arr[i]->pin_cnt == 0);
+
   struct fte *fte_ptr = frame_index_arr[i];
 
   switch (fte_ptr->eviction_method)
     {
       case SWAP:
         {
-          if (debug) printf ("Eviction by swap. \n");
+          debugf("Eviction by swap. \n");
           frame_swap (fte_ptr);
           break;
         }
       case DELETE: 
         {
-          if (debug) printf ("Eviction by deletion. \n");
+          debugf("Eviction by deletion. \n");
           frame_remove_owners (fte_ptr, true);
           frame_delete (fte_ptr); 
           break;
@@ -584,14 +583,16 @@ evict (void)
       case SWAP_IF_DIRTY:
         {
           bool dirty = frame_dirty (fte_ptr);
-          if (debug)
+
+          if (dirty) debugf("Eviction by swapping as dirty. \n");
+          else       debugf("Eviction by deletion as not dirty. \n");
+
+          if (dirty) frame_swap (fte_ptr);
+          else 
             {
-              if (dirty) printf ("Eviction by swapping as dirty. \n");
-              else       printf ("Eviction by deletion as not dirty. \n");
+              frame_remove_owners (fte_ptr, !dirty);
+              frame_delete (fte_ptr);
             }
-          frame_remove_owners (fte_ptr, !dirty);
-          if (dirty) frame_swap   (fte_ptr);
-          else       frame_delete (fte_ptr);
 
           break;
         }
@@ -600,11 +601,8 @@ evict (void)
           bool dirty = frame_dirty (fte_ptr);
           if (dirty) frame_write (fte_ptr);
 
-          if (debug) 
-            {
-              if (dirty) printf ("Eviction by writing as dirty. \n");
-              else       printf ("Eviction by deletion as not dirty.");
-            }
+          if (dirty) debugf("Eviction by writing as dirty. \n");
+          else       debugf("Eviction by deletion as not dirty.");
 
           frame_remove_owners (fte_ptr, true);
           frame_delete        (fte_ptr);
