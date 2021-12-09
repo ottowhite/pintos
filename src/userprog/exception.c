@@ -219,17 +219,23 @@ static bool
 attempt_stack_growth (void *esp, const void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  if ( (fault_addr >  esp && fault_addr < PHYS_BASE) ||
-      ((fault_addr == esp - 4   ||
-        fault_addr == esp - 32) &&
-        fault_addr >  STACK_LIMIT))
-    {
-      struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
-          pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
 
-      if (spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) 
-          return true;
-    }
+  /* esp must be between STACK_LIMIT and PHYS_BASE */
+  if (fault_addr <  STACK_LIMIT ||
+      fault_addr >= PHYS_BASE) 
+      return false;
+
+  /* esp can only be 4, or 32 bytes above fault_addr, other amounts invalid */
+  if (fault_addr <  esp &&
+      fault_addr != esp - 4 && 
+      fault_addr != esp - 32) 
+      return false;
+
+  struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
+      pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
+
+  if (spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) 
+      return true;
 
   return false;
 }
