@@ -28,8 +28,8 @@ static bool verify_and_pin_ptr_privileged (const void *ptr, bool write);
 static bool verify_and_pin_buffer         (const void *buffer, int size, 
                                            bool write);
 static bool verify_args                   (int argc, const uint32_t *esp);
-static void unpin_ptr                     (const void *ptr);
-static void unpin_buffer                  (const void *buffer, int size);
+static void try_unpin_ptr                 (const void *ptr);
+static void try_unpin_buffer              (const void *buffer, int size);
 
 /* System calls */
 static void     syscall_halt     (void);
@@ -144,10 +144,10 @@ verify_and_pin_ptr_privileged (const void *ptr, bool write)
 }
 
 /* Unpins the frame associated with a particular user address for the process, 
- * for usage at the end of a syscall. */
-// TODO: Rename associated functions to try_unpin, update comments
+   for usage at the end of a syscall. Only perform this action if the frame
+   is already pinned */
 static void
-unpin_ptr (const void *ptr)
+try_unpin_ptr (const void *ptr)
 {
   int *pin_cnt = &spt_find_entry (thread_current ()->spt_ptr, 
                                   pg_round_down (ptr))->fte_ptr->pin_cnt;
@@ -157,13 +157,13 @@ unpin_ptr (const void *ptr)
 
 /* Unpin all frames assocated with a buffer being used by a system call */
 static void
-unpin_buffer (const void *buffer, int size) 
+try_unpin_buffer (const void *buffer, int size) 
 {
   const void *buffer_top = buffer + size * sizeof (char);
   for (void *loc = (void *) buffer; 
        loc <= buffer_top; 
        loc = pg_round_up(loc) + 1) 
-    unpin_ptr (loc);
+    try_unpin_ptr (loc);
 }
 
 /* Checks whether a given pointer is valid for use */
@@ -262,7 +262,7 @@ syscall_exec (const char *cmd_line)
 {
   if (!verify_and_pin_ptr (cmd_line)) syscall_exit (-1);
   pid_t pid = process_execute (cmd_line);
-  unpin_ptr (cmd_line);
+  try_unpin_ptr (cmd_line);
   return pid; 
 }
 
@@ -288,7 +288,7 @@ syscall_create (const char *file, unsigned initial_size)
   
   release_filesys ();
 
-  unpin_ptr (file);
+  try_unpin_ptr (file);
   
   return result;
 }
@@ -335,7 +335,7 @@ syscall_open (const char *file)
      the struct into the current thread's hash table */
   init_fd_item (new_fd_item, thread_current (), file_to_open);
 
-  unpin_ptr (file);
+  try_unpin_ptr (file);
 
   return new_fd_item->fd;
 }
@@ -382,7 +382,7 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   release_filesys ();
 
-  unpin_buffer (buffer, size);
+  try_unpin_buffer (buffer, size);
   /* Returns the total count of bytes read */
   return bytes_read;
 }
@@ -437,7 +437,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   release_filesys ();
 
-  unpin_buffer (buffer, size);
+  try_unpin_buffer (buffer, size);
 
   /* Returns the total count of bytes written */
   return bytes_written;
