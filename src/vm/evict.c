@@ -1,11 +1,16 @@
 #include <debug.h>
 #include <stdio.h>
 #include <random.h>
+#include "threads/thread.h"
+#include "userprog/pagedir.h"
 #include "vm/evict.h"
 #include "vm/ft.h"
 
 static int evict_find_victim_random (void);
-static int evict_find_victim_sca    (void);
+
+static int  evict_find_victim_sca      (void);
+static bool frame_unset_accessed_ptes  (struct fte *fte_ptr);
+static bool pagedir_unset_accessed_pte (struct owner owner);
 
 static int sca_victim_candidate_index = 0;
 struct fte *sca_victim_candidate_ptr;
@@ -97,7 +102,49 @@ evict_find_victim_sca (void)
       //      set access bit to 0, continue
       // If not accessed, victim found
       //      add one to the victim index and return our original victim index
-
     }
   return 0;
+}
+
+/* Returns true if the frame was accessed, all access bits of owners will
+   be set to 0 in this case. Otherwise returns false. */
+static bool
+frame_unset_accessed_ptes (struct fte *fte_ptr)
+{
+  bool accessed = false;
+  if (fte_ptr->shared)
+    {
+      struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
+
+      for (struct list_elem *e = list_begin (owner_list_ptr); 
+           e != list_end (owner_list_ptr);
+           e  = list_next (e))
+        {
+          accessed |= pagedir_unset_accessed_pte (
+              list_entry (e, struct owner_list_elem, elem)->owner);
+        }
+    }
+  else
+    {
+      accessed = pagedir_unset_accessed_pte (fte_ptr->owners.owner_single);
+    }
+
+  return accessed;
+}
+
+/* Returns true if a PTE is accessed and unsets it's access bit. 
+   Returns false otherwise */
+static bool
+pagedir_unset_accessed_pte (struct owner owner)
+{
+  if (pagedir_is_accessed (owner.owner_ptr->pagedir,
+                           owner.upage_ptr))
+    {
+      pagedir_set_accessed (owner.owner_ptr->pagedir, 
+                            owner.upage_ptr,
+                            false);
+      return true;
+    }
+
+  return false;
 }
