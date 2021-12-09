@@ -52,6 +52,7 @@ static bool fte_add_owner_shared       (struct fte *fte_ptr,
 static bool fte_add_owner_newly_shared (struct fte *fte_ptr, 
                                         struct thread *t_ptr, 
                                         void *upage);
+static void convert_fte_to_non_shared  (struct fte *fte_ptr);
 
 /* Helper to obtain eviction methods by frame type */
 static enum eviction_method get_eviction_method (enum frame_type frame_type);
@@ -165,6 +166,7 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 
   /* Unpin the frame and associate SPTE with FTE */
   spte_ptr->fte_ptr = fte_ptr;
+  ASSERT (fte_ptr->pin_cnt > 0);
   fte_ptr->pin_cnt--;
   return true;
 
@@ -195,6 +197,7 @@ ft_get_frame (struct spte *spte_ptr)
           int free_index = evict ();
           swap_in (fte_ptr, frame_ptr_from_index (free_index));
         }
+      ASSERT (fte_ptr->pin_cnt >= 0);
       fte_ptr->pin_cnt++;
     }
   else
@@ -422,20 +425,7 @@ ft_remove_owner (struct fte *fte_ptr)
 
       /* If the owner list became a singleton, convert the FTE to non shared */
       if (list_front (owner_list_ptr) == list_back (owner_list_ptr))
-        {
-          struct owner_list_elem *owner_e_ptr 
-              = list_entry (list_front (owner_list_ptr), 
-                            struct owner_list_elem, 
-                            elem);
-
-          struct owner new_owner = owner_e_ptr->owner;
-
-          free (owner_e_ptr);
-          free (owner_list_ptr);
-
-          fte_ptr->shared              = false;
-          fte_ptr->owners.owner_single = new_owner;
-        }
+          convert_fte_to_non_shared (fte_ptr);
     } 
   else 
     {
@@ -445,6 +435,31 @@ ft_remove_owner (struct fte *fte_ptr)
       fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
     }
   return owner;
+}
+
+/* Converts a shared frame table entry to a non-shared entry
+   in the case that it's owner list becomes a singleton after owner removal */
+static void
+convert_fte_to_non_shared (struct fte *fte_ptr)
+{
+  struct list *owner_list_ptr = fte_ptr->owners.owner_list_ptr;
+
+  /* Defensive assertions */
+  ASSERT (fte_ptr->shared);
+  ASSERT (list_front (owner_list_ptr) == list_back (owner_list_ptr));
+
+  struct owner_list_elem *owner_e_ptr 
+      = list_entry (list_front (owner_list_ptr), 
+                    struct owner_list_elem, 
+                    elem);
+  
+  struct owner new_owner = owner_e_ptr->owner;
+  
+  free (owner_e_ptr);
+  free (owner_list_ptr);
+  
+  fte_ptr->shared              = false;
+  fte_ptr->owners.owner_single = new_owner;
 }
 
 /* Remove a frame if the last owner was removed. In the swapped case
@@ -502,7 +517,7 @@ evict (void)
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
   int i = (int) (random_ulong () % frame_index_size);
   /* Keep trying until we find a frame that is not pinned to evict */
-  for (; frame_index_arr[i]->pin_cnt != 0; 
+  for (; frame_index_arr[i]->pin_cnt != 0;
          i = (int) (random_ulong () % frame_index_size));
 
   struct fte *fte_ptr = frame_index_arr[i];

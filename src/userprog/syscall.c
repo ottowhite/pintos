@@ -23,13 +23,13 @@ static uint32_t invoke_function (const void *syscall_ptr,
                                  const uint32_t *esp);
 
 /* Pointer verification helpers */
-static bool verify_ptr            (const void *ptr);
-static bool verify_ptr_privileged (const void *ptr, bool write);
-static bool verify_buffer         (const void *buffer, int size, bool write);
-static bool verify_args           (int argc, const uint32_t *esp);
-
-static void unpin_ptr    (const void *ptr);
-static void unpin_buffer (const void *buffer, int size);
+static bool verify_and_pin_ptr            (const void *ptr);
+static bool verify_and_pin_ptr_privileged (const void *ptr, bool write);
+static bool verify_and_pin_buffer         (const void *buffer, int size, 
+                                           bool write);
+static bool verify_args                   (int argc, const uint32_t *esp);
+static void try_unpin_ptr                 (const void *ptr);
+static void try_unpin_buffer              (const void *buffer, int size);
 
 /* System calls */
 static void     syscall_halt     (void);
@@ -88,7 +88,7 @@ static void
 syscall_handler (struct intr_frame *f) 
 {
   /* Read the syscall number at the stack pointer (f->esp) */
-  if (!verify_ptr (f->esp)) syscall_exit (-1);
+  if (!verify_and_pin_ptr (f->esp)) syscall_exit (-1);
   int syscall_no = *((int *) f->esp);
 
   /* Ensure our syscall_no refers to a defined system call */
@@ -110,14 +110,14 @@ verify_args (int argc, const uint32_t *esp)
 {
   /* The argc value from the jump table is passed in
      for the number of iterations */
-  for (int i = argc; i >= 1; i--) if (!verify_ptr (&esp[i])) return false;
+  for (int i = argc; i >= 1; i--) if (!verify_and_pin_ptr (&esp[i])) return false;
   return true;
 }
 
 /* Verifies the given pointer, additionally if write is true but the page is 
    not writable we will return false. */
 static bool 
-verify_ptr_privileged (const void *ptr, bool write)
+verify_and_pin_ptr_privileged (const void *ptr, bool write)
 {
   /* Verifies the address in user space and page directory */
   if (ptr != NULL && 
@@ -144,36 +144,39 @@ verify_ptr_privileged (const void *ptr, bool write)
 }
 
 /* Unpins the frame associated with a particular user address for the process, 
- * for usage at the end of a syscall. */
+   for usage at the end of a syscall. Only perform this action if the frame
+   is already pinned */
 static void
-unpin_ptr (const void *ptr)
+try_unpin_ptr (const void *ptr)
 {
-  spt_find_entry (thread_current ()->spt_ptr, 
-      pg_round_down (ptr))->fte_ptr->pin_cnt--;
+  int *pin_cnt = &spt_find_entry (thread_current ()->spt_ptr, 
+                                  pg_round_down (ptr))->fte_ptr->pin_cnt;
+
+  *pin_cnt = (*pin_cnt > 0) ? *pin_cnt - 1 : 0;
 }
 
 /* Unpin all frames assocated with a buffer being used by a system call */
 static void
-unpin_buffer (const void *buffer, int size) 
+try_unpin_buffer (const void *buffer, int size) 
 {
   const void *buffer_top = buffer + size * sizeof (char);
   for (void *loc = (void *) buffer; 
        loc <= buffer_top; 
        loc = pg_round_up(loc) + 1) 
-    unpin_ptr (loc);
+    try_unpin_ptr (loc);
 }
 
 /* Checks whether a given pointer is valid for use */
 static bool
-verify_ptr (const void *ptr)
+verify_and_pin_ptr (const void *ptr)
 {
-  return verify_ptr_privileged (ptr, false);
+  return verify_and_pin_ptr_privileged (ptr, false);
 }
 
 /* Checks that the entire buffer (up to size) is in valid memory and returns 
    false if not */
 static bool
-verify_buffer (const void *buffer, int size, bool write) 
+verify_and_pin_buffer (const void *buffer, int size, bool write) 
 {
   /* Check that the first memory location in the buffer is valid, and that 
      every memory location on the end of a page + 1 (i.e. the next page over) 
@@ -183,7 +186,7 @@ verify_buffer (const void *buffer, int size, bool write)
        loc <= buffer_top; 
        loc = pg_round_up(loc) + 1) 
   {
-    if (!verify_ptr_privileged (loc, write)) {
+    if (!verify_and_pin_ptr_privileged (loc, write)) {
       return false;
     }
   }
@@ -257,9 +260,9 @@ syscall_exit (int status)
 static pid_t
 syscall_exec (const char *cmd_line)
 {
-  if (!verify_ptr (cmd_line)) syscall_exit (-1);
+  if (!verify_and_pin_ptr (cmd_line)) syscall_exit (-1);
   pid_t pid = process_execute (cmd_line);
-  unpin_ptr (cmd_line);
+  try_unpin_ptr (cmd_line);
   return pid; 
 }
 
@@ -275,7 +278,7 @@ static bool
 syscall_create (const char *file, unsigned initial_size)
 {
   /* Sanity check */
-  if (file == NULL || !verify_ptr (file)) syscall_exit (-1);
+  if (file == NULL || !verify_and_pin_ptr (file)) syscall_exit (-1);
 
   /* Acquires the lock to create the file, 
      and returns an error if the file is invalid */
@@ -285,7 +288,7 @@ syscall_create (const char *file, unsigned initial_size)
   
   release_filesys ();
 
-  unpin_ptr (file);
+  try_unpin_ptr (file);
   
   return result;
 }
@@ -312,7 +315,7 @@ syscall_open (const char *file)
   /* Returns an error if the file name is invalid */
   if (file == NULL) return -1;
 
-  if (!verify_ptr (file)) syscall_exit (-1);
+  if (!verify_and_pin_ptr (file)) syscall_exit (-1);
 
   /* Acquires the lock to open the file, 
      and returns an error if the file is invalid */
@@ -332,7 +335,7 @@ syscall_open (const char *file)
      the struct into the current thread's hash table */
   init_fd_item (new_fd_item, thread_current (), file_to_open);
 
-  unpin_ptr (file);
+  try_unpin_ptr (file);
 
   return new_fd_item->fd;
 }
@@ -366,7 +369,7 @@ syscall_read (int fd, void *buffer, unsigned size)
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES ||
       fd == STDOUT_FILENO  ||
-      !verify_buffer (buffer, size, false)) syscall_exit (-1);
+      !verify_and_pin_buffer (buffer, size, false)) syscall_exit (-1);
 
   unsigned bytes_read;
 
@@ -379,7 +382,7 @@ syscall_read (int fd, void *buffer, unsigned size)
 
   release_filesys ();
 
-  unpin_buffer (buffer, size);
+  try_unpin_buffer (buffer, size);
   /* Returns the total count of bytes read */
   return bytes_read;
 }
@@ -420,7 +423,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
   if (buffer == NULL       || 
       fd >= MAX_OPEN_FILES || 
       fd == STDIN_FILENO   ||
-      !verify_buffer (buffer, size, true)) syscall_exit (-1);
+      !verify_and_pin_buffer (buffer, size, true)) syscall_exit (-1);
 
 
   unsigned bytes_written;
@@ -434,7 +437,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
 
   release_filesys ();
 
-  unpin_buffer (buffer, size);
+  try_unpin_buffer (buffer, size);
 
   /* Returns the total count of bytes written */
   return bytes_written;
@@ -599,7 +602,7 @@ syscall_mmap (int fd, void *addr)
 fail_2: /* Remove all allocated spt entries associated with the mmapped file */
         acquire_ft ();
         while (loc > mmap_top) 
-            spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE);
+            spt_propagate_removal (t_ptr->spt_ptr, loc -= PGSIZE);
         release_ft ();
 fail_1: return -1;
 }
@@ -608,5 +611,4 @@ static void
 syscall_munmap (mapid_t mapping)
 {
   mmap_remove_entry (mapping);
-  // TODO: ask jay why he calls file open and then file reopen
 }

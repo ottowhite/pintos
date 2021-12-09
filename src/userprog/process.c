@@ -629,14 +629,11 @@ setup_stack (void **esp)
       goto fail_2;
   release_ft ();
   
-
   *esp = PHYS_BASE;
-  fte_ptr->pin_cnt--;
-
   return true;
   
           /* Also implicitly removes the frame. */
-  fail_2: spt_remove_entry (t_ptr->spt_ptr, uaddr); 
+  fail_2: spt_propagate_removal (t_ptr->spt_ptr, uaddr); 
           release_ft ();
   fail_1: return false;
 }

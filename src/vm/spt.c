@@ -74,7 +74,7 @@ spt_add_entry (struct hash *spt_ptr,
    associated memory.
    Returns true on success, and fale if entry not found */
 bool
-spt_remove_entry (struct hash *spt_ptr, void *uaddr)
+spt_propagate_removal (struct hash *spt_ptr, void *uaddr)
 {
   struct spte *spte_ptr = spt_find_entry (spt_ptr, uaddr);
 

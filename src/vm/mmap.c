@@ -46,7 +46,7 @@ mmap_remove_entry (mapid_t mid)
   void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
   acquire_ft ();
   while (loc >= mmape_ptr->uaddr) 
-    spt_remove_entry (t_ptr->spt_ptr, loc = pg_round_down (--loc));
+      spt_propagate_removal (t_ptr->spt_ptr, loc = pg_round_down (--loc));
   release_ft ();
   free (mmape_ptr);
 }
@@ -70,7 +70,7 @@ mmap_remove_all (struct list *list_ptr)
       void *loc = mmape_ptr->uaddr + mmape_ptr->filesize;
       acquire_ft ();
       while (loc >= mmape_ptr->uaddr) 
-          spt_remove_entry (t_ptr->spt_ptr, loc -= PGSIZE); 
+          spt_propagate_removal (t_ptr->spt_ptr, loc -= PGSIZE); 
       release_ft ();
 
 			/* Deallocate the list entry. */
@@ -100,4 +100,3 @@ mmap_locate_entry (struct list *list_ptr, mapid_t mid)
 
   return (found) ? mmape_ptr : NULL;
 }
-
