@@ -3,9 +3,6 @@ FAIL tests/vm/page-merge-mm
 FAIL tests/vm/page-merge-par
 FAIL tests/vm/page-merge-seq
 FAIL tests/vm/page-merge-stk
-FAIL tests/vm/pt-big-stk-obj
-FAIL tests/vm/pt-grow-stack
-FAIL tests/vm/pt-grow-stk-sc
 FAIL tests/vm/pt-overflowstk
 pass tests/filesys/base/lg-create
 pass tests/filesys/base/lg-full
@@ -105,8 +102,11 @@ pass tests/vm/page-parallel
 pass tests/vm/page-shuffle
 pass tests/vm/pt-bad-addr
 pass tests/vm/pt-bad-read
+pass tests/vm/pt-big-stk-obj
 pass tests/vm/pt-grow-bad
 pass tests/vm/pt-grow-pusha
+pass tests/vm/pt-grow-stack
+pass tests/vm/pt-grow-stk-sc
 pass tests/vm/pt-write-code
 pass tests/vm/pt-write-code2
-Warning: 9 of 111 tests failed!
+Warning: 6 of 111 tests failed!

@@ -219,7 +219,7 @@ static bool
 attempt_stack_growth (void *esp, const void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  if ( (fault_addr >  esp && fault_addr < PHYS_BASE) ||
+  if ( (fault_addr >= esp && fault_addr < PHYS_BASE) ||
       ((fault_addr == esp - 4   ||
         fault_addr == esp - 32) &&
         fault_addr >  STACK_LIMIT))
