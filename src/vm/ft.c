@@ -103,7 +103,7 @@ ft_init (void)
       goto fail_2;
 
   /* Zero initialize the frame index as the user pool is initially empty */
-  memset (frame_index_arr, 0, frame_index_size);
+  memset (frame_index_arr, 0, frame_index_size * sizeof (struct fte *));
 
   return true;
 
@@ -521,6 +521,7 @@ evict (void)
   /* Keep trying until we find a frame that is not pinned to evict */
 
   int i = (int) (random_ulong () % frame_index_size);
+
   while (true)
     {
       if (frame_index_arr[i]->pin_cnt == 0) break;
