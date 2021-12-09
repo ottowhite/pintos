@@ -218,7 +218,6 @@ ft_get_frame (struct spte *spte_ptr)
 
   /* Associate the new frame location in the user pool with the fte */
   int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
-  // DELETE: printf ("Setting frame_index_arr[%d] = %p\n", frame_index, fte_ptr->loc.frame_ptr);
   frame_index_arr[frame_index] = fte_ptr;
 
   /* Associate the supplemental page table entry with the frame */
@@ -246,21 +245,15 @@ construct_frame (enum frame_type frame_type,
                  off_t offset, 
                  int amount_occupied)
 {
+  enum palloc_flags flags = frame_type == STACK 
+                                ? PAL_USER | PAL_ZERO 
+                                : PAL_USER;
   /* Gets a page from the user pool, zeroed if stack page */
-  void *frame_ptr = palloc_get_page (frame_type == STACK
-                                        ? PAL_USER | PAL_ZERO 
-                                        : PAL_USER);
-
-
-  // DELETE: bool swapped_case = false;
+  void *frame_ptr = palloc_get_page (flags);
   if (frame_ptr == NULL) 
     {
-      // DELETE: swapped_case = true;
       evict ();
-      frame_ptr = palloc_get_page (frame_type == STACK
-                                        ? PAL_USER | PAL_ZERO 
-                                        : PAL_USER);
-      // DELETE: printf ("Obtained free frame pointer %p.\n", frame_ptr);
+      frame_ptr = palloc_get_page (flags);
     }
 
   enum eviction_method eviction_method = get_eviction_method (frame_type);
@@ -270,7 +263,6 @@ construct_frame (enum frame_type frame_type,
       (union Frame_location) { .frame_ptr = frame_ptr }, eviction_method, 
       inode_ptr, offset, amount_occupied);
 
-  // DELETE: printf ("Constructed fte. (%s) \n", swapped_case ? "swapped" : "normal");
   
   if (fte_ptr == NULL) 
       goto fail;
@@ -546,29 +538,23 @@ evict (void)
       i = (int) (random_ulong () % frame_index_size);
     }
 
-  // DELETE: printf ("Evicting frame at index %d\n", i);
-
   struct fte *fte_ptr = frame_index_arr[i];
 
   switch (fte_ptr->eviction_method)
     {
       case SWAP:
         {
-          // DELETE: printf ("Swap case. \n");
           frame_swap (fte_ptr);
-          // DELETE: printf ("Swap succesful. \n");
           break;
         }
       case DELETE: 
         {
-          // DELETE: printf ("Delete case. \n");
           frame_remove_owners (fte_ptr, true);
           frame_delete (fte_ptr); 
           break;
         }
       case SWAP_IF_DIRTY:
         {
-          // DELETE: printf ("Swap if dirty case. \n");
           bool dirty = frame_dirty (fte_ptr);
           frame_remove_owners (fte_ptr, !dirty);
           if (dirty) frame_swap   (fte_ptr);
@@ -578,7 +564,6 @@ evict (void)
         }
       case WRITE_IF_DIRTY:
         {
-          // DELETE: printf ("Write if dirty case. \n");
           if (frame_dirty (fte_ptr)) frame_write (fte_ptr);
           frame_remove_owners (fte_ptr, true);
           frame_delete        (fte_ptr);
