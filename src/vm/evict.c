@@ -23,8 +23,7 @@ evict (void)
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
   /* Keep trying until we find a frame that is not pinned to evict */
 
-  int victim_index    = evict_find_victim_linear ();
-  debugf("Victim index: %d\n", victim_index);
+  int victim_index    = evict_find_victim_sca ();
   struct fte *fte_ptr = frame_index_arr[victim_index];
 
   switch (fte_ptr->eviction_method)
@@ -109,6 +108,7 @@ evict_find_victim_random (void)
 static int
 evict_find_victim_sca (void)
 {
+  debugf("Running. \n");
   struct fte *sca_victim_candidate_ptr;
   for (int i = sca_victim_candidate_index; true;
        i = (i + 1) % frame_index_size)
@@ -120,7 +120,7 @@ evict_find_victim_sca (void)
           continue;
       else
         {
-          sca_victim_candidate_index = i + 1;
+          sca_victim_candidate_index = (i + 1) % frame_index_size;
           return i;
         }
     }
