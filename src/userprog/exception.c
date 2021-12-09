@@ -200,11 +200,11 @@ attempt_frame_load (struct spte *spte_ptr, bool left_pinned)
   acquire_ft ();
   if (!ft_install_frame (spte_ptr, fte_ptr)) 
       goto fail_2;
-  release_ft ();
 
   /* Leave the frame pinned if left_pinned, for usage in syscall handlers */
   ASSERT (fte_ptr->pin_cnt >= 0);
   if (left_pinned) fte_ptr->pin_cnt++;
+  release_ft ();
 
   return true;
 
