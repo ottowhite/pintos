@@ -53,7 +53,7 @@ swap_out (struct fte *fte_ptr)
   void *kpage = fte_ptr->loc.frame_ptr;
   
   if (!find_free_slot (&sector))
-   PANIC ("No swap space available");
+    PANIC ("No swap space available");
   
   fte_ptr->swapped = true;
   fte_ptr->loc.swap_index = sector / SECTORS_PER_PAGE;
@@ -81,5 +81,5 @@ find_free_slot (block_sector_t *sector_ptr)
 
     *sector_ptr = sector * SECTORS_PER_PAGE;
 
-    return (sector == BITMAP_ERROR);
+    return (sector != BITMAP_ERROR);
 }
