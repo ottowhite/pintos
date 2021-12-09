@@ -108,7 +108,6 @@ evict_find_victim_random (void)
 static int
 evict_find_victim_sca (void)
 {
-  debugf("Running. \n");
   struct fte *sca_victim_candidate_ptr;
   for (int i = sca_victim_candidate_index; true;
        i = (i + 1) % frame_index_size)

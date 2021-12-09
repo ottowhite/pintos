@@ -92,7 +92,7 @@ ft_init (void)
      which frames */
   user_pool_top    = get_user_pool_top ();
   user_pool_bottom = get_user_pool_bottom ();
-  frame_index_size = (user_pool_top - user_pool_bottom) / PGSIZE;
+  frame_index_size = ((user_pool_top - user_pool_bottom) / PGSIZE) - 1;
 
   frame_index_arr  = malloc (frame_index_size * sizeof (struct fte *));
   if (frame_index_arr == NULL)
