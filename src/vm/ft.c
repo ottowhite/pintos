@@ -194,6 +194,12 @@ ft_get_frame (struct spte *spte_ptr)
   int amount_occupied        = spte_ptr->amount_occupied;
 
   struct fte *fte_ptr;
+  if (spte_ptr->fte_ptr != NULL)
+    {
+      // printf (" --------------- Swapping back in. \n");
+      // TODO: Swap back in if there is an associated swapped frame
+    }
+
   if ((frame_type == EXECUTABLE_CODE ||
        frame_type == MMAP)           &&
       (fte_ptr = ft_find_frame (inode_ptr, offset)) != NULL)
@@ -201,7 +207,10 @@ ft_get_frame (struct spte *spte_ptr)
       /* Found shared frame, pin it until installation. */
       if (fte_ptr->swapped)
         {
+          // printf ("Swapping back in. \n");
+          // TODO: Remove free index return value from eviction
           int free_index = evict ();
+          // TODO: Use palloc get page here
           swap_in (fte_ptr, frame_ptr_from_index (free_index));
         }
 
@@ -544,17 +553,20 @@ evict (void)
     {
       case SWAP:
         {
+          // printf ("Eviction by swap. \n");
           frame_swap (fte_ptr);
           break;
         }
       case DELETE: 
         {
+          // printf ("Eviction by deletion. \n");
           frame_remove_owners (fte_ptr, true);
           frame_delete (fte_ptr); 
           break;
         }
       case SWAP_IF_DIRTY:
         {
+          // printf ("Eviction by swapping if dirty. \n");
           bool dirty = frame_dirty (fte_ptr);
           frame_remove_owners (fte_ptr, !dirty);
           if (dirty) frame_swap   (fte_ptr);
@@ -564,6 +576,7 @@ evict (void)
         }
       case WRITE_IF_DIRTY:
         {
+          // printf ("Eviction by writing if dirty. \n");
           if (frame_dirty (fte_ptr)) frame_write (fte_ptr);
           frame_remove_owners (fte_ptr, true);
           frame_delete        (fte_ptr);
