@@ -1,5 +1,6 @@
 #include <hash.h>
 #include <debug.h>
+#include <stdio.h>
 #include <string.h>
 #include <random.h>
 #include <list.h>
@@ -241,8 +242,10 @@ construct_frame (enum frame_type frame_type,
   void *frame_ptr = palloc_get_page (frame_type == STACK
                                         ? PAL_USER | PAL_ZERO 
                                         : PAL_USER);
+
+
   if (frame_ptr == NULL) 
-      evict ();
+      frame_ptr = frame_ptr_from_index (evict ());
 
   enum eviction_method eviction_method = get_eviction_method (frame_type);
 
@@ -515,10 +518,14 @@ static int
 evict (void)
 {
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
-  int i = (int) (random_ulong () % frame_index_size);
   /* Keep trying until we find a frame that is not pinned to evict */
-  for (; frame_index_arr[i]->pin_cnt != 0;
-         i = (int) (random_ulong () % frame_index_size));
+
+  int i = (int) (random_ulong () % frame_index_size);
+  while (true)
+    {
+      if (frame_index_arr[i]->pin_cnt == 0) break;
+      i = (int) (random_ulong () % frame_index_size);
+    }
 
   struct fte *fte_ptr = frame_index_arr[i];
 
