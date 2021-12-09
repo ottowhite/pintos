@@ -138,11 +138,12 @@ page_fault_trigger (const void *fault_addr, void *esp, bool not_present,
 
   return;
 
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-      fault_addr,
-      not_present ? "not present" : "rights violation",
-      write ? "writing" : "reading",
-      user ? "user" : "kernel");
+  /* Useful for debugging */
+  // printf ("Page fault at %p: %s error %s page in %s context.\n",
+  //     fault_addr,
+  //     not_present ? "not present" : "rights violation",
+  //     write ? "writing" : "reading",
+  //     user ? "user" : "kernel");
 fail:
   page_fault_cnt++;
   if (filesys_locked ()) release_filesys ();
