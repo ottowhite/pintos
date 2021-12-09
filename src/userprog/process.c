@@ -617,9 +617,9 @@ setup_stack (void **esp)
   /* Get a frame that fits our description*/
   acquire_ft ();
   struct fte *fte_ptr = ft_get_frame (spte_ptr);
-  release_ft ();
   if (fte_ptr == NULL)
       goto fail_2;
+  release_ft ();
   
   /* try and add the new frame to the page table */
   acquire_ft ();
