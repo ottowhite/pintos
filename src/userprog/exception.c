@@ -119,7 +119,6 @@ void
 page_fault_trigger (const void *fault_addr, void *esp, bool not_present, 
                     bool write, bool user, bool left_pinned)
 {
-
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
   intr_enable ();
@@ -138,13 +137,13 @@ page_fault_trigger (const void *fault_addr, void *esp, bool not_present,
 
   return;
 
+fail:
   /* Useful for debugging */
   // printf ("Page fault at %p: %s error %s page in %s context.\n",
   //     fault_addr,
   //     not_present ? "not present" : "rights violation",
   //     write ? "writing" : "reading",
   //     user ? "user" : "kernel");
-fail:
   page_fault_cnt++;
   if (filesys_locked ()) release_filesys ();
   syscall_exit (-1);
@@ -219,17 +218,25 @@ static bool
 attempt_stack_growth (void *esp, const void *fault_addr)
 {
   /* Fault was a valid stack access, we need to bring in a new page */
-  if ( (fault_addr >= esp && fault_addr < PHYS_BASE) ||
-      ((fault_addr == esp - 4   ||
-        fault_addr == esp - 32) &&
-        fault_addr >  STACK_LIMIT))
-    {
-      struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
-          pg_round_down (fault_addr), ALL_ZERO, NULL, 0, 0, true);
 
-      if (spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) 
-          return true;
-    }
+  /* esp must be between STACK_LIMIT and PHYS_BASE */
+  if (fault_addr <  STACK_LIMIT ||
+      fault_addr >= PHYS_BASE) 
+      goto fail;
 
+  /* esp can only be 4, or 32 bytes above fault_addr, other amounts invalid */
+  if (fault_addr <  esp &&
+      fault_addr != esp - 4 && 
+      fault_addr != esp - 32) 
+      goto fail;
+
+  struct spte *spte_ptr = spt_add_entry (thread_current ()->spt_ptr, 
+      pg_round_down (fault_addr), STACK, NULL, 0, PGSIZE, true);
+
+  if (spte_ptr != NULL && attempt_frame_load (spte_ptr, false)) 
+      return true;
+
+fail:
+  // printf ("esp = %p, fault_addr = %p\n", esp, fault_addr);
   return false;
 }

@@ -567,10 +567,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
       enum frame_type frame_type;
 
-      if (page_zero_bytes == PGSIZE) frame_type = ALL_ZERO;
-      else if (writable)             frame_type = EXECUTABLE_DATA;
-      else if (!writable)            frame_type = EXECUTABLE_CODE;
-      else                           NOT_REACHED ();
+      if   (writable)  frame_type = EXECUTABLE_DATA;
+      else             frame_type = EXECUTABLE_CODE;
 
       if (spte_ptr == NULL) 
         {
@@ -619,9 +617,9 @@ setup_stack (void **esp)
   /* Get a frame that fits our description*/
   acquire_ft ();
   struct fte *fte_ptr = ft_get_frame (spte_ptr);
-  release_ft ();
   if (fte_ptr == NULL)
       goto fail_2;
+  release_ft ();
   
   /* try and add the new frame to the page table */
   acquire_ft ();

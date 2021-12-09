@@ -1,5 +1,6 @@
 #include <hash.h>
 #include <debug.h>
+#include <stdio.h>
 #include <string.h>
 #include <random.h>
 #include <list.h>
@@ -87,22 +88,32 @@ static off_t write_to_inode  (void *frame_ptr,
 static int   index_from_frame_ptr (void *frame_ptr);
 static void *frame_ptr_from_index (int frame_index);
 
+static void *user_pool_top;
+static void *user_pool_bottom;
+
+static bool debug;
+
 /* Initilizes the frame table as a hash map of struct ftes */
 bool 
 ft_init (void)
 {
+  debug = false;
+
   if (!hash_init (&ft, &fte_hash_func, &fte_less_func, NULL)) 
       goto fail_1;
   lock_init (&ft_lock);
   /* Frame index is used for eviction to store which ftes correspond to
      which frames */
-  frame_index_size = (get_user_pool_start () - PHYS_BASE) / PGSIZE;
+  user_pool_top    = get_user_pool_top ();
+  user_pool_bottom = get_user_pool_bottom ();
+  frame_index_size = (user_pool_top - user_pool_bottom) / PGSIZE;
+
   frame_index_arr  = malloc (frame_index_size * sizeof (struct fte *));
   if (frame_index_arr == NULL)
       goto fail_2;
 
   /* Zero initialize the frame index as the user pool is initially empty */
-  memset (frame_index_arr, 0, frame_index_size);
+  memset (frame_index_arr, 0, frame_index_size * sizeof (struct fte *));
 
   return true;
 
@@ -181,32 +192,55 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 struct fte *
 ft_get_frame (struct spte *spte_ptr)
 {
+  if (debug)
+  {
+    switch (spte_ptr->frame_type)
+    {
+      case EXECUTABLE_DATA: printf ("Getting EXECUTABLE_DATA page. \n"); break;
+      case EXECUTABLE_CODE: printf ("Getting EXECUTABLE_CODE page. \n"); break;
+      case STACK:           printf ("Getting STACK page. \n"); break;
+      case ALL_ZERO:        printf ("Getting ALL_ZERO page. \n"); break;
+      case MMAP:            printf ("Getting MMAP page. \n"); break;
+    }
+  }
   enum frame_type frame_type = spte_ptr->frame_type;
   struct inode *inode_ptr    = spte_ptr->inode_ptr;
   off_t offset               = spte_ptr->offset;
   int amount_occupied        = spte_ptr->amount_occupied;
+  
+  // TODO: Remove free index return value from eviction
+  // TODO: Use palloc get page here
 
-  struct fte *fte_ptr;
-  if ((frame_type == EXECUTABLE_CODE ||
-       frame_type == MMAP)           &&
-      (fte_ptr = ft_find_frame (inode_ptr, offset)) != NULL)
+
+  /* Set the fte_ptr to what the SPT entry refers to, null if no frame yet. */
+  struct fte *fte_ptr = spte_ptr->fte_ptr;
+
+  /* If this failed look for a shared frame. */
+  if ((fte_ptr == NULL) &&
+      (frame_type == EXECUTABLE_CODE || frame_type == MMAP))
+      fte_ptr = ft_find_frame (inode_ptr, offset);
+
+  /* If we found a frame, bring it in from swap if necessary. */
+  if (fte_ptr != NULL)
     {
-      /* Found shared frame, pin it until installation. */
-      if (fte_ptr->swapped)
+      if (debug) printf ("Swapping back in. \n");
+
+      if (fte_ptr->swapped) 
         {
-          int free_index = evict ();
-          swap_in (fte_ptr, frame_ptr_from_index (free_index));
+          evict ();
+          swap_in (fte_ptr, palloc_get_page (PAL_USER));
         }
-      ASSERT (fte_ptr->pin_cnt >= 0);
-      fte_ptr->pin_cnt++;
     }
   else
     {
-      /* Construct a new pinned frame */
+      /* Otherwise construct a new frame */
       fte_ptr = construct_frame (frame_type, inode_ptr, offset, 
           amount_occupied);
       if (fte_ptr == NULL) return NULL;
     }
+
+  ASSERT (fte_ptr->pin_cnt >= 0);
+  fte_ptr->pin_cnt++;
 
   /* Associate the new frame location in the user pool with the fte */
   int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
@@ -221,14 +255,14 @@ ft_get_frame (struct spte *spte_ptr)
 static int
 index_from_frame_ptr (void *frame_ptr)
 {
-  return (frame_ptr - PHYS_BASE) / PGSIZE;
+  return (frame_ptr - user_pool_bottom) / PGSIZE;
 }
 
 /* Obtains the frame_ptr from an index used by the frame_index_arr */
 static void *
 frame_ptr_from_index (int frame_index)
 {
-  return (frame_index * PGSIZE) + PHYS_BASE;
+  return (frame_index * PGSIZE) + user_pool_bottom;
 }
 
 struct fte *
@@ -237,12 +271,16 @@ construct_frame (enum frame_type frame_type,
                  off_t offset, 
                  int amount_occupied)
 {
+  enum palloc_flags flags = frame_type == STACK 
+                                ? PAL_USER | PAL_ZERO 
+                                : PAL_USER;
   /* Gets a page from the user pool, zeroed if stack page */
-  void *frame_ptr = palloc_get_page (frame_type == STACK
-                                        ? PAL_USER | PAL_ZERO 
-                                        : PAL_USER);
+  void *frame_ptr = palloc_get_page (flags);
   if (frame_ptr == NULL) 
+    {
       evict ();
+      frame_ptr = palloc_get_page (flags);
+    }
 
   enum eviction_method eviction_method = get_eviction_method (frame_type);
 
@@ -250,6 +288,7 @@ construct_frame (enum frame_type frame_type,
   struct fte *fte_ptr = construct_fte (
       (union Frame_location) { .frame_ptr = frame_ptr }, eviction_method, 
       inode_ptr, offset, amount_occupied);
+
   
   if (fte_ptr == NULL) 
       goto fail;
@@ -486,7 +525,7 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr, struct owner original_owner)
   frame_delete (fte_ptr);
 }
 
-/* Constructs a pinned frame table entry stored in the kernel pool
+/* Constructs a frame table entry stored in the kernel pool
    returns NULL if memory allocation failed */
 static struct fte * 
 construct_fte (union Frame_location loc,
@@ -500,7 +539,7 @@ construct_fte (union Frame_location loc,
 
   fte_ptr->swapped             = false;
   fte_ptr->shared              = false;
-  fte_ptr->pin_cnt             = 1;
+  fte_ptr->pin_cnt             = 0;
   fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
   fte_ptr->loc                 = loc;
   fte_ptr->inode_ptr           = inode_ptr;
@@ -515,10 +554,15 @@ static int
 evict (void)
 {
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
-  int i = (int) (random_ulong () % frame_index_size);
   /* Keep trying until we find a frame that is not pinned to evict */
-  for (; frame_index_arr[i]->pin_cnt != 0;
-         i = (int) (random_ulong () % frame_index_size));
+
+  int i = (int) (random_ulong () % frame_index_size);
+
+  while (true)
+    {
+      if (frame_index_arr[i]->pin_cnt == 0) break;
+      i = (int) (random_ulong () % frame_index_size);
+    }
 
   struct fte *fte_ptr = frame_index_arr[i];
 
@@ -526,11 +570,13 @@ evict (void)
     {
       case SWAP:
         {
+          if (debug) printf ("Eviction by swap. \n");
           frame_swap (fte_ptr);
           break;
         }
       case DELETE: 
         {
+          if (debug) printf ("Eviction by deletion. \n");
           frame_remove_owners (fte_ptr, true);
           frame_delete (fte_ptr); 
           break;
@@ -538,6 +584,11 @@ evict (void)
       case SWAP_IF_DIRTY:
         {
           bool dirty = frame_dirty (fte_ptr);
+          if (debug)
+            {
+              if (dirty) printf ("Eviction by swapping as dirty. \n");
+              else       printf ("Eviction by deletion as not dirty. \n");
+            }
           frame_remove_owners (fte_ptr, !dirty);
           if (dirty) frame_swap   (fte_ptr);
           else       frame_delete (fte_ptr);
@@ -546,7 +597,15 @@ evict (void)
         }
       case WRITE_IF_DIRTY:
         {
-          if (frame_dirty (fte_ptr)) frame_write (fte_ptr);
+          bool dirty = frame_dirty (fte_ptr);
+          if (dirty) frame_write (fte_ptr);
+
+          if (debug) 
+            {
+              if (dirty) printf ("Eviction by writing as dirty. \n");
+              else       printf ("Eviction by deletion as not dirty.");
+            }
+
           frame_remove_owners (fte_ptr, true);
           frame_delete        (fte_ptr);
           break;
