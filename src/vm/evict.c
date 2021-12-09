@@ -4,23 +4,16 @@
 #include "vm/evict.h"
 #include "vm/ft.h"
 
+static int evict_find_victim_random (void);
+
 int
 evict (void)
 {
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
   /* Keep trying until we find a frame that is not pinned to evict */
 
-  int i = (int) (random_ulong () % frame_index_size);
-
-  while (true)
-    {
-      if (frame_index_arr[i]->pin_cnt == 0) break;
-      i = (int) (random_ulong () % frame_index_size);
-    }
-
-  ASSERT (frame_index_arr[i]->pin_cnt == 0);
-
-  struct fte *fte_ptr = frame_index_arr[i];
+  int victim_index    = evict_find_victim_random ();
+  struct fte *fte_ptr = frame_index_arr[victim_index];
 
   switch (fte_ptr->eviction_method)
     {
@@ -68,6 +61,21 @@ evict (void)
       default: NOT_REACHED ();
     }
 
-  frame_index_arr[i] = NULL;
+  frame_index_arr[victim_index] = NULL;
+  return victim_index;
+}
+
+static int
+evict_find_victim_random (void)
+{
+  int i = (int) (random_ulong () % frame_index_size);
+
+  while (true)
+    {
+      if (frame_index_arr[i]->pin_cnt == 0) break;
+      i = (int) (random_ulong () % frame_index_size);
+    }
+
+  ASSERT (frame_index_arr[i]->pin_cnt == 0);
   return i;
 }
