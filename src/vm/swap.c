@@ -69,6 +69,7 @@ swap_remove (struct fte *fte_ptr)
 	bitmap_reset (swap_bitmap, fte_ptr->loc.swap_index);
 }
 
+/* Finds a free slot in the swap. Sets sector_ptr to index of free slot. */ 
 static bool
 find_free_slot (block_sector_t *sector_ptr)
 {
