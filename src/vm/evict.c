@@ -9,7 +9,6 @@
 static int evict_find_victim_random (void);
 
 static int evict_find_victim_linear (void);
-// DEBUG, set back to 0
 static int linear_victim_candidate_index = 0;
 
 static int  evict_find_victim_sca      (void);
@@ -17,27 +16,23 @@ static bool frame_unset_accessed_ptes  (struct fte *fte_ptr);
 static bool pagedir_unset_accessed_pte (struct owner owner);
 static int  sca_victim_candidate_index = 0;
 
-// DEBUG, DELETE
-static int swapped_count = 0;
-
 int
 evict (void)
 {
   /* Obtain a random int from 0 to frame_index_size (exclusive) */
   /* Keep trying until we find a frame that is not pinned to evict */
 
-  int victim_index    = evict_find_victim_linear ();
+  int victim_index    = evict_find_victim_sca ();
   struct fte *fte_ptr = frame_index_arr[victim_index];
 
   switch (fte_ptr->eviction_method)
     {
       case SWAP:
         {
-          debugf("Eviction by swap. (swap %d)\n", swapped_count);
+          debugf("Eviction by swap.\n");
           frame_swap (fte_ptr);
           /* Remove PTE references */
           frame_remove_owners (fte_ptr, false, true);
-          swapped_count++;
           break;
         }
       case DELETE: 
@@ -55,7 +50,11 @@ evict (void)
           if (dirty) debugf("Eviction by swapping as dirty. \n");
           else       debugf("Eviction by deletion as not dirty. \n");
 
-          if (dirty) frame_swap (fte_ptr);
+          if (dirty) 
+            {
+              frame_remove_owners (fte_ptr, false, true);
+              frame_swap (fte_ptr);
+            }
           else 
             {
               /* Remove SPTE references if not dirty and PTE references */
