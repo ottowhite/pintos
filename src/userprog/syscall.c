@@ -131,9 +131,7 @@ verify_and_pin_ptr_privileged (const void *ptr, bool write)
              before termination */
           page_fault_trigger (ptr, 
                               thread_current ()->esp, 
-                              false, /* Page was not present */
                               write, /* Was access a read or write? */
-                              true,  /* User processed triggered */
                               true); /* Do leave the frame pinned */
         }
     }

@@ -10,7 +10,7 @@
 void exception_init (void);
 void exception_print_stats (void);
 
-void page_fault_trigger (const void *fault_addr, void *esp, bool not_present, 
-                         bool write, bool user, bool left_pinned);
+void page_fault_trigger (const void *fault_addr, void *esp, bool write, 
+                         bool left_pinned);
 
 #endif /* userprog/exception.h */

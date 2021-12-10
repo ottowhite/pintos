@@ -116,8 +116,8 @@ kill (struct intr_frame *f)
 }
 
 void
-page_fault_trigger (const void *fault_addr, void *esp, bool not_present, 
-                    bool write, bool user, bool left_pinned)
+page_fault_trigger (const void *fault_addr, void *esp, bool write, 
+                    bool left_pinned)
 {
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
@@ -138,12 +138,6 @@ page_fault_trigger (const void *fault_addr, void *esp, bool not_present,
   return;
 
 fail:
-  /* Useful for debugging */
-  // printf ("Page fault at %p: %s error %s page in %s context.\n",
-  //     fault_addr,
-  //     not_present ? "not present" : "rights violation",
-  //     write ? "writing" : "reading",
-  //     user ? "user" : "kernel");
   page_fault_cnt++;
   if (filesys_locked ()) release_filesys ();
   syscall_exit (-1);
@@ -175,14 +169,10 @@ page_fault (struct intr_frame *f_ptr)
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
 
   /* Determine cause. */
-  /* True: not-present page, false: writing r/o page. */
-  bool not_present = (f_ptr->error_code & PF_P) == 0;
   /* True: access was write, false: access was read. */
   bool write       = (f_ptr->error_code & PF_W) != 0;
-  /* True: access by user, false: access by kernel. */
-  bool user        = (f_ptr->error_code & PF_U) != 0;
 
-  page_fault_trigger (fault_addr, f_ptr->esp, not_present, write, user, false);
+  page_fault_trigger (fault_addr, f_ptr->esp, write, false);
 }
 
 /* Attempts to load the given frame from an spte entry */
