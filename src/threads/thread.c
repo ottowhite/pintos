@@ -401,11 +401,13 @@ thread_exit (void)
 
 #ifdef VM
 
-  if (t_ptr != initial_thread && !list_empty (&t_ptr->mmap_list))
+  if (t_ptr != initial_thread)
     {
-      mmap_remove_all (&t_ptr->mmap_list);
+      if (!list_empty (&t_ptr->mmap_list)) 
+          mmap_remove_all (&t_ptr->mmap_list);
       spt_destroy (t_ptr->spt_ptr);
     }
+
 
 
 #endif
