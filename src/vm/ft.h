@@ -46,6 +46,7 @@ struct fte
 {
   bool swapped;
   bool shared;
+  bool dirty;
   int pin_cnt;
   struct inode *inode_ptr;
   off_t offset;

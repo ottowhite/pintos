@@ -45,12 +45,12 @@ evict (void)
         }
       case SWAP_IF_DIRTY:
         {
-          bool dirty = frame_dirty (fte_ptr);
+          if (!fte_ptr->dirty) fte_ptr->dirty = frame_dirty (fte_ptr);
 
-          if (dirty) debugf("Eviction by swapping as dirty. \n");
-          else       debugf("Eviction by deletion as not dirty. \n");
+          if (fte_ptr->dirty) debugf("Eviction by swapping as dirty. \n");
+          else                debugf("Eviction by deletion as not dirty. \n");
 
-          if (dirty) 
+          if (fte_ptr->dirty) 
             {
               frame_remove_owners (fte_ptr, false, true);
               frame_swap (fte_ptr);
@@ -58,7 +58,7 @@ evict (void)
           else 
             {
               /* Remove SPTE references if not dirty and PTE references */
-              frame_remove_owners (fte_ptr, !dirty, true);
+              frame_remove_owners (fte_ptr, !fte_ptr->dirty, true);
               frame_delete (fte_ptr);
             }
 
@@ -66,11 +66,11 @@ evict (void)
         }
       case WRITE_IF_DIRTY:
         {
-          bool dirty = frame_dirty (fte_ptr);
-          if (dirty) frame_write (fte_ptr);
+          if (!fte_ptr->dirty) fte_ptr->dirty = frame_dirty (fte_ptr);
+          if (fte_ptr->dirty) frame_write (fte_ptr);
 
-          if (dirty) debugf("Eviction by writing as dirty. \n");
-          else       debugf("Eviction by deletion as not dirty.");
+          if (fte_ptr->dirty) debugf("Eviction by writing as dirty. \n");
+          else                debugf("Eviction by deletion as not dirty.");
 
           /* Remove PTE and SPTE references */
           frame_remove_owners (fte_ptr, true, true);

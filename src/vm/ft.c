@@ -356,8 +356,10 @@ fte_add_owner_newly_shared (struct fte *fte_ptr,
   if (owner_new_elem_ptr == NULL)
       goto fail_3;
 
+
   owner_initial_elem_ptr->owner = fte_ptr->owners.owner_single;
   owner_new_elem_ptr->owner     = (struct owner) { t_ptr, upage };
+
 
   list_push_front (fte_ptr->owners.owner_list_ptr, 
                    &owner_initial_elem_ptr->elem);
@@ -532,6 +534,7 @@ construct_fte (union Frame_location loc,
 
   fte_ptr->swapped             = false;
   fte_ptr->shared              = false;
+  fte_ptr->dirty               = false;
   fte_ptr->pin_cnt             = 0;
   fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
   fte_ptr->loc                 = loc;
@@ -629,6 +632,7 @@ frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference,
       frame_remove_owner (fte_ptr->owners.owner_single, 
                           remove_spte_reference,
                           remove_pte_reference);
+
       fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
     }
 }
