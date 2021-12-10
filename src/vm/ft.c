@@ -70,12 +70,10 @@ static off_t write_to_inode  (void *frame_ptr,
 
 /* Helpers for converting between frame indices and frame_ptrs */
 static int   index_from_frame_ptr (void *frame_ptr);
-static void *frame_ptr_from_index (int frame_index);
 
 static void *user_pool_top;
 static void *user_pool_bottom;
 
-bool debug;
 struct fte** frame_index_arr;
 size_t       frame_index_size;
 
@@ -83,8 +81,6 @@ size_t       frame_index_size;
 bool 
 ft_init (void)
 {
-  debug = false;
-
   if (!hash_init (&ft, &fte_hash_func, &fte_less_func, NULL)) 
       goto fail_1;
   lock_init (&ft_lock);
@@ -178,15 +174,6 @@ ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 struct fte *
 ft_get_frame (struct spte *spte_ptr)
 {
-  switch (spte_ptr->frame_type)
-  {
-    case EXECUTABLE_DATA: debugf("Getting EXECUTABLE_DATA page. \n"); break;
-    case EXECUTABLE_CODE: debugf("Getting EXECUTABLE_CODE page. \n"); break;
-    case STACK:           debugf("Getting STACK page. \n"); break;
-    case ALL_ZERO:        debugf("Getting ALL_ZERO page. \n"); break;
-    case MMAP:            debugf("Getting MMAP page. \n"); break;
-  }
-
   enum frame_type frame_type = spte_ptr->frame_type;
   struct inode *inode_ptr    = spte_ptr->inode_ptr;
   off_t offset               = spte_ptr->offset;
@@ -203,8 +190,6 @@ ft_get_frame (struct spte *spte_ptr)
   /* If we found a frame, bring it in from swap if necessary. */
   if (fte_ptr != NULL)
     {
-      debugf("------------------Swapping back in. \n");
-
       if (fte_ptr->swapped) 
         {
           void *frame_ptr = palloc_get_page_with_eviction (PAL_USER);
@@ -224,8 +209,6 @@ ft_get_frame (struct spte *spte_ptr)
 
   /* Associate the new frame location in the user pool with the fte */
   int frame_index = index_from_frame_ptr (fte_ptr->loc.frame_ptr);
-  debugf("Setting frame index %d to %p. \n", 
-      frame_index, fte_ptr->loc.frame_ptr);
   frame_index_arr[frame_index] = fte_ptr;
 
   /* Associate the supplemental page table entry with the frame */
@@ -238,13 +221,6 @@ static int
 index_from_frame_ptr (void *frame_ptr)
 {
   return ((frame_ptr - user_pool_bottom) / PGSIZE) - 1;
-}
-
-/* Obtains the frame_ptr from an index used by the frame_index_arr */
-static void *
-frame_ptr_from_index (int frame_index)
-{
-  return ((frame_index - 1) * PGSIZE) + user_pool_bottom;
 }
 
 static void *

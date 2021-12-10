@@ -6,9 +6,9 @@
 #include "vm/evict.h"
 #include "vm/ft.h"
 
-static int evict_find_victim_random (void);
+static int evict_find_victim_random (void) UNUSED;
 
-static int evict_find_victim_linear (void);
+static int evict_find_victim_linear (void) UNUSED;
 static int linear_victim_candidate_index = 0;
 
 static int  evict_find_victim_sca      (void);
@@ -29,7 +29,6 @@ evict (void)
     {
       case SWAP:
         {
-          debugf("Eviction by swap.\n");
           frame_swap (fte_ptr);
           /* Remove PTE references */
           frame_remove_owners (fte_ptr, false, true);
@@ -37,7 +36,6 @@ evict (void)
         }
       case DELETE: 
         {
-          debugf("Eviction by deletion. \n");
           /* Remove PTE and SPTE references */
           frame_remove_owners (fte_ptr, true, true);
           frame_delete (fte_ptr); 
@@ -46,10 +44,6 @@ evict (void)
       case SWAP_IF_DIRTY:
         {
           if (!fte_ptr->dirty) fte_ptr->dirty = frame_dirty (fte_ptr);
-
-          if (fte_ptr->dirty) debugf("Eviction by swapping as dirty. \n");
-          else                debugf("Eviction by deletion as not dirty. \n");
-
           if (fte_ptr->dirty) 
             {
               frame_remove_owners (fte_ptr, false, true);
@@ -68,9 +62,6 @@ evict (void)
         {
           if (!fte_ptr->dirty) fte_ptr->dirty = frame_dirty (fte_ptr);
           if (fte_ptr->dirty) frame_write (fte_ptr);
-
-          if (fte_ptr->dirty) debugf("Eviction by writing as dirty. \n");
-          else                debugf("Eviction by deletion as not dirty.");
 
           /* Remove PTE and SPTE references */
           frame_remove_owners (fte_ptr, true, true);
