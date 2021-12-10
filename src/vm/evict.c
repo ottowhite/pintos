@@ -16,6 +16,8 @@ static bool frame_unset_accessed_ptes  (struct fte *fte_ptr);
 static bool pagedir_unset_accessed_pte (struct owner owner);
 static int  sca_victim_candidate_index = 0;
 
+// DEBUG, DELETE
+static int swapped_count = 0;
 
 int
 evict (void)
@@ -30,8 +32,9 @@ evict (void)
     {
       case SWAP:
         {
-          debugf("Eviction by swap. \n");
+          debugf("Eviction by swap. (swap %d)\n", swapped_count);
           frame_swap (fte_ptr);
+          swapped_count++;
           break;
         }
       case DELETE: 
@@ -84,7 +87,8 @@ evict_find_victim_linear (void)
           = (linear_victim_candidate_index + 1) % frame_index_size;
 
   int victim_index = linear_victim_candidate_index;
-  linear_victim_candidate_index++;
+  linear_victim_candidate_index 
+      = (linear_victim_candidate_index + 1) % frame_index_size;
   return victim_index;
 }
 
