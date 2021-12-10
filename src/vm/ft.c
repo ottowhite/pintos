@@ -601,7 +601,8 @@ frame_dirty (struct fte *fte_ptr)
 }
 
 void
-frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
+frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference,
+                     bool remove_pte_reference)
 {
   if (fte_ptr->shared)
     {
@@ -615,25 +616,26 @@ frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference)
               = list_entry (e, struct owner_list_elem, elem);
           frame_remove_owner (
                 owner_e_ptr->owner, 
-                remove_spte_reference);
+                remove_spte_reference,
+                remove_pte_reference);
           list_remove (&owner_e_ptr->elem);
         }
     }
   else
     {
       frame_remove_owner (fte_ptr->owners.owner_single, 
-                          remove_spte_reference);
+                          remove_spte_reference,
+                          remove_pte_reference);
       fte_ptr->owners.owner_single = (struct owner) { NULL, NULL };
     }
 }
 
 void
-frame_remove_owner (struct owner owner, bool remove_spte_reference)
+frame_remove_owner (struct owner owner, bool remove_spte_reference, 
+                    bool remove_pte_reference)
 {
-  if (remove_spte_reference)
-      frame_remove_spte_reference (owner);
-
-  frame_remove_pte (owner);
+  if (remove_spte_reference) frame_remove_spte_reference (owner);
+  if (remove_pte_reference)   frame_remove_pte (owner);
 }
 
 void

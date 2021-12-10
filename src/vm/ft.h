@@ -80,9 +80,11 @@ void frame_delete (struct fte *fte_ptr);
 void frame_swap   (struct fte *fte_ptr);
 
 void frame_remove_owner  (struct owner owner, 
-                          bool remove_spte_reference);
+                          bool remove_spte_reference,
+                          bool remove_pte_reference);
 void frame_remove_owners (struct fte *fte_ptr, 
-                          bool remove_spte_reference);
+                          bool remove_spte_reference,
+                          bool remove_pte_reference);
 
 void frame_remove_spte_reference (struct owner owner);
 void frame_remove_pte            (struct owner owner);
