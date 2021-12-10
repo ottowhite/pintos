@@ -16,15 +16,17 @@ static bool frame_unset_accessed_ptes  (struct fte *fte_ptr);
 static bool pagedir_unset_accessed_pte (struct owner owner);
 static int  sca_victim_candidate_index = 0;
 
+/* Returns index of frame to be evicted. */
 int
 evict (void)
 {
-  /* Obtain a random int from 0 to frame_index_size (exclusive) */
-  /* Keep trying until we find a frame that is not pinned to evict */
-
+	/* Finds victim index using the evict_find_victim_sca. Different functions
+	 * can be used here to apply different eviction algorithms. */
   int victim_index    = evict_find_victim_sca ();
   struct fte *fte_ptr = frame_index_arr[victim_index];
 
+	/* Case statement to determine correct behaviour of eviction depending on 
+	 * specified frame eviction method. */
   switch (fte_ptr->eviction_method)
     {
       case SWAP:
@@ -75,6 +77,7 @@ evict (void)
   return victim_index;
 }
 
+/* Linear eviction algorithm. */
 static int
 evict_find_victim_linear (void)
 {

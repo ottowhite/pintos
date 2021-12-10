@@ -77,7 +77,7 @@ static void *user_pool_bottom;
 struct fte** frame_index_arr;
 size_t       frame_index_size;
 
-/* Initilizes the frame table as a hash map of struct ftes */
+/* Initilizes the frame table as a hash map of struct ftes. */
 bool 
 ft_init (void)
 {
@@ -116,6 +116,8 @@ ft_destroy (void)
   free (frame_index_arr);
 }
 
+/* Installs a frame and adds the corresponding owner to the frame.
+ * Associates the SPTE with the FTE. Unpins the frame. */
 bool
 ft_install_frame (struct spte *spte_ptr, struct fte *fte_ptr)
 {
@@ -223,6 +225,7 @@ index_from_frame_ptr (void *frame_ptr)
   return ((frame_ptr - user_pool_bottom) / PGSIZE) - 1;
 }
 
+/* Returns pointer to an unused frame, using eviction if necessary. */
 static void *
 palloc_get_page_with_eviction (enum palloc_flags flags)
 {
@@ -235,6 +238,7 @@ palloc_get_page_with_eviction (enum palloc_flags flags)
   return frame_ptr;
 }
 
+/* Constucts a pinned frame. */
 struct fte *
 construct_frame (enum frame_type frame_type, 
                  struct inode *inode_ptr,
@@ -280,6 +284,7 @@ construct_frame (enum frame_type frame_type,
         return NULL;
 }
 
+/* Find frame based given inode pointer and offset. */
 static struct fte *
 ft_find_frame (struct inode *inode_ptr, off_t offset)
 {
@@ -554,6 +559,7 @@ frame_swap (struct fte *fte_ptr)
   palloc_free_page (frame_ptr);
 }
 
+/* Checks if frame is dirty. */
 bool
 frame_dirty (struct fte *fte_ptr)
 {
@@ -582,6 +588,7 @@ frame_dirty (struct fte *fte_ptr)
   return false;
 }
 
+/* Remove all owners of a frame. */
 void
 frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference,
                      bool remove_pte_reference)
@@ -613,6 +620,7 @@ frame_remove_owners (struct fte *fte_ptr, bool remove_spte_reference,
     }
 }
 
+/* Remove specified owner from frame. */
 void
 frame_remove_owner (struct owner owner, bool remove_spte_reference, 
                     bool remove_pte_reference)
@@ -621,6 +629,7 @@ frame_remove_owner (struct owner owner, bool remove_spte_reference,
   if (remove_pte_reference)  frame_remove_pte (owner);
 }
 
+/* Remove frame pointer in SPTE given an owner. */
 void
 frame_remove_spte_reference (struct owner owner)
 {
@@ -639,14 +648,14 @@ frame_remove_pte (struct owner owner)
       pagedir_clear_page (owner.owner_ptr->pagedir, owner.upage_ptr);
 }
 
-
-
+/* Insert an fte in the Frame hash table. */
 static void
 fte_insert (struct fte *fte_ptr)
 {
   hash_insert (&ft, &fte_ptr->hash_elem);
 }
 
+/* Hash function to hash frame table entries into the frame table. */
 static unsigned
 fte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
 {
@@ -654,6 +663,7 @@ fte_hash_func (const struct hash_elem *e_ptr, void *aux UNUSED)
   return (unsigned) fte_ptr->inode_ptr + (fte_ptr->offset / PGSIZE);
 }
 
+/* Function to sort frame table entries within buckets in the frame table. */
 static bool 
 fte_less_func (const struct hash_elem *a_ptr,
                const struct hash_elem *b_ptr,

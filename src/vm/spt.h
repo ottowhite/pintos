@@ -9,6 +9,7 @@
 #include "filesys/file.h"
 #include "filesys/inode.h"
 
+/* Type of frame. */
 enum frame_type
 {
   STACK,
@@ -21,14 +22,14 @@ enum frame_type
 /* Suplemental page table entry. */
 struct spte
 {
-  void *uaddr;
-  struct fte *fte_ptr;
-  enum frame_type frame_type;
-  struct inode *inode_ptr;
-  off_t offset;
-  int amount_occupied;
-  bool writable;
-  struct hash_elem hash_elem;
+  void *uaddr;                 /* User address. */
+  struct fte *fte_ptr;         /* Frame table entry pointer. */
+  enum frame_type frame_type;  /* Type of frame. */
+  struct inode *inode_ptr;     /* Pointer to indode. */
+  off_t offset;                /* Inode offset. */
+  int amount_occupied;         /* Amount of page not set to zero. */
+  bool writable;               /* Page can be written to. */
+  struct hash_elem hash_elem;  /* Hash element. */
 };
 
 #include "vm/ft.h"
