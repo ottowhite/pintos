@@ -18,6 +18,7 @@ enum frame_type
   MMAP
 };
 
+/* Suplemental page table entry. */
 struct spte
 {
   void *uaddr;

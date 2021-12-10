@@ -13,21 +13,21 @@ enum eviction_method {
   WRITE_IF_DIRTY
 };
 
-/* Uniquely references the thread and upage that reference a frame */
+/* Uniquely references the thread and upage that reference a frame. */
 struct owner
 {
   struct thread *owner_ptr;            /* Pointer to owner thread. */
   void *upage_ptr;                     /* User address of owner.   */
 };
 
-/* used to store a single owner when multiple processes own a frame */
+/* Used to store a single owner when multiple processes own a frame. */
 struct owner_list_elem
 {
   struct owner owner;                  /* Owner information. */
   struct list_elem elem;               /* List element. */
 };
 
-/* When swapped is false, use frame_ptr, otherwise use swap_index */
+/* When swapped is false, use frame_ptr, otherwise use swap_index. */
 union Frame_location
 {
   void *frame_ptr;  /* Case when not swapped. Pointer to frame in user pool. */

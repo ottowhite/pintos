@@ -247,9 +247,8 @@ syscall_exit (int status)
 			child_ptr->exit_status = status;
 			sema_up (&child_ptr->sema);
       sema_up (&child_ptr->load_sema);
-			lock_release (&cur->self_lock);
 		}
-	else lock_release (&cur->self_lock);
+	lock_release (&cur->self_lock);
 
   /* Allow writes back to the executable */
   if (cur->executable)
