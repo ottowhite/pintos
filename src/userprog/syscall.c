@@ -234,6 +234,10 @@ syscall_exit (int status)
 
 	/* Set exit status and call sema up. For process_wait. */
 
+  if (!list_empty (&cur->mmap_list)) 
+      mmap_remove_all (&cur->mmap_list);
+  spt_destroy (cur->spt_ptr);
+
 	/* Acquire lock to prevent race conditions between process writing to the 
 	 * struct child, and its parent deallocating that struct when exiting. */
 	lock_acquire (&cur->self_lock);
