@@ -1,3 +1,4 @@
+FAIL tests/vm/page-parallel
 pass tests/filesys/base/lg-create
 pass tests/filesys/base/lg-full
 pass tests/filesys/base/lg-random
@@ -97,7 +98,6 @@ pass tests/vm/page-merge-mm
 pass tests/vm/page-merge-par
 pass tests/vm/page-merge-seq
 pass tests/vm/page-merge-stk
-pass tests/vm/page-parallel
 pass tests/vm/page-shuffle
 pass tests/vm/pt-bad-addr
 pass tests/vm/pt-bad-read
@@ -109,3 +109,4 @@ pass tests/vm/pt-grow-stk-sc
 pass tests/vm/pt-overflowstk
 pass tests/vm/pt-write-code
 pass tests/vm/pt-write-code2
+Warning: 1 of 111 tests failed!

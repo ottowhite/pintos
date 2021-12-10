@@ -381,6 +381,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
+  acquire_filesys ();
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -478,6 +479,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   success = true;
 
  done:
+  release_filesys ();
   /* We arrive here whether the load is successful or not. */
   file_close (file);
   return success;
@@ -612,27 +614,16 @@ setup_stack (void **esp)
   struct spte *spte_ptr = spt_add_entry (t_ptr->spt_ptr, uaddr, 
       STACK, NULL, 0, PGSIZE, true);
   if (spte_ptr == NULL)
-      goto fail_1;
+      goto fail;
 
-  /* Get a frame that fits our description*/
-  acquire_ft ();
-  struct fte *fte_ptr = ft_get_frame (spte_ptr);
-  if (fte_ptr == NULL)
-      goto fail_2;
-  
-  /* try and add the new frame to the page table */
-  if (!ft_install_frame (spte_ptr, fte_ptr))
-      goto fail_2;
-
-  release_ft ();
-  
   *esp = PHYS_BASE;
   return true;
   
-          /* Also implicitly removes the frame. */
-  fail_2: spt_propagate_removal (t_ptr->spt_ptr, uaddr); 
-  fail_1: release_ft ();
-          return false;
+  /* Also implicitly removes the frame. */
+fail: 
+  hash_delete (t_ptr->spt_ptr, &spte_ptr->hash_elem);
+  free (spte_ptr);
+  return false;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
