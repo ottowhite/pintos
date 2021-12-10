@@ -4,7 +4,7 @@
 #include <lib/user/syscall.h>
 
 #define MAX_CONSOLE_BUFFER_SIZE (400)
-#define MAX_OPEN_FILES (32)
+#define MAX_OPEN_FILES (1024)
 #define MAX_PROCESS_NAME_LENGTH (16)
 
 typedef uint32_t (*syscall_0_args) (void);
