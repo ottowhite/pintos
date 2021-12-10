@@ -262,9 +262,10 @@ syscall_exit (int status)
 static pid_t
 syscall_exec (const char *cmd_line)
 {
-  if (!verify_and_pin_ptr (cmd_line)) syscall_exit (-1);
+  int size = strlen (cmd_line) + 1;
+  if (!verify_and_pin_buffer (cmd_line, size, false)) syscall_exit (-1);
   pid_t pid = process_execute (cmd_line);
-  try_unpin_ptr (cmd_line);
+  try_unpin_buffer (cmd_line, size);
   return pid; 
 }
 
