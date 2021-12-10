@@ -9,6 +9,7 @@
 static int evict_find_victim_random (void);
 
 static int evict_find_victim_linear (void);
+// DEBUG, set back to 0
 static int linear_victim_candidate_index = 0;
 
 static int  evict_find_victim_sca      (void);
@@ -34,13 +35,16 @@ evict (void)
         {
           debugf("Eviction by swap. (swap %d)\n", swapped_count);
           frame_swap (fte_ptr);
+          /* Remove PTE references */
+          frame_remove_owners (fte_ptr, false, true);
           swapped_count++;
           break;
         }
       case DELETE: 
         {
           debugf("Eviction by deletion. \n");
-          frame_remove_owners (fte_ptr, true);
+          /* Remove PTE and SPTE references */
+          frame_remove_owners (fte_ptr, true, true);
           frame_delete (fte_ptr); 
           break;
         }
@@ -54,7 +58,8 @@ evict (void)
           if (dirty) frame_swap (fte_ptr);
           else 
             {
-              frame_remove_owners (fte_ptr, !dirty);
+              /* Remove SPTE references if not dirty and PTE references */
+              frame_remove_owners (fte_ptr, !dirty, true);
               frame_delete (fte_ptr);
             }
 
@@ -68,7 +73,8 @@ evict (void)
           if (dirty) debugf("Eviction by writing as dirty. \n");
           else       debugf("Eviction by deletion as not dirty.");
 
-          frame_remove_owners (fte_ptr, true);
+          /* Remove PTE and SPTE references */
+          frame_remove_owners (fte_ptr, true, true);
           frame_delete        (fte_ptr);
           break;
         }
