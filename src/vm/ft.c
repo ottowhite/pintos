@@ -441,16 +441,16 @@ ft_remove_owner (struct fte *fte_ptr)
           struct owner_list_elem *owner_e_ptr 
               = list_entry (e, struct owner_list_elem, elem);
           owner = owner_e_ptr->owner;
-
+          
           if (owner.owner_ptr == t_ptr)
             {
               list_remove (e);
               free (owner_e_ptr);
+              frame_remove_pte (owner);
               break;
             }
         }
 
-      frame_remove_pte (owner);
 
       /* If the owner list became a singleton, convert the FTE to non shared */
       if (list_front (owner_list_ptr) == list_back (owner_list_ptr))
@@ -504,7 +504,10 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr, struct owner original_owner)
 
   /* Otherwise we just removed the last owner. */
   if (fte_ptr->swapped) 
-			swap_remove (fte_ptr);
+    {
+	    swap_remove (fte_ptr);
+      fte_ptr->swapped = false;
+    }
   else if (fte_ptr->eviction_method == WRITE_IF_DIRTY && 
            pagedir_is_dirty (original_owner.owner_ptr->pagedir,
                              original_owner.upage_ptr)) 
@@ -558,7 +561,7 @@ frame_delete (struct fte *fte_ptr)
 {
   /* Free the page in memory and the frame table entry */
   ASSERT (!fte_ptr->swapped);
-  palloc_free_page (fte_ptr->loc.frame_ptr);
+  palloc_free_page ( pg_round_down (fte_ptr->loc.frame_ptr));
   hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
 }
@@ -635,7 +638,7 @@ frame_remove_owner (struct owner owner, bool remove_spte_reference,
                     bool remove_pte_reference)
 {
   if (remove_spte_reference) frame_remove_spte_reference (owner);
-  if (remove_pte_reference)   frame_remove_pte (owner);
+  if (remove_pte_reference)  frame_remove_pte (owner);
 }
 
 void
@@ -652,7 +655,8 @@ void
 frame_remove_pte (struct owner owner)
 {
   /* Clear the page in the owners page directory */
-  pagedir_clear_page (owner.owner_ptr->pagedir, owner.upage_ptr);
+  if (owner.owner_ptr != NULL && owner.upage_ptr != NULL)
+      pagedir_clear_page (owner.owner_ptr->pagedir, owner.upage_ptr);
 }
 
 
