@@ -16,45 +16,45 @@ enum eviction_method {
 /* Uniquely references the thread and upage that reference a frame */
 struct owner
 {
-  struct thread *owner_ptr;
-  void *upage_ptr;
+  struct thread *owner_ptr;            /* Pointer to owner thread. */
+  void *upage_ptr;                     /* User address of owner.   */
 };
 
 /* used to store a single owner when multiple processes own a frame */
 struct owner_list_elem
 {
-  struct owner owner;
-  struct list_elem elem;
+  struct owner owner;                  /* Owner information. */
+  struct list_elem elem;               /* List element. */
 };
 
 /* When swapped is false, use frame_ptr, otherwise use swap_index */
 union Frame_location
 {
-  void *frame_ptr;
-  int swap_index;
+  void *frame_ptr;  /* Case when not swapped. Pointer to frame in user pool. */
+  int swap_index;		/* Case when swapped. Index in swap. */
 };
 
 /* When shared is false, use owner_single, otherwise use owner_list_ptr */
 union Owner
 {
-  struct owner owner_single;
-  struct list *owner_list_ptr;
+  struct owner owner_single;   /* Case when not shared. */
+  struct list *owner_list_ptr; /* Case when shared. List of owners. */
 };
 
 /* Frame / swap table entry */
 struct fte 
 {
-  bool swapped;
-  bool shared;
-  bool dirty;
-  int pin_cnt;
-  struct inode *inode_ptr;
-  off_t offset;
-  union Owner owners;
-  union Frame_location loc;
-  enum eviction_method eviction_method;
-  int amount_occupied;
-  struct hash_elem hash_elem;
+  bool swapped;               /* Frame is in the swap. */
+  bool shared;								/* Frame is shared. */
+  bool dirty;									/* Frame is dirty. */
+  int pin_cnt;								/* Count of times pinned. 0 if unpinned. */
+  struct inode *inode_ptr;    /* Inode pointer. */
+  off_t offset;								/* Inode offset. */
+  union Owner owners;         /* Owner or owners of frame. */
+  union Frame_location loc;	  /* Location either in swap or frame hash table. */
+  enum eviction_method eviction_method; /* How frame should be evicted. */
+  int amount_occupied;        /* Amount of frame not set to zero. */
+  struct hash_elem hash_elem; /* Hash element to store frame in hash table. */
 };
 
 bool         ft_init                      (void);
