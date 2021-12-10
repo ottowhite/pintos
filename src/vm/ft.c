@@ -504,7 +504,10 @@ ft_remove_frame_if_necessary (struct fte *fte_ptr, struct owner original_owner)
 
   /* Otherwise we just removed the last owner. */
   if (fte_ptr->swapped) 
-			swap_remove (fte_ptr);
+    {
+	    swap_remove (fte_ptr);
+      fte_ptr->swapped = false;
+    }
   else if (fte_ptr->eviction_method == WRITE_IF_DIRTY && 
            pagedir_is_dirty (original_owner.owner_ptr->pagedir,
                              original_owner.upage_ptr)) 
