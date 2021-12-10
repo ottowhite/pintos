@@ -1,5 +1,4 @@
 FAIL tests/vm/page-linear
-FAIL tests/vm/page-merge-mm
 pass tests/filesys/base/lg-create
 pass tests/filesys/base/lg-full
 pass tests/filesys/base/lg-random
@@ -94,6 +93,7 @@ pass tests/vm/mmap-twice
 pass tests/vm/mmap-unmap
 pass tests/vm/mmap-write
 pass tests/vm/mmap-zero
+pass tests/vm/page-merge-mm
 pass tests/vm/page-merge-par
 pass tests/vm/page-merge-seq
 pass tests/vm/page-merge-stk
@@ -109,4 +109,4 @@ pass tests/vm/pt-grow-stk-sc
 pass tests/vm/pt-overflowstk
 pass tests/vm/pt-write-code
 pass tests/vm/pt-write-code2
-Warning: 2 of 111 tests failed!
+Warning: 1 of 111 tests failed!

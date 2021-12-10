@@ -619,12 +619,11 @@ setup_stack (void **esp)
   struct fte *fte_ptr = ft_get_frame (spte_ptr);
   if (fte_ptr == NULL)
       goto fail_2;
-  release_ft ();
   
   /* try and add the new frame to the page table */
-  acquire_ft ();
   if (!ft_install_frame (spte_ptr, fte_ptr))
       goto fail_2;
+
   release_ft ();
   
   *esp = PHYS_BASE;
@@ -632,8 +631,8 @@ setup_stack (void **esp)
   
           /* Also implicitly removes the frame. */
   fail_2: spt_propagate_removal (t_ptr->spt_ptr, uaddr); 
-          release_ft ();
-  fail_1: return false;
+  fail_1: release_ft ();
+          return false;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
