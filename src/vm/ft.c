@@ -561,7 +561,7 @@ frame_delete (struct fte *fte_ptr)
 {
   /* Free the page in memory and the frame table entry */
   ASSERT (!fte_ptr->swapped);
-  palloc_free_page (fte_ptr->loc.frame_ptr);
+  palloc_free_page ( pg_round_down (fte_ptr->loc.frame_ptr));
   hash_delete (&ft, &fte_ptr->hash_elem);
   free (fte_ptr);
 }
